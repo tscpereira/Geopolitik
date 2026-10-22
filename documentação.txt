@@ -1510,6 +1510,72 @@ Screenshots também confirmaram o visual.
 7. BACKLOG (ideias para depois)
 --------------------------------------------------------------
 
+>>> PRIORIDADE PARA 22/10/2026 <<<
+
+[ ] 1. SAVE / LOAD DA PARTIDA
+    - Hoje não há banco de dados nem save: a partida só existe na
+      memória e se perde ao fechar o jogo.
+    - Proposta: arquivo JSON em user://saves/ (no Windows,
+      %APPDATA%\Godot\app_userdata\ProjetoGame\saves\), com
+      to_dict() / from_dict() em cada classe (Player, City, Unit,
+      LumberMill, GameMap, TurnManager).
+    - F5 salva, F9 carrega, vários slots; salvamento automático no
+      início de cada turno do jogador; número de versão no arquivo
+      (para saves antigos continuarem abrindo).
+    - Cuidado com o estado "escondido": madeira que resta em cada
+      floresta, Trabalhadores dentro das madeireiras, unidades
+      fortificadas dentro das cidades, progresso das obras e
+      trabalhadores dos prédios, ordens "Mover", estado da máquina
+      (personalidade, turnos esperando).
+    - Teste automático de ida e volta: salvar no meio da partida,
+      carregar e conferir que tudo voltou igual.
+
+[ ] 2. PILHAGEM
+    - Unidades militares podem pilhar fazendas e madeireiras
+      inimigas (da cidade ou remotas):
+        * pilhar FAZENDA: a unidade recupera 30 de saúde (energia);
+        * pilhar MADEIREIRA: o jogador ganha 5 de ouro.
+    - A decidir:
+        * a melhoria é destruída ao ser pilhada? (no Civilization,
+          sim);
+        * quanto custa pilhar (gasta o turno? 1 movimento?);
+        * Trabalhadores dentro de uma madeireira remota pilhada:
+          voltam ao mapa? são capturados?
+        * cidadãos que trabalhavam na melhoria: ficam livres e são
+          realocados (como numa floresta esgotada);
+        * pode pilhar o próprio território? (provavelmente não);
+        * a máquina deve usar a pilhagem e também se defender dela.
+
+[ ] 3. FRONTEIRAS, TERRITÓRIOS E CLASSES DE CIDADE
+    - Cada cidade tem um território, marcado no mapa com a borda na
+      cor do dono.
+    - A PRIMEIRA cidade é a CAPITAL: começa com o território do
+      raio de ação dela (hoje, a área de 21 casas).
+    - Cidades fundadas depois começam como POVOADO: território só
+      das 8 casas vizinhas ao centro.
+    - Ao crescer, a cidade sobe de classe e o território aumenta.
+    - Novo atributo de classe da cidade:
+        Capital, Povoado, Vila, Cidade, Metrópole
+    - Futuro (diplomacia): entrar no território de outro jogador
+      sem acordo = declaração de guerra surpresa.
+    - A decidir:
+        * requisitos de cada classe (sugestão para discutir:
+          Povoado 1-2 de população, Vila 3-5, Cidade 6-9, Metrópole
+          10+; ou também exigir prédios, ex.: Vila precisa de ...);
+        * gatilhos da expansão do território: subir de classe?
+          crescer a população? cultura acumulada por turno (quando
+          existir cultura)?
+        * a Capital é uma classe ou um título? (uma Capital também
+          tem tamanho: Capital-Vila, Capital-Cidade...);
+        * a área de trabalho (fazendas, madeireiras) passa a ser
+          só dentro do território? (hoje é sempre a área de 21
+          casas);
+        * territórios de duas cidades que se encostam: quem fica
+          com a casa? (a mais antiga? a mais perto?);
+        * o que acontece com melhorias fora do território
+          (madeireiras remotas);
+        * a máquina respeitar e usar fronteiras.
+
 [ ] Personalidades da máquina em jogo (já existem como dados):
     expansionista, econômica (crescimento), defensiva; depois
     científica e cultural
