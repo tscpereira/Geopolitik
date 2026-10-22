@@ -1,4 +1,4 @@
-[gd_scene load_steps=12 format=3]
+[gd_scene load_steps=13 format=3]
 
 [ext_resource type="Script" path="res://scripts/main.gd" id="1"]
 [ext_resource type="Script" path="res://scripts/map/game_map.gd" id="2"]
@@ -9,6 +9,7 @@
 [ext_resource type="Script" path="res://scripts/ui/city_name_dialog.gd" id="7"]
 [ext_resource type="Script" path="res://scripts/ui/notice_dialog.gd" id="8"]
 [ext_resource type="Script" path="res://scripts/ui/save_dialog.gd" id="9"]
+[ext_resource type="Script" path="res://scripts/map/territory_overlay.gd" id="10"]
 
 [sub_resource type="StyleBoxFlat" id="PanelStyle"]
 bg_color = Color(0, 0, 0, 0.6)
@@ -29,6 +30,10 @@ texture_filter = 1
 script = ExtResource("2")
 
 [node name="TerrainLayer" type="TileMapLayer" parent="GameMap"]
+
+[node name="TerritoryOverlay" type="Node2D" parent="." node_paths=PackedStringArray("map")]
+script = ExtResource("10")
+map = NodePath("../GameMap")
 
 [node name="Cities" type="Node2D" parent="."]
 texture_filter = 1

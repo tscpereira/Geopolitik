@@ -6,7 +6,7 @@ Tipo de jogo : Estratégia em turnos 2D
 Engine       : Godot 4.7.2 (versão padrão, GDScript)
 Linguagem    : GDScript
 Pasta        : C:\ProjetoGame
-Última atualização: 21/10/2026
+Última atualização: 22/10/2026
 
 
 --------------------------------------------------------------
@@ -92,8 +92,12 @@ C:\ProjetoGame
 |   |   |-- game_map.gd            Mapa em grid (dados + desenho)
 |   |   |-- movement.gd            Alcance e caminho das unidades
 |   |   |-- move_overlay.gd        Destaque das casas alcançáveis
+|   |   |-- territory_overlay.gd   Fronteiras dos territórios
 |   |   `-- terrain.gdshader       Desenho do mapa com transições
 |   |                              naturais entre os terrenos
+|   |-- save/
+|   |   `-- save_game.gd           Arquivos de save (JSON), versão e
+|   |                              conversões
 |   |-- players/
 |   |   |-- player.gd              Jogador, unidades e cidades
 |   |   `-- arsenal.gd             Armas do arsenal (Lança)
@@ -119,11 +123,13 @@ C:\ProjetoGame
 |       |-- city_map_view.gd       Mapa da área da cidade (na janela)
 |       |-- city_name_dialog.gd    Pergunta do nome da nova cidade
 |       |-- notice_dialog.gd       Aviso "construção concluída"
+|       |-- save_dialog.gd         Janela de salvar (F5) / carregar (F9)
 |       |-- icons.gd               Ícones desenhados (moeda de ouro,
 |       |                          construções e unidades)
 |       `-- floating_text.gd       Números de dano flutuantes
 |-- assets/
 |   |-- sprites/                   Imagens de unidades, objetos
+|   |   `-- improvements/          Fazenda e madeireira destruídas
 |   |-- tiles/                     Tilesets do mapa
 |   |-- theme/game_theme.tres     Tema do jogo (tooltips sólidos)
 |   |-- audio/                     Músicas e efeitos
@@ -220,7 +226,8 @@ VITÓRIA
   partida.
 - Como as cidades ainda não podem ser atacadas (a conquista vem
   depois), hoje só perde quem nunca fundou uma cidade e perde
-  todas as unidades.
+  todas as unidades. Uma cidade vazia (0 de população, depois de
+  uma pilhagem) continua contando.
 
 MAPA (scripts/map/)
 - Grid de casas quadradas, no estilo Civilization 1.
@@ -484,8 +491,19 @@ TRABALHADOR (data/units/trabalhador.tres)
 - Floresta esgotada: a madeireira remota é consumida, a casa vira
   Cerrado e os Trabalhadores voltam ao mapa em casas livres
   próximas.
-- Ainda não feito: a máquina não faz Trabalhadores nem
-  madeireiras, e madeireiras não podem ser atacadas.
+- Madeireira remota só fora do território de outro jogador
+  (ver TERRITÓRIO). No próprio território ou em terra sem dono,
+  pode.
+- Outras habilidades (campos "Can Rebuild" e "Can Join City" do
+  .tres):
+    * Reconstruir [R]: numa fazenda ou madeireira sua destruída
+      pela pilhagem (ver PILHAGEM). Leva o mesmo tempo de uma obra
+      nova: 4 turnos com 1 Trabalhador.
+    * Migrar para a cidade [J]: o Trabalhador, numa cidade sua ou
+      numa casa vizinha a ela, vira 1 de população da cidade e
+      deixa de ser uma unidade. É assim que uma cidade vazia (0 de
+      população) volta a viver: outra cidade faz um Trabalhador,
+      que anda até lá e migra.
 
 COLONO
 - Ataque 0, Defesa 0, Movimento 1 (data/units/colono.tres).
@@ -517,9 +535,12 @@ CIDADES (scripts/cities/city.gd)
   (estilo Civilization 1) e o nome embaixo. As fazendas são
   pintadas pelo shader do terreno, integradas ao chão (ver
   FAZENDAS NO MAPA); as madeireiras em obra ficam transparentes.
-- Área da cidade: as 8 casas vizinhas mais as 12 seguintes, sem
-  as 4 pontas (um quadrado 5x5 sem os cantos), ou seja, 20 casas
-  além da própria cidade.
+- Área de trabalho da cidade = o TERRITÓRIO dela (ver TERRITÓRIO
+  E CLASSES DE CIDADE): na capital, as 8 casas vizinhas mais as 12
+  seguintes, sem as 4 pontas (um quadrado 5x5 sem os cantos, 20
+  casas além da cidade); nas outras cidades, só as 8 vizinhas.
+  Fazendas e madeireiras da cidade só podem ser feitas no
+  território.
 - Cidadãos: cada um trabalha em uma coisa só:
     * numa obra: gera 1 ponto de produção por turno para ela;
     * numa fazenda pronta: a fazenda gera 3 de alimento por turno
@@ -831,6 +852,52 @@ JANELA DA CIDADE (scripts/ui/city_window.gd e city_map_view.gd)
       mapa. Se ela não estiver fortificada, o botão é "Selecionar".
 - Esc fecha, nesta ordem: a lista de construções, a escolha da
   casa e, por fim, a janela.
+- Título com a classe da cidade (ex.: "Aurora (Jogador 1, Povoado
+  (capital))"). O resumo mostra "Classe: Povoado (1-5 de
+  população) - capital   Território: 21 casas". O mapa da cidade
+  mostra sempre as 21 casas em volta, com a borda do território
+  na cor do dono; as casas fora do território ficam escurecidas
+  (o tooltip diz "fora do território").
+- Melhorias destruídas aparecem no mapa da cidade com o desenho
+  de ruína, em "Produção da cidade" ("destruída - reconstrução
+  N/4", em laranja) e com um aviso no resumo. Cidade vazia mostra
+  o aviso em vermelho.
+
+TERRITÓRIO E CLASSES DE CIDADE (City.territory, City.rank,
+scripts/map/territory_overlay.gd)
+- Cada cidade tem um território: as casas dela, marcadas no mapa
+  com um véu leve e a fronteira na cor do dono. Entre duas
+  cidades do mesmo jogador aparece só uma linha fina; contra
+  outro jogador ou terra sem dono, a borda grossa.
+- A PRIMEIRA cidade do jogador é a CAPITAL: começa com o
+  território de 21 casas (City.area_offsets). No mapa, uma estrela
+  dourada ao lado do nome.
+- As outras cidades começam com a casa delas e as 8 vizinhas
+  (City.territory_offsets).
+- Quem chegou primeiro fica com a casa: o território novo não
+  pega casas que já são de outra cidade (de qualquer jogador) nem
+  a casa de uma madeireira remota de outro jogador. Ex.: uma
+  cidade a 3 casas da capital fica com 6 casas em vez de 9.
+- Não dá para fundar uma cidade dentro de um território
+  ("Esta casa é território de Aurora.").
+- A área de trabalho da cidade é o território. As unidades
+  Trabalhador podem construir fora dele (só madeireira, por
+  enquanto), mas não no território de outro jogador.
+- Por enquanto o território não cresce (ver BACKLOG).
+- CLASSE da cidade (só uma classificação pelo tamanho, sem outro
+  efeito por enquanto; City.RANK_MIN_POPULATION):
+    Povoado    1 a 5 de população (e a cidade vazia, com 0)
+    Vila       6 a 15
+    Cidade     16 a 30
+    Metrópole  31 ou mais
+  Ser a capital é à parte ("Vila (capital)"). Quando a cidade
+  cresce e muda de classe, aparece "Aurora: agora é uma Vila".
+- O painel de informações mostra "território de Aurora (Jogador
+  1)" na casa sob o mouse, e a classe da cidade.
+- Funções do Game: territory_owner(casa) e refresh_territories()
+  (chamada ao fundar uma cidade e ao carregar um save).
+- A máquina procura lugar para cidades fora dos territórios e dá
+  nota só às casas que o território novo teria.
 
 IA: ECONOMIA, EXPANSÃO E DEFESA (scripts/ai/ai_economy.gd)
 - A máquina usa TODAS as regras do jogo, com as mesmas funções do
@@ -863,13 +930,22 @@ IA: ECONOMIA, EXPANSÃO E DEFESA (scripts/ai/ai_economy.gd)
     madeira > prédios > expansão > armas > exército; todos na mais
     importante, para ela terminar logo), madeireiras cheias e o
     resto na Marcenaria parada (impostos).
-- Colonos: procuram, a até settler_search_radius casas, o melhor
-  lugar para uma cidade (área com pradaria 3, cerrado e floresta
-  2, água 1, menos casas já usadas e menos a distância), andam até
-  lá com a ordem "Mover" e fundam. O primeiro Colono pode andar
-  1-2 casas para achar um lugar melhor.
-- Trabalhadores: andam até a floresta livre mais próxima (ou uma
-  madeireira sua com vaga) e trabalham nela.
+- Colonos: procuram, a até settler_search_radius casas e fora de
+  qualquer território, o melhor lugar para uma cidade (o
+  território que ela teria: pradaria 3, cerrado e floresta 2,
+  água 1, sem as casas de outras cidades, menos a distância),
+  andam até lá com a ordem "Mover" e fundam. O primeiro Colono
+  pode andar 1-2 casas para achar um lugar melhor.
+- Trabalhadores, nesta ordem: reconstroem a ruína em que estão,
+  migram para a cidade vazia ao lado, vão até uma cidade vazia
+  ou uma ruína sua; senão andam até a floresta livre mais
+  próxima (fora do território de outro jogador) ou uma madeireira
+  sua com vaga e trabalham nela.
+- Reconstrução: com ruínas ou cidades vazias, as cidades de 2+
+  de população pedem Trabalhadores (1 por ruína ou cidade vazia,
+  até 2), com prioridade logo depois da comida. Cidade vazia não
+  faz pedidos.
+- Pilhagem: ver PILHAGEM.
 - Guarnição: cada cidade fica com garrison_per_city soldados
   fortificados: o primeiro dentro da cidade (escondido), os outros
   nas casas vizinhas (floresta primeiro). A guarnição não sai para
@@ -1042,6 +1118,57 @@ Visual: o atacante faz uma investida até o alvo, os danos
 aparecem como números vermelhos flutuantes e a unidade
 destruída some aos poucos.
 
+PILHAGEM (Game.pillage, tecla P)
+- Uma unidade militar (Ataque > 0) parada numa fazenda ou
+  madeireira pronta de outro jogador pode pilhá-la: tecla P ou
+  botão "Pilhar [P]". Vale para melhorias da cidade e madeireiras
+  remotas.
+- Custa 1 movimento (Game.PILLAGE_COST). O Cavaleiro (2 de
+  movimento) pode andar 1 casa e pilhar no mesmo turno.
+- Recompensa:
+    pilhar FAZENDA     a unidade recupera 30 de energia
+                       (PILLAGE_FARM_ENERGY), até a energia máxima
+    pilhar MADEIREIRA  o jogador ganha 5 de ouro (PILLAGE_MILL_GOLD)
+- A melhoria é danificada e perde a função: vira ruína (desenho
+  novo, ver abaixo), não produz mais e a casa continua ocupada (a
+  cidade não pode fazer outra fazenda nela). A floresta da
+  madeireira NÃO recupera a madeira que já foi tirada.
+- Quem trabalhava na melhoria é executado:
+    * melhoria da cidade: os cidadãos alocados ali saem da
+      população da cidade. A população pode chegar a 0;
+    * madeireira remota: os Trabalhadores lá dentro são
+      destruídos.
+- CIDADE VAZIA (0 de população): não produz alimento (nem a casa
+  da cidade), não come, não cresce e não faz obras. Continua do
+  jogador (conta para a vitória). Volta a viver quando um
+  Trabalhador migra para ela (tecla J, ver TRABALHADOR).
+- Não dá para pilhar as próprias melhorias nem nada dentro do
+  próprio território. Ruínas e obras não podem ser pilhadas.
+- RECONSTRUÇÃO: um Trabalhador do dono, parado na ruína, aperta R
+  ("Reconstruir [R]"):
+    * ruína da cidade: ele fica na casa e faz 1 ponto por turno
+      (Game.REBUILD_PER_TURN), no início da sua vez, até o custo
+      da melhoria (4). Um martelo amarelo aparece na unidade e
+      uma barra de progresso na ruína. Ele não é selecionado
+      sozinho; mover a unidade interrompe (o progresso fica
+      guardado). Pronta, a melhoria volta sem trabalhador e
+      aparece o aviso de construção concluída;
+    * madeireira remota destruída: ele entra nela, como numa obra
+      nova (até 2 Trabalhadores, 1 ponto cada por turno).
+- Desenhos das ruínas (PNG 40x40, provisórios, dá para editar):
+    assets/sprites/improvements/fazenda_destruida.png
+    assets/sprites/improvements/madeireira_destruida.png
+  Campo queimado com brasas e fumaça; toras carbonizadas em volta
+  de um monte de cinzas. Ficam em City.RUIN_TEXTURES.
+- Mensagem no topo da tela: "Guerreiro (Jogador 2) pilhou a
+  fazenda de Aurora (+30 de energia). 1 cidadão executado."
+- A MÁQUINA: os soldados de campo pilham a melhoria inimiga em
+  que estão parados e, quando o exército avança, preferem parar
+  numa melhoria inimiga ao alcance (fora da zona de ameaça). Para
+  se recuperar, ela faz Trabalhadores (1 por ruína ou cidade
+  vazia, até 2 de uma vez), manda-os reconstruir as ruínas e
+  migrar para as cidades vazias.
+
 TURNOS (scripts/autoload/turn_manager.gd)
 - Autoload global, acessível de qualquer script como
   "TurnManager".
@@ -1051,7 +1178,47 @@ TURNOS (scripts/autoload/turn_manager.gd)
   contador vira "Turno 2" quando a vez volta ao Jogador 1
   (padrão do Civilization).
 - Sinais: turn_started(jogador, turno), turn_ended(jogador).
-- Funções: start_game(jogadores), end_turn(), current_player().
+- Funções: start_game(jogadores), end_turn(), current_player(),
+  to_dict() e restore() (save).
+
+SALVAR E CARREGAR (scripts/save/save_game.gd)
+- F5: janela "Salvar partida", com 5 espaços. Cada linha mostra o
+  que está guardado ("Turno 12, vez do Jogador 1 - 22/10/2026
+  14:30") e o botão "Salvar" (substitui o que estiver lá). Só na
+  sua vez, sem nada acontecendo.
+- F9: janela "Carregar partida", com o espaço "Automático" e os 5
+  espaços. Espaço vazio fica com o botão desabilitado. Também
+  funciona na tela de vitória. Esc ou "Cancelar" fecham.
+- Salvamento automático: no início de cada vez do jogador humano
+  (depois de as cidades produzirem), no espaço "Automático".
+- Arquivos: JSON em user://saves/ (no Windows,
+  %APPDATA%\Godot\app_userdata\ProjetoGame\saves\): autosave.json,
+  slot_1.json ... slot_5.json. O caminho aparece na janela.
+- O arquivo guarda o número da versão do formato
+  (SaveGame.VERSION, hoje 1) e a data. Save de uma versão mais
+  nova do jogo não abre (aviso no Output). Para mudar o formato:
+  suba VERSION e acrescente um passo em SaveGame.migrate, para os
+  saves antigos continuarem abrindo. Campos novos lidos com valor
+  padrão (ex.: data.get("ruins", [])) também mantêm os saves
+  antigos funcionando; um save sem territórios ganha o território
+  inicial ao carregar.
+- O que é salvo: turno e vez (TurnManager), terreno de cada casa
+  (florestas que viraram cerrado ou pradaria) e a madeira que
+  resta em cada floresta (GameMap), e cada jogador (Player) com
+  ouro, madeira, arsenal, personalidade da máquina e "turnos
+  esperando" dela; as unidades (Unit: tipo, casa, movimentos,
+  energia, fortificada, escondida na cidade, ordem "Mover",
+  reconstruindo); as madeireiras remotas (LumberMill: progresso,
+  destruída e os Trabalhadores lá dentro); as cidades (City:
+  população, estoque, fazendas, madeireiras, ruínas, obras com
+  progresso, trabalhadores e madeira/armas pagas, prédios,
+  trabalhadores dos prédios, capital e território).
+- Cada classe tem to_dict() e from_dict()/apply_dict();
+  Game.capture_state() junta tudo e Game.restore_state() monta a
+  partida de novo. Carregar continua a vez de quem estava jogando,
+  sem processar o início do turno de novo.
+- Não é salvo: avisos de construção concluída que ainda não
+  apareceram e a unidade selecionada.
 
 CÂMERA E CONTROLES
 - Setas ou WASD: mover a câmera.
@@ -1077,6 +1244,13 @@ CÂMERA E CONTROLES
   floresta (ou entra na que já existe ali).
 - Clique na sua madeireira remota: seleciona a madeireira
   (botão "Retirar trabalhador").
+- P: a unidade militar selecionada pilha a fazenda ou madeireira
+  inimiga em que está (ver PILHAGEM).
+- R: o Trabalhador selecionado reconstrói a melhoria destruída em
+  que está.
+- J: o Trabalhador selecionado migra para a cidade (vira 1 de
+  população).
+- F5: salvar a partida. F9: carregar (ver SALVAR E CARREGAR).
 - Enter: confirmar o fim do turno (só depois de aparecer o
   pedido de confirmação).
 
@@ -1092,9 +1266,11 @@ HUD (scripts/ui/hud.gd)
 - Canto inferior direito: botões de ação da unidade selecionada
   (só na sua vez). Hoje: "Construir nova cidade [B]" (Colono),
   "Construir madeireira [M]" / "Trabalhar na madeireira [M]"
-  (Trabalhador), "Mover [G]", "Fortificar [F]" e "Pular turno
-  [Espaço]" (todas). Com uma madeireira remota selecionada:
-  "Retirar trabalhador".
+  (Trabalhador), "Reconstruir [R]" e "Migrar para <cidade> [J]"
+  (Trabalhador, quando fazem sentido), "Pilhar [P]" (unidade
+  militar numa fazenda ou madeireira pronta), "Mover [G]",
+  "Fortificar [F]" e "Pular turno [Espaço]" (todas). Com uma
+  madeireira remota selecionada: "Retirar trabalhador".
 - Canto superior direito: painel ARSENAL (armas; ver ARSENAL),
   "Ouro N +N por turno" (tesouro, com a moeda; ver
   OURO) e, abaixo, o painel "Recursos estratégicos" (ver
@@ -1191,7 +1367,9 @@ Screenshots também confirmaram o visual.
 [x] Construções que gastam madeira (Quartel General 15, Guerreiro 2)
 [ ] Outros recursos estratégicos (ex.: pedra, ferro)
 [x] IA: produzir Trabalhadores e construir madeireiras
-[ ] Madeireiras remotas: ataque/captura pelo inimigo
+[x] Madeireiras remotas: pilhagem pelo inimigo (Trabalhadores
+    executados)
+[ ] Madeireiras remotas: captura pelo inimigo
 [ ] Cerrado com regras próprias (hoje é igual à Pradaria)
 [ ] Desenhos definitivos de pradaria, floresta, cerrado,
     madeireira e Trabalhador
@@ -1231,6 +1409,22 @@ Screenshots também confirmaram o visual.
 [ ] Imagem própria (PNG) para a cidade e a fazenda (hoje são
     desenhadas pelo código)
 [x] Primeiro commit no Git (21/10/2026)
+[x] Save / load da partida (F5/F9, 5 espaços, salvamento
+    automático, versão no arquivo)
+[ ] Save: guardar também os avisos de construção concluída
+[ ] Save: confirmar antes de substituir um espaço ocupado
+[x] Pilhagem de fazendas e madeireiras (P), ruínas, reconstrução
+    pelo Trabalhador (R)
+[x] Cidade vazia (0 de população) e migração do Trabalhador (J)
+[x] IA: pilhar, reconstruir e repovoar cidades vazias
+[ ] IA: defender as melhorias da pilhagem (hoje só a guarnição
+    das cidades)
+[ ] Desenhos definitivos da fazenda e da madeireira destruídas
+[x] Territórios das cidades com fronteiras no mapa (capital 21
+    casas, demais 9; quem chega primeiro fica com a casa)
+[x] Classe da cidade pelo tamanho (Povoado, Vila, Cidade,
+    Metrópole) e capital com estrela
+[x] Área de trabalho limitada ao território
 
 
 --------------------------------------------------------------
@@ -1505,76 +1699,117 @@ Screenshots também confirmaram o visual.
 - Novo item 7. BACKLOG: personalidades em jogo, ciência, cultura,
   diplomacia, balanceamento do ritmo.
 
+22/10/2026
+- Código no GitHub (tscpereira/Geopolitik), um commit por parte.
+- SAVE / LOAD: F5 salva e F9 carrega, com 5 espaços e o
+  salvamento automático no início de cada vez do jogador. JSON em
+  user://saves/, com número de versão (SaveGame.VERSION) e
+  SaveGame.migrate para saves antigos. Cada classe ganhou
+  to_dict / from_dict (GameMap, Player, City, Unit, LumberMill,
+  TurnManager, AIPersonality). O estado "escondido" também vai
+  junto: madeira de cada floresta, Trabalhadores dentro das
+  madeireiras, unidades fortificadas na cidade, obras com
+  progresso e madeira/armas pagas, trabalhadores dos prédios,
+  ordens "Mover", personalidade e "turnos esperando" da máquina.
+- Validação: teste de ida e volta com 33 verificações (estado
+  depois de carregar = estado salvo, comparando o JSON inteiro;
+  cidade, obras, prédios, arsenal, madeireira remota com
+  Trabalhador, floresta explorada, terreno trocado, unidade
+  escondida, energia, ordem Mover, personalidade, vez e turno; o
+  jogo continua depois de carregar; janela com os espaços; save
+  de versão mais nova é recusado), mais screenshot da janela.
+- PILHAGEM (decisões do usuário): unidade militar pilha fazenda
+  ou madeireira inimiga (P, 1 movimento). Fazenda: +30 de
+  energia. Madeireira: +5 de ouro. A melhoria vira ruína e para
+  de produzir; a floresta não recupera a madeira tirada. Os
+  cidadãos que trabalhavam nela são executados (a cidade pode
+  ficar com 0 de população); os Trabalhadores da madeireira
+  remota também. Não dá para pilhar o próprio território.
+- Novos desenhos: fazenda destruída e madeireira destruída
+  (assets/sprites/improvements/, 40x40, provisórios).
+- Trabalhador: Reconstruir (R), 4 turnos como uma obra nova; e
+  Migrar para a cidade (J), virando 1 de população. Cidade vazia
+  não produz nem cresce até alguém migrar para ela.
+- A máquina pilha com os soldados de campo, faz Trabalhadores
+  para reconstruir e repovoar, e manda-os para as ruínas e
+  cidades vazias.
+- Validação: teste com 42 verificações (pilhar fazenda,
+  madeireira da cidade e remota; recompensas; cidadãos e
+  Trabalhadores executados; cidade vazia; não pilhar o próprio;
+  reconstruir na cidade e na madeireira remota; mover interrompe;
+  migrar; save com ruínas; a máquina pilha, reconstrói e
+  repovoa), mais screenshots do mapa e da janela da cidade.
+- FRONTEIRAS, TERRITÓRIOS E CLASSES (decisões do usuário): cada
+  cidade tem território com a borda na cor do dono. A capital (1ª
+  cidade) começa com 21 casas, as outras com 9. Quem chega
+  primeiro fica com a casa. A área de trabalho da cidade é o
+  território; Trabalhadores constroem madeireira fora dele (não no
+  território de outro jogador). Classe pelo tamanho: Povoado
+  (1-5), Vila (6-15), Cidade (16-30), Metrópole (31+); a capital
+  tem uma estrela. O território ainda não cresce.
+- Validação: teste com 35 verificações (capital 21 casas, povoado
+  sem as casas da capital, área de trabalho = território, fundar
+  e madeireira remota com território, a madeireira de quem chegou
+  primeiro fica fora, pilhagem no próprio território, classes e
+  aviso de mudança de classe, overlay, save com território e save
+  antigo sem território), mais screenshots do mapa e da janela.
+- Os 11 testes das sessões anteriores passaram de novo (com os
+  saves desviados para uma pasta temporária).
+- Partida de 100 rodadas máquina x máquina (Econômica x
+  Equilibrada) sem erros, com salvar e carregar no meio dela
+  (estado idêntico) e o salvamento automático conferido. As duas
+  chegaram aos mesmos marcos de 21/10 (2 cidades, madeireiras,
+  Marcenaria e Lanças). Com o ritmo de hoje ninguém monta
+  exército em 100 rodadas, então a pilhagem da máquina foi
+  conferida no teste de cenário (ver acima).
+- Correção feita pelos testes: carregar um save enquanto as
+  ordens "Mover" andavam no início da vez dava erro; agora o
+  código confere se a unidade ainda existe.
+
 
 --------------------------------------------------------------
 7. BACKLOG (ideias para depois)
 --------------------------------------------------------------
 
->>> PRIORIDADE PARA 22/10/2026 <<<
+Prioridades de 22/10/2026 - CONCLUÍDAS (ver seção 4 e o
+histórico):
+[x] 1. Save / load da partida
+[x] 2. Pilhagem (decisões: a melhoria vira ruína e o Trabalhador
+       reconstrói; custa 1 movimento; Trabalhadores e cidadãos da
+       melhoria são executados; cidade pode ficar vazia e o
+       Trabalhador migra para ela; não pilha o próprio território)
+[x] 3. Fronteiras, territórios e classes de cidade (decisões:
+       Povoado 1-5, Vila 6-15, Cidade 16-30, Metrópole 31+; a
+       classe é só uma classificação e a capital é à parte; área
+       de trabalho = território; quem constrói primeiro fica com a
+       casa; fora do território só o Trabalhador constrói, e só
+       madeireira)
 
-[ ] 1. SAVE / LOAD DA PARTIDA
-    - Hoje não há banco de dados nem save: a partida só existe na
-      memória e se perde ao fechar o jogo.
-    - Proposta: arquivo JSON em user://saves/ (no Windows,
-      %APPDATA%\Godot\app_userdata\ProjetoGame\saves\), com
-      to_dict() / from_dict() em cada classe (Player, City, Unit,
-      LumberMill, GameMap, TurnManager).
-    - F5 salva, F9 carrega, vários slots; salvamento automático no
-      início de cada turno do jogador; número de versão no arquivo
-      (para saves antigos continuarem abrindo).
-    - Cuidado com o estado "escondido": madeira que resta em cada
-      floresta, Trabalhadores dentro das madeireiras, unidades
-      fortificadas dentro das cidades, progresso das obras e
-      trabalhadores dos prédios, ordens "Mover", estado da máquina
-      (personalidade, turnos esperando).
-    - Teste automático de ida e volta: salvar no meio da partida,
-      carregar e conferir que tudo voltou igual.
+[ ] INVASÃO E CONQUISTA DE CIDADES (em breve)
+    - Atacar a cidade e a guarnição dela; conquistar (a cidade
+      muda de dono, com o território) ou destruir.
+    - A decidir: o que acontece com a população, os prédios, as
+      obras e as melhorias; se a capital conquistada passa a
+      capital para outra cidade.
 
-[ ] 2. PILHAGEM
-    - Unidades militares podem pilhar fazendas e madeireiras
-      inimigas (da cidade ou remotas):
-        * pilhar FAZENDA: a unidade recupera 30 de saúde (energia);
-        * pilhar MADEIREIRA: o jogador ganha 5 de ouro.
-    - A decidir:
-        * a melhoria é destruída ao ser pilhada? (no Civilization,
-          sim);
-        * quanto custa pilhar (gasta o turno? 1 movimento?);
-        * Trabalhadores dentro de uma madeireira remota pilhada:
-          voltam ao mapa? são capturados?
-        * cidadãos que trabalhavam na melhoria: ficam livres e são
-          realocados (como numa floresta esgotada);
-        * pode pilhar o próprio território? (provavelmente não);
-        * a máquina deve usar a pilhagem e também se defender dela.
+[ ] CRESCIMENTO DO TERRITÓRIO
+    - Hoje o território fica do tamanho que nasceu.
+    - A decidir o gatilho: subir de classe? crescer a população?
+      cultura acumulada por turno (quando existir cultura)? Quanto
+      cresce a cada vez e em que ordem (casas mais perto primeiro?).
 
-[ ] 3. FRONTEIRAS, TERRITÓRIOS E CLASSES DE CIDADE
-    - Cada cidade tem um território, marcado no mapa com a borda na
-      cor do dono.
-    - A PRIMEIRA cidade é a CAPITAL: começa com o território do
-      raio de ação dela (hoje, a área de 21 casas).
-    - Cidades fundadas depois começam como POVOADO: território só
-      das 8 casas vizinhas ao centro.
-    - Ao crescer, a cidade sobe de classe e o território aumenta.
-    - Novo atributo de classe da cidade:
-        Capital, Povoado, Vila, Cidade, Metrópole
-    - Futuro (diplomacia): entrar no território de outro jogador
-      sem acordo = declaração de guerra surpresa.
-    - A decidir:
-        * requisitos de cada classe (sugestão para discutir:
-          Povoado 1-2 de população, Vila 3-5, Cidade 6-9, Metrópole
-          10+; ou também exigir prédios, ex.: Vila precisa de ...);
-        * gatilhos da expansão do território: subir de classe?
-          crescer a população? cultura acumulada por turno (quando
-          existir cultura)?
-        * a Capital é uma classe ou um título? (uma Capital também
-          tem tamanho: Capital-Vila, Capital-Cidade...);
-        * a área de trabalho (fazendas, madeireiras) passa a ser
-          só dentro do território? (hoje é sempre a área de 21
-          casas);
-        * territórios de duas cidades que se encostam: quem fica
-          com a casa? (a mais antiga? a mais perto?);
-        * o que acontece com melhorias fora do território
-          (madeireiras remotas);
-        * a máquina respeitar e usar fronteiras.
+[ ] TROCA DE TERRITÓRIOS
+    - Mecânica para uma casa mudar de cidade ou de jogador (hoje,
+      quem constrói primeiro fica com a casa para sempre).
+    - Ideias: troca entre cidades do mesmo jogador; acordo entre
+      jogadores (diplomacia); pressão cultural da cidade vizinha.
+
+[ ] Fronteiras e diplomacia: entrar no território de outro jogador
+    sem acordo = declaração de guerra surpresa.
+[ ] Melhorias fora do território além da madeireira (ex.: mina,
+    estrada), feitas pelo Trabalhador.
+[ ] Efeitos da classe da cidade (hoje é só um nome): prédios que
+    exigem Vila ou Cidade, território maior etc.
 
 [ ] Personalidades da máquina em jogo (já existem como dados):
     expansionista, econômica (crescimento), defensiva; depois

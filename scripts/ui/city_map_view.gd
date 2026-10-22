@@ -4,7 +4,8 @@ extends Control
 ## Mapa da área de trabalho da cidade, na janela da cidade: a cidade no centro,
 ## as 8 casas vizinhas e as 12 seguintes (sem as pontas). Mostra o terreno, as
 ## fazendas, as madeireiras (com a madeira que resta), as obras (com progresso)
-## e os cidadãos trabalhando.
+## e os cidadãos trabalhando. A borda na cor do dono marca o território (a
+## área de trabalho); as casas de fora aparecem escurecidas.
 ## No modo de escolha, destaca as casas onde dá para construir e avisa o clique.
 
 signal cell_picked(cell: Vector2i)
@@ -14,6 +15,8 @@ signal pick_cancelled
 const CELL_SIZE := 72
 const HIGHLIGHT_COLOR := Color(0.4, 1.0, 0.4)
 const BLOCKED_TINT := Color(0, 0, 0, 0.55)
+## Casas fora do território da cidade.
+const OUTSIDE_TINT := Color(0, 0, 0, 0.6)
 const HOVER_COLOR := Color(1, 1, 1, 0.9)
 ## Espiga de milho (com o alimento por turno) no centro da fazenda trabalhada.
 const CORN_SIZE := Vector2(38, 50)
@@ -71,14 +74,19 @@ func _notification(what: int) -> void:
 ## Dica ao parar o mouse sobre uma casa.
 func _get_tooltip(at_position: Vector2) -> String:
 	var cell := _cell_at(at_position)
-	if _city == null or not _city.area_cells().has(cell) or not _game.game_map.is_in_bounds(cell):
+	if _city == null or not _view_cells().has(cell) or not _game.game_map.is_in_bounds(cell):
 		return ""
 	var map := _game.game_map
 	var text := "(%d, %d) %s" % [cell.x, cell.y, Terrain.NAMES[map.get_terrain(cell)]]
 	if map.get_terrain(cell) == Terrain.Type.FOREST:
 		text += " (madeira %d/%d)" % [map.wood_left(cell), Terrain.WOOD_PER_FOREST]
-	if cell == _city.cell:
-		text += " - %s (+%d alimento)" % [_city.city_name, City.CENTER_FOOD]
+	if not _city.territory.has(cell):
+		var owner_city := _game.territory_owner(cell)
+		text += " - fora do território%s" % (" (território de %s)" % owner_city.city_name if owner_city else "")
+		if _game.lumber_mill_at(cell):
+			text += "; madeireira de %s" % _game.lumber_mill_at(cell).owner_player.display_name
+	elif cell == _city.cell:
+		text += " - %s (+%d alimento)" % [_city.city_name, City.CENTER_FOOD if _city.population > 0 else 0]
 	elif _city.farms.has(cell):
 		text += " - Fazenda %s" % ("trabalhada (+%d alimento)" % _city.farm_food(cell) if _city.farms[cell] > 0 else "sem trabalhador (renderia +%d)" % _city.farm_food(cell))
 	elif _city.lumber_mills.has(cell):
@@ -104,7 +112,7 @@ func _draw() -> void:
 		return
 	var map := _game.game_map
 	var font := ThemeDB.fallback_font
-	for cell in _city.area_cells():
+	for cell in _view_cells():
 		var rect := _cell_rect(cell)
 		if not map.is_in_bounds(cell):
 			draw_rect(rect, Color.BLACK)
@@ -132,6 +140,8 @@ func _draw() -> void:
 				_draw_worker(rect, construction.workers)
 		elif cell != _city.cell and (_game.claiming_city(cell) or _game.lumber_mill_at(cell)):
 			draw_rect(rect, BLOCKED_TINT)
+		if not _city.territory.has(cell):
+			draw_rect(rect, OUTSIDE_TINT) # fora do território: a cidade não trabalha aqui
 
 		if is_picking() and cell != _city.cell:
 			if _pick_cells.has(cell):
@@ -139,16 +149,42 @@ func _draw() -> void:
 			else:
 				draw_rect(rect, BLOCKED_TINT)
 
+	_draw_border()
 	City.draw_city_icon(self, _cell_rect(_city.cell).grow(-CELL_SIZE / 10.0),
 			_city.owner_player.color, _city.population, int(CELL_SIZE * 0.45))
 
-	if _city.area_cells().has(_hover) and (not is_picking() or _pick_cells.has(_hover)):
+	if _view_cells().has(_hover) and (not is_picking() or _pick_cells.has(_hover)):
 		draw_rect(_cell_rect(_hover), HOVER_COLOR, false, 2.0)
 
 	if is_picking():
 		var hint := "Escolha o terreno"
 		draw_string_outline(font, Vector2(6, 18), hint, HORIZONTAL_ALIGNMENT_LEFT, -1, 16, 4, Color.BLACK)
 		draw_string(font, Vector2(6, 18), hint, HORIZONTAL_ALIGNMENT_LEFT, -1, 16, HIGHLIGHT_COLOR)
+
+
+## Fronteira do território da cidade, na cor do dono (como no mapa).
+func _draw_border() -> void:
+	var color := _city.owner_player.color
+	for cell in _city.territory:
+		var rect := _cell_rect(cell)
+		for side: Array in TerritoryOverlay.SIDES:
+			if _city.territory.has(cell + side[0]):
+				continue
+			var from: Vector2 = rect.position + side[1] * rect.size
+			var to: Vector2 = rect.position + side[2] * rect.size
+			var inward := (rect.get_center() - (from + to) / 2.0).normalized() * 2.0
+			draw_line(from + inward, to + inward, Color.BLACK, 6.0)
+			draw_line(from + inward, to + inward, color, 4.0)
+
+
+## Casas mostradas na janela: a área de 21 casas em volta da cidade (o
+## território inteiro da capital; nas outras, o que fica fora do território
+## aparece escurecido).
+func _view_cells() -> Array[Vector2i]:
+	var cells: Array[Vector2i] = []
+	for offset in City.area_offsets():
+		cells.append(_city.cell + offset)
+	return cells
 
 
 ## Barrinha de progresso na base da casa, com "progresso/custo" em cima.

@@ -10,7 +10,9 @@ extends RefCounted
 ## A cada turno:
 ##   1. em todas as cidades, primeiro: compra de defesa com ouro, se há
 ##      inimigo perto e a cidade está sem guarnição;
-##   2. em cada cidade, pedidos (um de cada tipo por vez):
+##   2. em cada cidade (menos as vazias), pedidos (um de cada tipo por vez):
+##        reconst. Trabalhador para as ruínas (melhorias pilhadas) e para
+##                 repovoar cidades vazias (1 por ruína/cidade, até 2);
 ##        comida   fazenda nova se o alimento não chega a food_surplus (e
 ##                 todas as fazendas já têm trabalhador);
 ##        defesa   Guerreiro (e a Lança dele) para a guarnição da cidade;
@@ -313,9 +315,10 @@ func _rebuild_jobs() -> int:
 	return mini(_ruin_cells().size() + empty, 2)
 
 
-## Melhor casa para uma cidade nova ao alcance do Colono (ou NO_TARGET).
-## Nota = terreno da área (pradaria 3, cerrado e floresta 2, água 1) menos
-## casas já usadas por outras cidades e menos a distância a andar.
+## Melhor casa para uma cidade nova ao alcance do Colono (ou NO_TARGET), fora
+## de qualquer território. Nota = terreno do território que ela teria (21 casas
+## para a capital, 9 para as outras; pradaria 3, cerrado e floresta 2, água 1),
+## sem as casas que já são de outra cidade, menos a distância a andar.
 func _best_city_site(settler: Unit) -> Vector2i:
 	var map := _game.game_map
 	var occupants := _game.occupants()
@@ -324,7 +327,7 @@ func _best_city_site(settler: Unit) -> Vector2i:
 	var best := Unit.NO_TARGET
 	var best_score := -INF
 	for cell: Vector2i in reachable:
-		if occupants.has(cell) or _game.claiming_city(cell) or _game.lumber_mill_at(cell):
+		if occupants.has(cell) or _game.claiming_city(cell) or _game.lumber_mill_at(cell) or _game.territory_owner(cell):
 			continue
 		var too_close := false
 		for city in _game.cities():
@@ -333,10 +336,10 @@ func _best_city_site(settler: Unit) -> Vector2i:
 		if too_close:
 			continue
 		var score := 0.0
-		for offset in City.area_offsets():
+		for offset in City.territory_offsets(_player.cities.is_empty()):
 			var area_cell: Vector2i = cell + offset
-			if not map.is_in_bounds(area_cell):
-				continue
+			if not map.is_in_bounds(area_cell) or _game.territory_owner(area_cell):
+				continue # casa de outra cidade: não entra no território novo
 			match map.get_terrain(area_cell):
 				Terrain.Type.GRASSLAND:
 					score += 3.0
@@ -364,6 +367,9 @@ func _best_forest(worker: Unit) -> Vector2i:
 	for cell: Vector2i in reachable:
 		if occupants.has(cell) or map.get_terrain(cell) != Terrain.Type.FOREST or _game.claiming_city(cell):
 			continue
+		var owner_city := _game.territory_owner(cell)
+		if owner_city and owner_city.owner_player != _player:
+			continue # território de outro jogador
 		var mill := _game.lumber_mill_at(cell)
 		if mill and (mill.owner_player != _player or not mill.has_room()):
 			continue

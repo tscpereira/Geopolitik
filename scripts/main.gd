@@ -48,12 +48,15 @@ var _goto_mode := false
 ## Madeireira remota selecionada (clique nela): a barra de ações mostra
 ## "Retirar trabalhador". Só uma coisa fica selecionada: unidade ou madeireira.
 var _selected_mill: LumberMill = null
+## Dono de cada casa de território: {casa: City} (ver refresh_territories).
+var _territory := {}
 ## Construções concluídas nas cidades do humano neste início de turno, à espera
 ## do aviso: [[City, City.Build], ...].
 var _completion_notices: Array[Array] = []
 
 @onready var game_map: GameMap = $GameMap
 @onready var move_overlay: MoveOverlay = $MoveOverlay
+@onready var territory_overlay: TerritoryOverlay = $TerritoryOverlay
 @onready var cities_root: Node2D = $Cities
 @onready var units_root: Node2D = $Units
 @onready var camera: MapCamera = $MapCamera
@@ -184,6 +187,35 @@ func get_city_at(cell: Vector2i) -> City:
 	return null
 
 
+## Cidade de cujo território a casa faz parte (ou null: terra sem dono).
+func territory_owner(cell: Vector2i) -> City:
+	return _territory.get(cell)
+
+
+## Recalcula o dono de cada casa a partir dos territórios das cidades e
+## redesenha as fronteiras.
+func refresh_territories() -> void:
+	_territory = {}
+	for city in cities():
+		for cell in city.territory:
+			_territory[cell] = city
+	territory_overlay.set_territories(_territory)
+
+
+## Território inicial da cidade (City.territory_offsets: 21 casas na capital,
+## 9 nas outras), sem as casas que já são de outra cidade nem as que têm a
+## madeireira remota de outro jogador: quem chegou primeiro fica com a casa.
+func _claim_territory(city: City) -> void:
+	city.territory.clear()
+	for offset in City.territory_offsets(city.is_capital):
+		var cell := city.cell + offset
+		var mill := lumber_mill_at(cell)
+		var owner_city := territory_owner(cell)
+		if (game_map.is_in_bounds(cell) and (owner_city == null or owner_city == city)
+				and (mill == null or mill.owner_player == city.owner_player)):
+			city.territory.append(cell)
+
+
 ## Cidade que tem uma fazenda ou obra na casa (ou null).
 func claiming_city(cell: Vector2i) -> City:
 	for city in cities():
@@ -229,6 +261,8 @@ func city_site_error(unit: Unit) -> String:
 		return "Esta casa já é usada por %s." % claiming_city(unit.cell).city_name
 	if lumber_mill_at(unit.cell):
 		return "Esta casa já tem uma madeireira."
+	if territory_owner(unit.cell):
+		return "Esta casa é território de %s." % territory_owner(unit.cell).city_name
 	return ""
 
 
@@ -294,6 +328,9 @@ func lumber_mill_error(unit: Unit) -> String:
 		return "Madeireiras só podem ser construídas na floresta."
 	if claiming_city(unit.cell):
 		return "Esta casa já é usada por %s." % claiming_city(unit.cell).city_name
+	var owner_city := territory_owner(unit.cell)
+	if owner_city and owner_city.owner_player != unit.owner_player:
+		return "Esta casa é território de %s (%s)." % [owner_city.city_name, owner_city.owner_player.display_name]
 	return ""
 
 
@@ -310,11 +347,12 @@ func pillage_target(cell: Vector2i) -> Dictionary:
 	return {}
 
 
-## Se a casa tem uma melhoria que [param player] pode pilhar: pronta e de outro
-## jogador.
+## Se a casa tem uma melhoria que [param player] pode pilhar: pronta, de outro
+## jogador e fora do território dele.
 func is_pillageable_by(player: Player, cell: Vector2i) -> bool:
 	var target := pillage_target(cell)
-	return not target.is_empty() and target["owner"] != player
+	var owner_city := territory_owner(cell)
+	return not target.is_empty() and target["owner"] != player and (owner_city == null or owner_city.owner_player != player)
 
 
 ## Motivo pelo qual a unidade não pode pilhar a casa em que está ("" = pode).
@@ -328,8 +366,10 @@ func pillage_error(unit: Unit) -> String:
 		if (city and city.ruins.has(unit.cell)) or (mill and mill.pillaged):
 			return "Esta melhoria já foi destruída."
 		return "Não há fazenda nem madeireira pronta nesta casa."
-	if not is_pillageable_by(unit.owner_player, unit.cell):
+	if target["owner"] == unit.owner_player:
 		return "Não dá para pilhar as próprias melhorias."
+	if not is_pillageable_by(unit.owner_player, unit.cell):
+		return "Não dá para pilhar no próprio território."
 	if unit.moves_left < PILLAGE_COST:
 		return "A unidade não tem mais movimentos neste turno."
 	return ""
@@ -551,9 +591,13 @@ func found_city(settler: Unit, city_name := "") -> City:
 		game_map.set_terrain(settler.cell, Terrain.Type.GRASSLAND)
 	var city := City.new()
 	city.setup(city_name if not city_name.is_empty() else _next_city_name(), player, settler.cell, game_map)
+	city.is_capital = player.cities.is_empty()
+	_claim_territory(city)
 	cities_root.add_child(city)
 	player.cities.append(city)
-	print("%s fundou a cidade %s em %s" % [player.display_name, city.city_name, city.cell])
+	refresh_territories()
+	print("%s fundou a cidade %s em %s (%s, território de %d casas)" % [
+		player.display_name, city.city_name, city.cell, city.rank_text(), city.territory.size()])
 	FloatingText.spawn(units_root, city.position - Vector2(0, GameMap.TILE_SIZE / 2.0),
 			city.city_name, Color.WHITE)
 
@@ -764,9 +808,10 @@ func advance_goto(unit: Unit) -> void:
 ## Início da vez do humano: as unidades com ordem "Mover" andam sozinhas.
 func _run_goto_orders(player: Player) -> void:
 	for unit in player.units.duplicate():
-		if unit.has_goto() and not game_over:
+		if is_instance_valid(unit) and unit.has_goto() and not game_over:
 			await camera.pan_to(unit.position, 0.15)
-			await advance_goto(unit)
+			if is_instance_valid(unit): # um save pode ter sido carregado durante a câmera
+				await advance_goto(unit)
 
 
 ## Botões da barra de ações do HUD (os mesmos das teclas de atalho).
@@ -1281,6 +1326,12 @@ func restore_state(data: Dictionary) -> void:
 			city.apply_dict(city_data)
 			cities_root.add_child(city)
 			player.cities.append(city)
+	refresh_territories()
+	for city in cities():
+		if city.territory.is_empty(): # save anterior aos territórios: território inicial
+			city.is_capital = city == city.owner_player.cities[0]
+			_claim_territory(city)
+			refresh_territories()
 	TurnManager.restore(players, data["turn_manager"])
 	var current := TurnManager.current_player()
 	print("Partida carregada: turno %d, vez do %s" % [TurnManager.turn_number, current.display_name])
@@ -1404,11 +1455,14 @@ func _update_info() -> void:
 	var unit := selected_unit
 	if game_map.is_in_bounds(_hover_cell):
 		lines.append("Casa (%d, %d): %s" % [_hover_cell.x, _hover_cell.y, _terrain_text(_hover_cell)])
+		var owner_city := territory_owner(_hover_cell)
+		if owner_city:
+			lines[-1] += " - território de %s (%s)" % [owner_city.city_name, owner_city.owner_player.display_name]
 		var city := get_city_at(_hover_cell)
 		var mill := lumber_mill_at(_hover_cell)
 		if city:
-			lines.append("Cidade %s (%s) - População %d | Alimentos %d/%d (%+d por turno)" % [
-				city.city_name, city.owner_player.display_name, city.population,
+			lines.append("Cidade %s (%s, %s) - População %d | Alimentos %d/%d (%+d por turno)" % [
+				city.city_name, city.owner_player.display_name, city.rank_text(), city.population,
 				city.food_stock, city.food_capacity(), city.food_per_turn(),
 			])
 		elif claiming_city(_hover_cell):

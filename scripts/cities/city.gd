@@ -24,6 +24,16 @@ extends Node2D
 ##      esgotada) vai para a próxima obra da fila ou, sem obras, para uma
 ##      fazenda sem trabalhador e depois para uma madeireira com vaga.
 ##
+## TERRITÓRIO: as casas da cidade, marcadas no mapa com a borda na cor do dono
+## (TerritoryOverlay). A primeira cidade do jogador é a capital e começa com a
+## área de 21 casas (area_offsets); as outras começam com as 8 vizinhas
+## (territory_offsets). Casa que já é território de outra cidade (ou tem a
+## madeireira remota de outro jogador) fica com quem chegou primeiro. A área de
+## trabalho (fazendas, madeireiras) é o território. Por enquanto ele não cresce.
+##
+## CLASSE: só uma classificação pelo tamanho (rank): Povoado (1-5 de população),
+## Vila (6-15), Cidade (16-30) e Metrópole (31+). Ser a capital é à parte.
+##
 ## PILHAGEM (Game.pillage): uma unidade militar inimiga destrói uma fazenda ou
 ## madeireira pronta da cidade. A melhoria vira ruína (ruins) e não produz; os
 ## cidadãos que trabalhavam nela são executados e saem da população, que pode
@@ -48,6 +58,24 @@ extends Node2D
 signal changed
 
 enum Build { FARM, LUMBER_MILL, WARRIOR, WORKER, SETTLER, CITY_HALL, HEADQUARTERS, CARPENTRY, SPEAR }
+
+## Classe da cidade, pelo tamanho (ver rank).
+enum Rank { SETTLEMENT, TOWN, CITY, METROPOLIS }
+
+const RANK_NAMES := {
+	Rank.SETTLEMENT: "Povoado",
+	Rank.TOWN: "Vila",
+	Rank.CITY: "Cidade",
+	Rank.METROPOLIS: "Metrópole",
+}
+
+## População mínima de cada classe (o Povoado vai de 0 a 5).
+const RANK_MIN_POPULATION := {
+	Rank.SETTLEMENT: 0,
+	Rank.TOWN: 6,
+	Rank.CITY: 16,
+	Rank.METROPOLIS: 31,
+}
 
 ## Classes da lista "Construir", na ordem em que aparecem.
 enum Category { UNIT, WEAPON, TERRAIN_IMPROVEMENT, BUILDING }
@@ -250,6 +278,11 @@ class Construction:
 var city_name := ""
 var owner_player: Player
 var cell: Vector2i
+## Primeira cidade do jogador: começa com um território maior.
+var is_capital := false
+## Casas do território (inclui a casa da cidade). É também a área de trabalho.
+## Definido ao fundar (Game.found_city); por enquanto não cresce.
+var territory: Array[Vector2i] = []
 var population := 1
 var food_stock := 0
 ## Fazendas prontas: {casa: cidadãos trabalhando (0 ou 1)}.
@@ -296,7 +329,8 @@ func setup(p_name: String, p_owner: Player, p_cell: Vector2i, map: GameMap) -> v
 ## Estado da cidade para o save.
 func to_dict() -> Dictionary:
 	return {
-		"name": city_name, "cell": SaveGame.cell_to_json(cell), "population": population,
+		"name": city_name, "cell": SaveGame.cell_to_json(cell), "is_capital": is_capital,
+		"territory": SaveGame.cells_to_json(territory), "population": population,
 		"food_stock": food_stock, "farms": SaveGame.cell_map_to_json(farms),
 		"lumber_mills": SaveGame.cell_map_to_json(lumber_mills),
 		"constructions": constructions.map(func(construction: Construction) -> Dictionary: return construction.to_dict()),
@@ -308,6 +342,9 @@ func to_dict() -> Dictionary:
 
 ## Volta ao estado salvo (depois de setup, que já deu o nome, o dono e a casa).
 func apply_dict(data: Dictionary) -> void:
+	is_capital = data.get("is_capital", false)
+	if data.has("territory"):
+		territory = SaveGame.json_to_cells(data["territory"])
 	population = int(data["population"])
 	food_stock = int(data["food_stock"])
 	farms = SaveGame.json_to_cell_map(data["farms"])
@@ -396,10 +433,47 @@ func add_building(build: int) -> void:
 	_notify_changed()
 
 
+# --- Classe e território -------------------------------------------------------
+
+## Classe pelo tamanho: Povoado, Vila, Cidade ou Metrópole (RANK_MIN_POPULATION).
+func rank() -> Rank:
+	var result := Rank.SETTLEMENT
+	for candidate: Rank in RANK_MIN_POPULATION:
+		if population >= RANK_MIN_POPULATION[candidate]:
+			result = candidate
+	return result
+
+
+## "Povoado", "Vila (capital)"...
+func rank_text() -> String:
+	return RANK_NAMES[rank()] + (" (capital)" if is_capital else "")
+
+
+## Faixa de população da classe: "1-5", "31+".
+static func rank_range_text(value: Rank) -> String:
+	var next: int = RANK_MIN_POPULATION.get(value + 1, -1)
+	if next < 0:
+		return "%d+" % RANK_MIN_POPULATION[value]
+	return "%d-%d" % [maxi(RANK_MIN_POPULATION[value], 1), next - 1]
+
+
+## Território inicial: a capital fica com a área de 21 casas (area_offsets); as
+## outras cidades, com a casa delas e as 8 vizinhas.
+static func territory_offsets(capital: bool) -> Array[Vector2i]:
+	if capital:
+		return area_offsets()
+	var offsets: Array[Vector2i] = []
+	for y in range(-1, 2):
+		for x in range(-1, 2):
+			offsets.append(Vector2i(x, y))
+	return offsets
+
+
 # --- Área da cidade ----------------------------------------------------------
 
-## Deslocamentos da área de trabalho: as 8 casas vizinhas mais as 12 seguintes,
-## sem as 4 pontas (um quadrado 5x5 sem os cantos). Inclui a própria cidade (0, 0).
+## Deslocamentos da área de 21 casas: as 8 casas vizinhas mais as 12 seguintes,
+## sem as 4 pontas (um quadrado 5x5 sem os cantos). Inclui a própria cidade
+## (0, 0). É o território inicial da capital e o que a janela da cidade mostra.
 static func area_offsets() -> Array[Vector2i]:
 	var offsets: Array[Vector2i] = []
 	for y in range(-2, 3):
@@ -413,12 +487,9 @@ static func area_offsets() -> Array[Vector2i]:
 	return offsets
 
 
-## Casas da área de trabalho no mapa, incluindo a casa da cidade.
+## Casas da área de trabalho no mapa (o território), incluindo a casa da cidade.
 func area_cells() -> Array[Vector2i]:
-	var cells: Array[Vector2i] = []
-	for offset in area_offsets():
-		cells.append(cell + offset)
-	return cells
+	return territory.duplicate()
 
 
 func construction_at(target: Vector2i) -> Construction:
@@ -802,8 +873,11 @@ func process_turn(spawn_unit: Callable) -> Array[String]:
 	food_stock += food_per_turn()
 	if food_stock >= food_capacity():
 		food_stock = 0 # estoque cheio: cresce e o estoque esvazia (Civilization II)
+		var old_rank := rank()
 		population += 1
 		events.append("cresceu para %d de população" % population)
+		if rank() != old_rank:
+			events.append("agora é %s %s" % ["uma" if rank() in [Rank.TOWN, Rank.CITY, Rank.METROPOLIS] else "um", RANK_NAMES[rank()]])
 	elif food_stock < 0:
 		food_stock = 0
 		if population > 1:
@@ -922,6 +996,9 @@ func _draw() -> void:
 	var origin := Vector2(-width / 2.0, tile.y / 2.0 + NAME_FONT_SIZE)
 	draw_string_outline(font, origin, city_name, HORIZONTAL_ALIGNMENT_LEFT, -1, NAME_FONT_SIZE, NAME_FONT_SIZE / 3, Color.BLACK)
 	draw_string(font, origin, city_name, HORIZONTAL_ALIGNMENT_LEFT, -1, NAME_FONT_SIZE, Color.WHITE)
+	if is_capital:
+		var star_center := Vector2(origin.x - NAME_FONT_SIZE * 0.7, origin.y - NAME_FONT_SIZE * 0.35)
+		draw_star(self, star_center, NAME_FONT_SIZE * 0.55)
 
 
 ## Barrinha do estoque de alimentos logo acima da cidade. Vermelha quando a
@@ -989,6 +1066,18 @@ static func draw_improvement(canvas: CanvasItem, build: int, rect: Rect2, alpha 
 		LumberMill.draw_icon(canvas, rect, alpha)
 	else:
 		draw_farm(canvas, rect, alpha >= 1.0)
+
+
+## Estrela dourada da capital (ao lado do nome, no mapa e na janela da cidade).
+static func draw_star(canvas: CanvasItem, center: Vector2, radius: float) -> void:
+	var points := PackedVector2Array()
+	for i in 10:
+		var angle := -PI / 2.0 + i * PI / 5.0
+		points.append(center + Vector2(cos(angle), sin(angle)) * (radius if i % 2 == 0 else radius * 0.45))
+	var outline := points.duplicate()
+	outline.append(points[0])
+	canvas.draw_colored_polygon(points, Color(1, 0.82, 0.2))
+	canvas.draw_polyline(outline, Color.BLACK, maxf(1.0, radius / 5.0))
 
 
 ## Melhoria destruída (pilhada): o PNG de RUIN_TEXTURES.

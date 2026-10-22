@@ -276,7 +276,7 @@ func _refresh() -> void:
 	_refresh_queued = false
 	if _city == null:
 		return
-	_title.text = "%s  (%s)%s" % [_city.city_name, _city.owner_player.display_name,
+	_title.text = "%s  (%s, %s)%s" % [_city.city_name, _city.owner_player.display_name, _city.rank_text(),
 			"  - observando" if _read_only else ""]
 	_title.add_theme_color_override("font_color", _city.owner_player.color)
 	_summary.text = _summary_text()
@@ -302,6 +302,9 @@ func _refresh() -> void:
 func _summary_text() -> String:
 	var lines: Array[String] = []
 	lines.append("População: %d   (livres: %d)" % [_city.population, _city.free_citizens()])
+	lines.append("Classe: %s (%s de população)%s   Território: %d casas" % [
+		City.RANK_NAMES[_city.rank()], City.rank_range_text(_city.rank()),
+		"  -  capital" if _city.is_capital else "", _city.territory.size()])
 	var food := _city.food_per_turn()
 	var growth := _city.turns_to_grow()
 	# Saldo de alimento colorido: verde sobrando, vermelho faltando
