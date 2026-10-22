@@ -1,0 +1,268 @@
+[gd_scene load_steps=11 format=3]
+
+[ext_resource type="Script" path="res://scripts/main.gd" id="1"]
+[ext_resource type="Script" path="res://scripts/map/game_map.gd" id="2"]
+[ext_resource type="Script" path="res://scripts/camera/map_camera.gd" id="3"]
+[ext_resource type="Script" path="res://scripts/map/move_overlay.gd" id="4"]
+[ext_resource type="Script" path="res://scripts/ui/hud.gd" id="5"]
+[ext_resource type="Script" path="res://scripts/ui/city_window.gd" id="6"]
+[ext_resource type="Script" path="res://scripts/ui/city_name_dialog.gd" id="7"]
+[ext_resource type="Script" path="res://scripts/ui/notice_dialog.gd" id="8"]
+
+[sub_resource type="StyleBoxFlat" id="PanelStyle"]
+bg_color = Color(0, 0, 0, 0.6)
+content_margin_left = 12.0
+content_margin_top = 6.0
+content_margin_right = 12.0
+content_margin_bottom = 6.0
+corner_radius_top_left = 4
+corner_radius_top_right = 4
+corner_radius_bottom_right = 4
+corner_radius_bottom_left = 4
+
+[node name="Main" type="Node2D"]
+script = ExtResource("1")
+
+[node name="GameMap" type="Node2D" parent="."]
+texture_filter = 1
+script = ExtResource("2")
+
+[node name="TerrainLayer" type="TileMapLayer" parent="GameMap"]
+
+[node name="Cities" type="Node2D" parent="."]
+
+[node name="MoveOverlay" type="Node2D" parent="." node_paths=PackedStringArray("map")]
+script = ExtResource("4")
+map = NodePath("../GameMap")
+
+[node name="Units" type="Node2D" parent="."]
+texture_filter = 1
+
+[node name="MapCamera" type="Camera2D" parent="."]
+script = ExtResource("3")
+
+[node name="HUD" type="CanvasLayer" parent="."]
+script = ExtResource("5")
+
+[node name="TurnPanel" type="PanelContainer" parent="HUD"]
+offset_left = 10.0
+offset_top = 10.0
+theme_override_styles/panel = SubResource("PanelStyle")
+
+[node name="VBox" type="VBoxContainer" parent="HUD/TurnPanel"]
+theme_override_constants/separation = 0
+
+[node name="TurnRow" type="HBoxContainer" parent="HUD/TurnPanel/VBox"]
+theme_override_constants/separation = 20
+
+[node name="TurnLabel" type="Label" parent="HUD/TurnPanel/VBox/TurnRow"]
+theme_override_font_sizes/font_size = 24
+text = "Turno 1"
+
+[node name="EndTurnLabel" type="Label" parent="HUD/TurnPanel/VBox/TurnRow"]
+visible = false
+theme_override_colors/font_color = Color(1, 0.85, 0.2, 1)
+theme_override_font_sizes/font_size = 24
+text = "Finalizar turno? [Enter]"
+
+[node name="PlayerLabel" type="Label" parent="HUD/TurnPanel/VBox"]
+text = "Vez do Jogador 1"
+
+[node name="TopRight" type="HBoxContainer" parent="HUD"]
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -10.0
+offset_top = 10.0
+offset_right = -10.0
+grow_horizontal = 0
+theme_override_constants/separation = 8
+alignment = 2
+
+[node name="ArsenalPanel" type="PanelContainer" parent="HUD/TopRight"]
+layout_mode = 2
+size_flags_vertical = 0
+theme_override_styles/panel = SubResource("PanelStyle")
+
+[node name="VBox" type="VBoxContainer" parent="HUD/TopRight/ArsenalPanel"]
+layout_mode = 2
+theme_override_constants/separation = 2
+
+[node name="Title" type="Label" parent="HUD/TopRight/ArsenalPanel/VBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.75, 0.75, 0.75, 1)
+theme_override_font_sizes/font_size = 13
+text = "Arsenal"
+
+[node name="Weapons" type="VBoxContainer" parent="HUD/TopRight/ArsenalPanel/VBox"]
+layout_mode = 2
+theme_override_constants/separation = 2
+
+[node name="ResourcePanel" type="PanelContainer" parent="HUD/TopRight"]
+layout_mode = 2
+size_flags_vertical = 0
+theme_override_styles/panel = SubResource("PanelStyle")
+
+[node name="VBox" type="VBoxContainer" parent="HUD/TopRight/ResourcePanel"]
+theme_override_constants/separation = 2
+
+[node name="GoldRow" type="HBoxContainer" parent="HUD/TopRight/ResourcePanel/VBox"]
+theme_override_constants/separation = 8
+
+[node name="GoldIcon" type="TextureRect" parent="HUD/TopRight/ResourcePanel/VBox/GoldRow"]
+custom_minimum_size = Vector2(28, 28)
+stretch_mode = 3
+
+[node name="GoldLabel" type="RichTextLabel" parent="HUD/TopRight/ResourcePanel/VBox/GoldRow"]
+custom_minimum_size = Vector2(240, 0)
+bbcode_enabled = true
+fit_content = true
+scroll_active = false
+autowrap_mode = 0
+size_flags_vertical = 4
+theme_override_font_sizes/normal_font_size = 18
+text = "Ouro 0"
+
+[node name="Separator" type="HSeparator" parent="HUD/TopRight/ResourcePanel/VBox"]
+
+[node name="Title" type="Label" parent="HUD/TopRight/ResourcePanel/VBox"]
+theme_override_colors/font_color = Color(0.75, 0.75, 0.75, 1)
+theme_override_font_sizes/font_size = 13
+text = "Recursos estratégicos"
+
+[node name="WoodRow" type="HBoxContainer" parent="HUD/TopRight/ResourcePanel/VBox"]
+theme_override_constants/separation = 8
+
+[node name="WoodIcon" type="Control" parent="HUD/TopRight/ResourcePanel/VBox/WoodRow"]
+custom_minimum_size = Vector2(28, 28)
+
+[node name="WoodLabel" type="RichTextLabel" parent="HUD/TopRight/ResourcePanel/VBox/WoodRow"]
+custom_minimum_size = Vector2(240, 0)
+bbcode_enabled = true
+fit_content = true
+scroll_active = false
+autowrap_mode = 0
+size_flags_vertical = 4
+theme_override_font_sizes/normal_font_size = 18
+text = "Madeira 0"
+
+[node name="InfoPanel" type="PanelContainer" parent="HUD"]
+anchors_preset = 2
+anchor_top = 1.0
+anchor_bottom = 1.0
+offset_left = 10.0
+offset_top = -10.0
+offset_bottom = -10.0
+grow_vertical = 0
+theme_override_styles/panel = SubResource("PanelStyle")
+
+[node name="VBox" type="VBoxContainer" parent="HUD/InfoPanel"]
+
+[node name="InfoLabel" type="Label" parent="HUD/InfoPanel/VBox"]
+
+[node name="HintLabel" type="Label" parent="HUD/InfoPanel/VBox"]
+theme_override_colors/font_color = Color(0.75, 0.75, 0.75, 1)
+theme_override_font_sizes/font_size = 13
+text = "Clique: selecionar / mover   |   Clique no inimigo (vermelho): atacar   |   Clique na sua cidade: abrir
+Botão direito / Esc: cancelar   |   Setas/WASD, roda do mouse: câmera"
+
+[node name="ActionPanel" type="PanelContainer" parent="HUD"]
+visible = false
+anchors_preset = 3
+anchor_left = 1.0
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -10.0
+offset_top = -10.0
+offset_right = -10.0
+offset_bottom = -10.0
+grow_horizontal = 0
+grow_vertical = 0
+theme_override_styles/panel = SubResource("PanelStyle")
+
+[node name="VBox" type="VBoxContainer" parent="HUD/ActionPanel"]
+
+[node name="ActionTitle" type="Label" parent="HUD/ActionPanel/VBox"]
+theme_override_colors/font_color = Color(0.75, 0.75, 0.75, 1)
+theme_override_font_sizes/font_size = 13
+text = "Ações"
+
+[node name="ActionButtons" type="HBoxContainer" parent="HUD/ActionPanel/VBox"]
+
+[node name="MessageLabel" type="Label" parent="HUD"]
+visible = false
+anchors_preset = 10
+anchor_right = 1.0
+offset_top = 70.0
+offset_bottom = 70.0
+grow_horizontal = 2
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 6
+theme_override_font_sizes/font_size = 22
+horizontal_alignment = 1
+
+[node name="CityWindow" type="Control" parent="HUD"]
+visible = false
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("6")
+
+[node name="CityNameDialog" type="Control" parent="HUD"]
+visible = false
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("7")
+
+[node name="NoticeDialog" type="Control" parent="HUD"]
+visible = false
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("8")
+
+[node name="VictoryScreen" type="ColorRect" parent="HUD"]
+visible = false
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0, 0, 0, 0.65)
+
+[node name="Center" type="CenterContainer" parent="HUD/VictoryScreen"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="VBox" type="VBoxContainer" parent="HUD/VictoryScreen/Center"]
+layout_mode = 2
+theme_override_constants/separation = 16
+
+[node name="VictoryLabel" type="Label" parent="HUD/VictoryScreen/Center/VBox"]
+layout_mode = 2
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 10
+theme_override_font_sizes/font_size = 64
+text = "Jogador 1 venceu!"
+horizontal_alignment = 1
+
+[node name="RestartLabel" type="Label" parent="HUD/VictoryScreen/Center/VBox"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 24
+text = "[Enter] Jogar novamente"
+horizontal_alignment = 1

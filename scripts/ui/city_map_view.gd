@@ -1,0 +1,195 @@
+class_name CityMapView
+extends Control
+
+## Mapa da área de trabalho da cidade, na janela da cidade: a cidade no centro,
+## as 8 casas vizinhas e as 12 seguintes (sem as pontas). Mostra o terreno, as
+## fazendas, as madeireiras (com a madeira que resta), as obras (com progresso)
+## e os cidadãos trabalhando.
+## No modo de escolha, destaca as casas onde dá para construir e avisa o clique.
+
+signal cell_picked(cell: Vector2i)
+signal pick_cancelled
+
+## Tamanho de cada casa na janela, em pixels.
+const CELL_SIZE := 72
+const HIGHLIGHT_COLOR := Color(0.4, 1.0, 0.4)
+const BLOCKED_TINT := Color(0, 0, 0, 0.55)
+const HOVER_COLOR := Color(1, 1, 1, 0.9)
+## Espiga de milho (com o alimento por turno) no centro da fazenda trabalhada.
+const CORN_SIZE := Vector2(38, 50)
+const FOOD_FONT_SIZE := 20
+
+var _city: City
+var _game: Game
+## Casas destacadas no modo de escolha (vazio = fora do modo de escolha).
+var _pick_cells: Array[Vector2i] = []
+var _hover := Vector2i.MAX
+
+
+func _ready() -> void:
+	custom_minimum_size = Vector2.ONE * CELL_SIZE * 5
+	texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	mouse_filter = Control.MOUSE_FILTER_STOP
+
+
+func setup(city: City, game: Game) -> void:
+	_city = city
+	_game = game
+	_pick_cells = []
+	queue_redraw()
+
+
+## Entra no modo de escolha destacando [param cells]; vazio sai do modo.
+func set_pick_cells(cells: Array[Vector2i]) -> void:
+	_pick_cells = cells
+	queue_redraw()
+
+
+func is_picking() -> bool:
+	return not _pick_cells.is_empty()
+
+
+func _gui_input(event: InputEvent) -> void:
+	if event is InputEventMouseMotion:
+		var cell := _cell_at(event.position)
+		if cell != _hover:
+			_hover = cell
+			queue_redraw()
+	elif event is InputEventMouseButton and event.pressed and is_picking():
+		if event.button_index == MOUSE_BUTTON_LEFT and _pick_cells.has(_cell_at(event.position)):
+			cell_picked.emit(_cell_at(event.position))
+		elif event.button_index == MOUSE_BUTTON_RIGHT:
+			pick_cancelled.emit()
+
+
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_MOUSE_EXIT:
+		_hover = Vector2i.MAX
+		queue_redraw()
+
+
+## Dica ao parar o mouse sobre uma casa.
+func _get_tooltip(at_position: Vector2) -> String:
+	var cell := _cell_at(at_position)
+	if _city == null or not _city.area_cells().has(cell) or not _game.game_map.is_in_bounds(cell):
+		return ""
+	var map := _game.game_map
+	var text := "(%d, %d) %s" % [cell.x, cell.y, Terrain.NAMES[map.get_terrain(cell)]]
+	if map.get_terrain(cell) == Terrain.Type.FOREST:
+		text += " (madeira %d/%d)" % [map.wood_left(cell), Terrain.WOOD_PER_FOREST]
+	if cell == _city.cell:
+		text += " - %s (+%d alimento)" % [_city.city_name, City.CENTER_FOOD]
+	elif _city.farms.has(cell):
+		text += " - Fazenda %s" % ("trabalhada (+%d alimento)" % _city.farm_food(cell) if _city.farms[cell] > 0 else "sem trabalhador (renderia +%d)" % _city.farm_food(cell))
+	elif _city.lumber_mills.has(cell):
+		text += " - Madeireira, %d/%d trabalhadores (+%d madeira)" % [
+			_city.lumber_mills[cell], LumberMill.MAX_WORKERS, _city.lumber_mills[cell] * LumberMill.WOOD_PER_WORKER]
+	elif _city.construction_at(cell):
+		var construction := _city.construction_at(cell)
+		text += " - %s em obra (%d/%d)" % [construction.display_name(), construction.progress, construction.cost()]
+	elif _game.claiming_city(cell):
+		text += " - usada por %s" % _game.claiming_city(cell).city_name
+	elif _game.lumber_mill_at(cell):
+		text += " - madeireira de %s" % _game.lumber_mill_at(cell).owner_player.display_name
+	return text
+
+
+func _draw() -> void:
+	draw_rect(Rect2(Vector2.ZERO, size), Color(0, 0, 0, 0.5))
+	if _city == null:
+		return
+	var map := _game.game_map
+	var font := ThemeDB.fallback_font
+	for cell in _city.area_cells():
+		var rect := _cell_rect(cell)
+		if not map.is_in_bounds(cell):
+			draw_rect(rect, Color.BLACK)
+			continue
+		draw_texture_rect(map.terrain_texture(map.get_terrain(cell)), rect, false)
+		draw_rect(rect, Color(0, 0, 0, 0.35), false, 1.0)
+
+		var construction := _city.construction_at(cell)
+		if _city.farms.has(cell):
+			City.draw_farm(self, rect)
+			if _city.farms[cell] > 0:
+				_draw_food(rect, _city.farm_food(cell) * _city.farms[cell])
+				_draw_worker(rect, _city.farms[cell])
+		elif _city.lumber_mills.has(cell):
+			LumberMill.draw_icon(self, rect)
+			LumberMill.draw_wood_bar(self, rect, map.wood_left(cell))
+			if _city.lumber_mills[cell] > 0:
+				_draw_worker(rect, _city.lumber_mills[cell])
+		elif construction:
+			City.draw_improvement(self, construction.build, rect, City.CONSTRUCTION_ALPHA)
+			_draw_progress(rect, construction)
+			if construction.workers > 0:
+				_draw_worker(rect, construction.workers)
+		elif cell != _city.cell and (_game.claiming_city(cell) or _game.lumber_mill_at(cell)):
+			draw_rect(rect, BLOCKED_TINT)
+
+		if is_picking() and cell != _city.cell:
+			if _pick_cells.has(cell):
+				draw_rect(rect.grow(-2), HIGHLIGHT_COLOR, false, 3.0)
+			else:
+				draw_rect(rect, BLOCKED_TINT)
+
+	City.draw_city_icon(self, _cell_rect(_city.cell).grow(-CELL_SIZE / 10.0),
+			_city.owner_player.color, _city.population, int(CELL_SIZE * 0.45))
+
+	if _city.area_cells().has(_hover) and (not is_picking() or _pick_cells.has(_hover)):
+		draw_rect(_cell_rect(_hover), HOVER_COLOR, false, 2.0)
+
+	if is_picking():
+		var hint := "Escolha o terreno"
+		draw_string_outline(font, Vector2(6, 18), hint, HORIZONTAL_ALIGNMENT_LEFT, -1, 16, 4, Color.BLACK)
+		draw_string(font, Vector2(6, 18), hint, HORIZONTAL_ALIGNMENT_LEFT, -1, 16, HIGHLIGHT_COLOR)
+
+
+## Barrinha de progresso na base da casa, com "progresso/custo" em cima.
+func _draw_progress(rect: Rect2, construction: City.Construction) -> void:
+	var ratio := float(construction.progress) / construction.cost()
+	var bar := Rect2(rect.position.x + 4, rect.end.y - 12, rect.size.x - 8, 8)
+	draw_rect(bar, Color.BLACK)
+	draw_rect(Rect2(bar.position, Vector2(bar.size.x * ratio, bar.size.y)), Color(0.3, 0.8, 1.0))
+	var text := "%d/%d" % [construction.progress, construction.cost()]
+	var font := ThemeDB.fallback_font
+	var origin := Vector2(rect.position.x + 5, bar.position.y - 4)
+	draw_string_outline(font, origin, text, HORIZONTAL_ALIGNMENT_LEFT, -1, 14, 4, Color.BLACK)
+	draw_string(font, origin, text, HORIZONTAL_ALIGNMENT_LEFT, -1, 14, Color.WHITE)
+
+
+## Espiga de milho no centro da fazenda trabalhada, com o alimento que ela
+## produz por turno no meio (fazenda sem trabalhador não mostra nada).
+func _draw_food(rect: Rect2, food: int) -> void:
+	var corn := Rect2(rect.get_center() - CORN_SIZE / 2.0, CORN_SIZE)
+	Icons.draw_corn(self, corn)
+	var font := ThemeDB.fallback_font
+	var text := str(food)
+	var width := font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, FOOD_FONT_SIZE).x
+	var baseline := (font.get_ascent(FOOD_FONT_SIZE) - font.get_descent(FOOD_FONT_SIZE)) / 2.0
+	var origin := corn.get_center() + Vector2(-width / 2.0, baseline - corn.size.y * 0.04)
+	draw_string_outline(font, origin, text, HORIZONTAL_ALIGNMENT_LEFT, -1, FOOD_FONT_SIZE, 5, Color.BLACK)
+	draw_string(font, origin, text, HORIZONTAL_ALIGNMENT_LEFT, -1, FOOD_FONT_SIZE, Color.WHITE)
+
+
+## Bonequinho no canto da casa indicando cidadãos trabalhando nela.
+func _draw_worker(rect: Rect2, count: int) -> void:
+	var center := rect.position + Vector2(rect.size.x - 13, 13)
+	draw_circle(center, 9, Color.BLACK)
+	draw_circle(center, 7, Color.WHITE)
+	var text := str(count)
+	var font := ThemeDB.fallback_font
+	var width := font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, 12).x
+	draw_string(font, center + Vector2(-width / 2.0, 4), text, HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Color.BLACK)
+
+
+func _cell_rect(cell: Vector2i) -> Rect2:
+	var offset := cell - _city.cell + Vector2i(2, 2)
+	return Rect2(Vector2(offset) * CELL_SIZE, Vector2.ONE * CELL_SIZE)
+
+
+func _cell_at(local_position: Vector2) -> Vector2i:
+	if _city == null:
+		return Vector2i.MAX
+	var offset := Vector2i((local_position / CELL_SIZE).floor())
+	return _city.cell + offset - Vector2i(2, 2)

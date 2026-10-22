@@ -1,0 +1,794 @@
+class_name CityWindow
+extends Control
+
+## Janela da cidade, aberta ao clicar numa cidade.
+##   esquerda: mapa da área de trabalho (CityMapView);
+##   direita : resumo (população, alimentos, produção), botão "Construir",
+##             prédios da cidade (com as unidades que cada um produz e os
+##             trabalhadores dele), obras em andamento (melhorias e prédios,
+##             com barra de progresso + trabalhadores), produção da cidade
+##             (fazendas e madeireiras) e unidades na cidade.
+## "Construir" abre uma lista (modal) com o que a cidade pode construir,
+## dividida em Unidades, Melhorias de terreno e Prédios. O botão da moeda
+## compra na hora com ouro (unidades e prédios). Prédios prontos somem da lista.
+## Melhorias (Fazenda, Madeireira) pedem para escolher a casa no mapa; unidades
+## entram na fila do prédio que as produz; prédios entram nas obras.
+## Esc fecha a lista, cancela a escolha da casa ou fecha a janela, nessa ordem.
+## A cidade de outro jogador abre só para observar: nenhum botão de ordem funciona.
+
+signal closed
+
+const PANEL_COLOR := Color(0.1, 0.1, 0.12, 0.96)
+const SECTION_COLOR := Color(1, 0.85, 0.2)
+const MUTED_COLOR := Color(0.75, 0.75, 0.75)
+const WARNING_COLOR := Color(1, 0.6, 0.4)
+const POSITIVE_COLOR := Color(0.45, 1, 0.45)
+const NEGATIVE_COLOR := Color(1, 0.4, 0.35)
+const RIGHT_COLUMN_WIDTH := 620
+## Largura do controle "- N trab. +" (para alinhar o X das linhas sem ele).
+const WORKER_CONTROLS_WIDTH := 124
+## Altura da lista de construções (o resto aparece rolando).
+const BUILD_LIST_HEIGHT := 380
+## Tamanho da moeda de ouro nos botões de compra.
+const COIN_SIZE := 20
+const BUY_BUTTON_WIDTH := 80
+## Coluna do custo na lista "Construir" (textos maiores quebram a linha).
+const COST_COLUMN_WIDTH := 310
+## Ícones das construções (Icons.build_icon): na lista "Construir" e o recuo
+## das unidades embaixo do prédio, na janela da cidade.
+const BUILD_LIST_ICON_SIZE := 28
+const UNIT_INDENT := 18
+## Letras por linha nos tooltips (as descrições cabem em até 3 linhas).
+const TOOLTIP_WIDTH := 50
+
+var _city: City
+var _game: Game
+## Melhoria sendo posicionada no mapa (-1 = nenhuma).
+var _picking := -1
+## Cidade de outro jogador: só observação.
+var _read_only := false
+var _refresh_queued := false
+
+var _title: Label
+var _summary: RichTextLabel
+var _food_bar: ProgressBar
+var _food_bar_label: Label
+var _hint: Label
+var _map_view: CityMapView
+var _build_box: VBoxContainer
+var _constructions_box: VBoxContainer
+var _farms_box: VBoxContainer
+var _buildings_box: VBoxContainer
+var _units_box: VBoxContainer
+var _build_modal: Control
+var _build_list: VBoxContainer
+var _treasury_label: Label
+
+
+func _ready() -> void:
+	hide()
+	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	mouse_filter = Control.MOUSE_FILTER_STOP
+	_build_layout()
+	_build_modal_layout()
+
+
+func open(city: City, game: Game, read_only := false) -> void:
+	_city = city
+	_game = game
+	_read_only = read_only
+	_picking = -1
+	_build_modal.hide()
+	_city.changed.connect(_queue_refresh)
+	_map_view.setup(city, game)
+	_refresh()
+	show()
+
+
+func close() -> void:
+	if _city and _city.changed.is_connected(_queue_refresh):
+		_city.changed.disconnect(_queue_refresh)
+	_city = null
+	_build_modal.hide()
+	hide()
+	closed.emit()
+
+
+func _input(event: InputEvent) -> void:
+	if not visible:
+		return
+	if event is InputEventKey and event.pressed and not event.echo and event.keycode == KEY_ESCAPE:
+		if _build_modal.visible:
+			_build_modal.hide()
+		elif _picking >= 0:
+			_cancel_pick()
+		else:
+			close()
+		get_viewport().set_input_as_handled()
+
+
+## Fundo dos painéis das janelas (também usado pela pergunta do nome da cidade).
+static func make_panel_style() -> StyleBoxFlat:
+	var style := StyleBoxFlat.new()
+	style.bg_color = PANEL_COLOR
+	style.set_corner_radius_all(6)
+	style.set_content_margin_all(16)
+	style.set_border_width_all(2)
+	style.border_color = Color(1, 1, 1, 0.25)
+	return style
+
+
+# --- Montagem da janela -----------------------------------------------------
+
+func _build_layout() -> void:
+	var root := _add_centered_panel(self)
+
+	# Cabeçalho: nome da cidade e botão de fechar
+	var header := HBoxContainer.new()
+	root.add_child(header)
+	_title = Label.new()
+	_title.add_theme_font_size_override("font_size", 26)
+	_title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	header.add_child(_title)
+	header.add_child(_make_button("Fechar [Esc]", close))
+	root.add_child(HSeparator.new())
+
+	var body := HBoxContainer.new()
+	body.add_theme_constant_override("separation", 24)
+	root.add_child(body)
+
+	# Esquerda: mapa da cidade
+	var left := VBoxContainer.new()
+	body.add_child(left)
+	left.add_child(_make_section("Mapa da cidade"))
+	_map_view = CityMapView.new()
+	_map_view.cell_picked.connect(_on_cell_picked)
+	_map_view.pick_cancelled.connect(_cancel_pick)
+	left.add_child(_map_view)
+	_hint = Label.new()
+	_hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_hint.custom_minimum_size.x = CityMapView.CELL_SIZE * 5
+	_hint.add_theme_color_override("font_color", MUTED_COLOR)
+	_hint.add_theme_font_size_override("font_size", 13)
+	left.add_child(_hint)
+
+	# Direita: resumo, construir, obras e produção da cidade (com rolagem)
+	var scroll := ScrollContainer.new()
+	scroll.custom_minimum_size = Vector2(RIGHT_COLUMN_WIDTH, CityMapView.CELL_SIZE * 5 + 60)
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	body.add_child(scroll)
+	var right := VBoxContainer.new()
+	right.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	right.add_theme_constant_override("separation", 6)
+	scroll.add_child(right)
+
+	right.add_child(_make_section("Resumo"))
+	_summary = RichTextLabel.new()
+	_summary.bbcode_enabled = true
+	_summary.fit_content = true
+	_summary.scroll_active = false
+	right.add_child(_summary)
+	# Barra do estoque de alimentos: quando enche, a cidade cresce
+	var food_row := HBoxContainer.new()
+	food_row.add_theme_constant_override("separation", 8)
+	right.add_child(food_row)
+	var food_title := Label.new()
+	food_title.text = "Estoque"
+	food_row.add_child(food_title)
+	_food_bar = ProgressBar.new()
+	_food_bar.show_percentage = false
+	_food_bar.custom_minimum_size = Vector2(0, 18)
+	_food_bar.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_food_bar.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	_food_bar.add_theme_stylebox_override("background", _bar_style(Color(0.3, 0.3, 0.33)))
+	_food_bar.add_theme_stylebox_override("fill", _bar_style(City.FOOD_BAR_COLOR))
+	food_row.add_child(_food_bar)
+	_food_bar_label = Label.new()
+	_food_bar_label.custom_minimum_size.x = 70
+	food_row.add_child(_food_bar_label)
+	_build_box = VBoxContainer.new()
+	right.add_child(_build_box)
+	right.add_child(_make_section("Prédios da cidade"))
+	_buildings_box = VBoxContainer.new()
+	right.add_child(_buildings_box)
+	right.add_child(_make_section("Obras em andamento"))
+	_constructions_box = VBoxContainer.new()
+	right.add_child(_constructions_box)
+	right.add_child(_make_section("Produção da cidade"))
+	_farms_box = VBoxContainer.new()
+	right.add_child(_farms_box)
+	right.add_child(_make_section("Unidades na cidade"))
+	_units_box = VBoxContainer.new()
+	right.add_child(_units_box)
+
+
+## Lista de construções, por cima da janela da cidade.
+func _build_modal_layout() -> void:
+	_build_modal = Control.new()
+	_build_modal.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	_build_modal.mouse_filter = Control.MOUSE_FILTER_STOP
+	_build_modal.hide()
+	add_child(_build_modal)
+
+	var root := _add_centered_panel(_build_modal)
+	var header := HBoxContainer.new()
+	root.add_child(header)
+	var title := Label.new()
+	title.text = "Construir"
+	title.add_theme_font_size_override("font_size", 24)
+	title.add_theme_color_override("font_color", SECTION_COLOR)
+	title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	header.add_child(title)
+	# Tesouro do jogador, para comparar com os preços em ouro
+	header.add_theme_constant_override("separation", 12)
+	var coin := TextureRect.new()
+	coin.texture = Icons.gold_coin(COIN_SIZE)
+	coin.stretch_mode = TextureRect.STRETCH_KEEP_CENTERED
+	header.add_child(coin)
+	_treasury_label = Label.new()
+	_treasury_label.add_theme_color_override("font_color", Icons.GOLD_COLOR)
+	header.add_child(_treasury_label)
+	header.add_child(_make_button("Cancelar [Esc]", _build_modal.hide))
+	root.add_child(HSeparator.new())
+	# Com rolagem, para quando a lista crescer além da tela
+	var scroll := ScrollContainer.new()
+	scroll.custom_minimum_size = Vector2(760, BUILD_LIST_HEIGHT)
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	root.add_child(scroll)
+	_build_list = VBoxContainer.new()
+	_build_list.add_theme_constant_override("separation", 12)
+	_build_list.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	scroll.add_child(_build_list)
+
+
+## Fundo escurecido + painel centralizado; retorna a coluna de conteúdo.
+func _add_centered_panel(parent: Control) -> VBoxContainer:
+	var dim := ColorRect.new()
+	dim.color = Color(0, 0, 0, 0.55)
+	dim.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	parent.add_child(dim)
+
+	var center := CenterContainer.new()
+	center.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	parent.add_child(center)
+
+	var panel := PanelContainer.new()
+	panel.add_theme_stylebox_override("panel", make_panel_style())
+	center.add_child(panel)
+
+	var root := VBoxContainer.new()
+	root.add_theme_constant_override("separation", 10)
+	panel.add_child(root)
+	return root
+
+
+# --- Atualização ------------------------------------------------------------
+
+## Atualiza no fim do quadro: os botões da janela são recriados, e um botão não
+## pode ser removido no meio do próprio clique.
+func _queue_refresh() -> void:
+	if not _refresh_queued:
+		_refresh_queued = true
+		_refresh.call_deferred()
+
+
+func _refresh() -> void:
+	_refresh_queued = false
+	if _city == null:
+		return
+	_title.text = "%s  (%s)%s" % [_city.city_name, _city.owner_player.display_name,
+			"  - observando" if _read_only else ""]
+	_title.add_theme_color_override("font_color", _city.owner_player.color)
+	_summary.text = _summary_text()
+	_food_bar.max_value = _city.food_capacity()
+	_food_bar.value = _city.food_stock
+	_food_bar_label.text = "%d/%d" % [_city.food_stock, _city.food_capacity()]
+	_food_bar.tooltip_text = "Estoque de alimentos. Cheio, a cidade ganha 1 de população. Tamanho = (população + 1) x %d." % City.FOOD_BOX_PER_SIZE
+	_rebuild_units()
+	_hint.text = ("Cidade de outro jogador: você pode observar, mas não dar ordens. Passe o mouse sobre uma casa para ver detalhes."
+			if _read_only else
+			"Clique em um terreno destacado para construir. Esc ou botão direito cancela."
+			if _picking >= 0 else
+			"Passe o mouse sobre uma casa para ver detalhes. Os números brancos indicam os cidadãos trabalhando ali.")
+	_rebuild_build_button()
+	_rebuild_constructions()
+	_rebuild_farms()
+	_rebuild_buildings()
+	if _build_modal.visible:
+		_rebuild_build_list()
+	_map_view.queue_redraw()
+
+
+func _summary_text() -> String:
+	var lines: Array[String] = []
+	lines.append("População: %d   (livres: %d)" % [_city.population, _city.free_citizens()])
+	var food := _city.food_per_turn()
+	var growth := _city.turns_to_grow()
+	# Saldo de alimento colorido: verde sobrando, vermelho faltando
+	var food_color := POSITIVE_COLOR if food > 0 else NEGATIVE_COLOR if food < 0 else Color.WHITE
+	lines.append("Estoque de alimentos: %d/%d   [color=#%s]%+d[/color] por turno%s" % [
+		_city.food_stock, _city.food_capacity(), food_color.to_html(false), food,
+		("   (cresce em %d %s)" % [growth, "turno" if growth == 1 else "turnos"]) if growth > 0 else "",
+	])
+	lines.append("    produção %d (cidade %d + fazendas %d)  -  consumo %d" % [
+		_city.food_produced(), City.CENTER_FOOD, _city.food_produced() - City.CENTER_FOOD, _city.food_consumed(),
+	])
+	if not _city.lumber_mills.is_empty():
+		lines.append("Madeira: [color=#%s]+%d[/color] por turno   (%d em madeireiras)" % [
+			LumberMill.WOOD_BAR_COLOR.to_html(false), _city.wood_per_turn(), _city.mill_workers(),
+		])
+	if _city.gold_per_turn() > 0:
+		lines.append("Ouro: [color=#%s]+%d[/color] por turno   (impostos da Marcenaria)" % [
+			Icons.GOLD_COLOR.to_html(false), _city.gold_per_turn(),
+		])
+	lines.append("Produção (força de trabalho): %d por turno   (%d em obras e prédios)" % [
+		_city.production, _city.construction_workers(),
+	])
+	if food < 0:
+		lines.append("[color=#%s]Atenção: a cidade está consumindo mais alimento do que produz![/color]" % NEGATIVE_COLOR.to_html(false))
+	return "\n".join(lines)
+
+
+## Botão "Construir" (ou, durante a escolha da casa, o aviso e o "Cancelar").
+func _rebuild_build_button() -> void:
+	_clear(_build_box)
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 8)
+	_build_box.add_child(row)
+	if _picking >= 0:
+		var label := Label.new()
+		label.text = "Escolha no mapa a casa da %s." % City.BUILDS[_picking]["name"]
+		label.add_theme_color_override("font_color", CityMapView.HIGHLIGHT_COLOR)
+		row.add_child(label)
+		row.add_child(_make_button("Cancelar", _cancel_pick))
+		return
+	var button := _make_button("Construir...", _open_build_modal)
+	button.custom_minimum_size.x = 160
+	button.disabled = _read_only
+	row.add_child(button)
+
+
+func _open_build_modal() -> void:
+	_rebuild_build_list()
+	_build_modal.show()
+
+
+## Lista dividida em classes (Unidades, Melhorias de terreno, Prédios). Cada
+## linha: nome, custo em produção, "Escolher" (vai para as obras) e o botão
+## da moeda (compra na hora com ouro). A descrição aparece no tooltip.
+func _rebuild_build_list() -> void:
+	_clear(_build_list)
+	_treasury_label.text = "Tesouro: %d" % _city.owner_player.gold
+	for category: int in City.CATEGORY_NAMES:
+		_build_list.add_child(_make_section(City.CATEGORY_NAMES[category]))
+		# Prédios prontos (e os que toda cidade já tem) somem da lista
+		var builds := City.BUILDS.keys().filter(func(build: int) -> bool:
+			return (City.BUILDS[build]["category"] == category
+					and not City.BUILDS[build].get("native", false) and not _city.has_building(build)))
+		if builds.is_empty():
+			_build_list.add_child(_make_muted("Nenhum disponível ainda."))
+		for build: int in builds:
+			_build_list.add_child(_make_build_row(build))
+
+
+func _make_build_row(build: int) -> HBoxContainer:
+	var info: Dictionary = City.BUILDS[build]
+	var description := wrap_tooltip(info["description"])
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 12)
+	# Tooltip com a descrição ao passar o mouse em qualquer parte da linha
+	row.mouse_filter = Control.MOUSE_FILTER_STOP
+	row.tooltip_text = description
+
+	row.add_child(Icons.build_icon(build, _city.owner_player.color, BUILD_LIST_ICON_SIZE))
+	var name_label := Label.new()
+	name_label.text = info["name"]
+	name_label.add_theme_font_size_override("font_size", 20)
+	name_label.custom_minimum_size.x = 160
+	row.add_child(name_label)
+
+	var cost := Label.new()
+	cost.text = "%d de produção" % info["cost"]
+	if info.get("population", 0) > 0:
+		cost.text += " + %d pop." % info["population"]
+	if info.get("wood", 0) > 0:
+		cost.text += " + %d madeira" % info["wood"]
+	var weapons: Dictionary = info.get("weapons", {})
+	for weapon: Arsenal.Weapon in weapons:
+		cost.text += " + %s" % Arsenal.amount_text(weapon, weapons[weapon])
+	cost.add_theme_color_override("font_color", MUTED_COLOR)
+	cost.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	cost.custom_minimum_size.x = COST_COLUMN_WIDTH
+	cost.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	row.add_child(cost)
+
+	var choose := _make_button("Escolher", _choose_build.bind(build))
+	choose.custom_minimum_size.x = 100
+	choose.tooltip_text = description
+	var reason := _city.build_error(build)
+	if reason.is_empty() and info["on_tile"] and _game.buildable_cells(_city, build).is_empty():
+		reason = ("Nenhuma floresta livre na área da cidade." if build == City.Build.LUMBER_MILL else
+				"Nenhum terreno livre na área da cidade.")
+	if not reason.is_empty():
+		choose.disabled = true
+		choose.tooltip_text = wrap_tooltip(reason)
+		cost.text = reason
+		cost.add_theme_color_override("font_color", WARNING_COLOR)
+	row.add_child(choose)
+
+	# Melhorias de terreno não são compradas: só um espaço, para alinhar as colunas
+	if info["category"] == City.Category.TERRAIN_IMPROVEMENT:
+		var spacer := Control.new()
+		spacer.custom_minimum_size.x = BUY_BUTTON_WIDTH
+		row.add_child(spacer)
+		return row
+	var buy := _make_button(str(info["gold"]), _buy_build.bind(build))
+	buy.icon = Icons.gold_coin(COIN_SIZE)
+	buy.custom_minimum_size.x = BUY_BUTTON_WIDTH
+	buy.add_theme_color_override("font_color", Icons.GOLD_COLOR)
+	var error: String = _game.buy_error(_city, build)
+	buy.disabled = _read_only or not error.is_empty()
+	buy.tooltip_text = wrap_tooltip(error if not error.is_empty() else
+			"Comprar agora por %d de ouro: fica pronto na hora." % info["gold"])
+	row.add_child(buy)
+	return row
+
+
+## Quebra o texto do tooltip em linhas de até [param width] letras, para não
+## ficar uma linha só muito comprida (as descrições cabem em 3 linhas).
+static func wrap_tooltip(text: String, width := TOOLTIP_WIDTH) -> String:
+	var lines: Array[String] = []
+	var line := ""
+	for word in text.split(" ", false):
+		if not line.is_empty() and line.length() + 1 + word.length() > width:
+			lines.append(line)
+			line = word
+		else:
+			line = word if line.is_empty() else line + " " + word
+	if not line.is_empty():
+		lines.append(line)
+	return "\n".join(lines)
+
+
+## Melhoria: vai para a escolha da casa no mapa. Unidade: entra direto nas obras.
+func _choose_build(build: int) -> void:
+	_build_modal.hide()
+	if City.BUILDS[build]["on_tile"]:
+		_start_pick(build)
+	else:
+		_city.order_build(build)
+
+
+## Botão da moeda: compra na hora com ouro (ver Game.buy_build).
+func _buy_build(build: int) -> void:
+	var error: String = _game.buy_error(_city, build)
+	if not error.is_empty():
+		_game.hud.show_message(error, WARNING_COLOR)
+		return
+	_game.buy_build(_city, build)
+	_build_modal.hide()
+	_game.hud.show_message("%s comprad%s por %d de ouro." % [City.BUILDS[build]["name"], City.BUILDS[build]["article"], City.BUILDS[build]["gold"]],
+			Icons.GOLD_COLOR)
+	_queue_refresh()
+
+
+## Seção "Obras em andamento": melhorias de terreno e prédios em construção.
+## (As unidades ficam na seção "Prédios da cidade", no prédio que as produz.)
+func _rebuild_constructions() -> void:
+	_clear(_constructions_box)
+	var works := _city.constructions.filter(func(c: City.Construction) -> bool: return not c.is_produced())
+	if works.is_empty():
+		_constructions_box.add_child(_make_muted("Nenhuma obra. Clique em \"Construir...\"."))
+		return
+	for construction: City.Construction in works:
+		_add_construction_row(_constructions_box, construction, true)
+
+
+## Seção "Prédios da cidade": cada prédio pronto e, embaixo, as unidades ou
+## armas que ele está produzindo. A primeira avança e tem o "- N trab. +"
+## (os trabalhadores são do prédio); as outras esperam "na fila". Quando uma
+## fica pronta, os trabalhadores passam para a próxima. A Marcenaria sem armas
+## na fila mostra a linha de impostos (ouro por trabalhador).
+func _rebuild_buildings() -> void:
+	_clear(_buildings_box)
+	for building in _city.buildings:
+		var info: Dictionary = City.BUILDS[building]
+		var row := HBoxContainer.new()
+		row.add_theme_constant_override("separation", 6)
+		row.mouse_filter = Control.MOUSE_FILTER_STOP
+		row.tooltip_text = wrap_tooltip(info["description"])
+		_buildings_box.add_child(row)
+		row.add_child(Icons.build_icon(building, _city.owner_player.color))
+		var name_label := Label.new()
+		name_label.text = info["name"]
+		name_label.add_theme_font_size_override("font_size", 17)
+		name_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		row.add_child(name_label)
+
+		var active := _city.active_unit(building)
+		var queue := _city.unit_queue(building)
+		if active == null and info.get("idle_gold", 0) > 0:
+			_add_idle_gold_row(building)
+		elif queue.is_empty():
+			var empty := _make_muted("          Nada em produção.")
+			empty.add_theme_font_size_override("font_size", 13)
+			_buildings_box.add_child(empty)
+		for construction in queue:
+			# Só a da frente da fila tem os trabalhadores (que são do prédio)
+			_add_construction_row(_buildings_box, construction, construction == active)
+
+
+## Prédio que rende ouro parado (Marcenaria sem armas na fila): os
+## trabalhadores dele recolhem impostos, +idle_gold de ouro cada por turno.
+func _add_idle_gold_row(building: int) -> void:
+	var gold_each: int = City.BUILDS[building]["idle_gold"]
+	var workers: int = _city.building_workers.get(building, 0)
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 6)
+	row.mouse_filter = Control.MOUSE_FILTER_STOP
+	row.tooltip_text = wrap_tooltip("Sem armas na fila: os trabalhadores produzem bens para a população e recolhem impostos (+%d de ouro cada por turno)." % gold_each)
+	_buildings_box.add_child(row)
+	var indent := Control.new()
+	indent.custom_minimum_size.x = UNIT_INDENT
+	row.add_child(indent)
+	var coin := TextureRect.new()
+	coin.texture = Icons.gold_coin(Icons.ICON_SIZE)
+	coin.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	row.add_child(coin)
+	var label := Label.new()
+	label.text = "Impostos (sem armas na fila)"
+	label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	row.add_child(label)
+	var status := Label.new()
+	status.text = "+%d ouro" % (workers * gold_each)
+	status.custom_minimum_size.x = 120
+	status.add_theme_color_override("font_color", Icons.GOLD_COLOR if workers > 0 else MUTED_COLOR)
+	row.add_child(status)
+	_add_worker_controls(row, workers, workers + _city.free_citizens(),
+			func(value: int) -> void: _city.set_building_workers(building, value))
+	var x_space := Control.new()
+	x_space.custom_minimum_size.x = 30 # alinha com o X das outras linhas
+	row.add_child(x_space)
+
+
+## Linha de uma obra: nome, barra de progresso, "progresso/custo (N t)",
+## trabalhadores (se [param with_workers]) e o X para cancelar. Unidades
+## aparecem recuadas, embaixo do prédio que as produz.
+func _add_construction_row(box: VBoxContainer, construction: City.Construction, with_workers: bool) -> void:
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 6)
+	box.add_child(row)
+
+	# Unidades ficam recuadas, embaixo do prédio que as produz
+	if construction.is_produced():
+		var indent := Control.new()
+		indent.custom_minimum_size.x = UNIT_INDENT
+		row.add_child(indent)
+	row.add_child(Icons.build_icon(construction.build, _city.owner_player.color))
+	var name_label := Label.new()
+	name_label.text = (construction.display_name() if not construction.is_on_tile() else
+			"%s (%d, %d)" % [construction.display_name(), construction.cell.x, construction.cell.y])
+	name_label.custom_minimum_size.x = 130 - (UNIT_INDENT + 6 if construction.is_produced() else 0)
+	row.add_child(name_label)
+
+	var bar := ProgressBar.new()
+	bar.max_value = construction.cost()
+	bar.value = construction.progress
+	bar.show_percentage = false
+	bar.custom_minimum_size = Vector2(90, 20)
+	bar.size_flags_horizontal = Control.SIZE_EXPAND_FILL # empurra trabalhadores e X para a direita
+	bar.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	bar.add_theme_stylebox_override("background", _bar_style(Color(0.3, 0.3, 0.33)))
+	bar.add_theme_stylebox_override("fill", _bar_style(Color(0.3, 0.8, 1.0)))
+	row.add_child(bar)
+
+	var turns := _city.turns_to_finish(construction)
+	var status := Label.new()
+	status.text = "%d/%d %s" % [construction.progress, construction.cost(),
+			"(parada)" if turns < 0 else "(%d t)" % turns]
+	status.custom_minimum_size.x = 120
+	status.tooltip_text = "Progresso / custo. (N t) = turnos para terminar."
+	status.mouse_filter = Control.MOUSE_FILTER_PASS
+	if construction.is_done():
+		# Unidade pronta esperando população para sair da cidade
+		status.text = "pronto"
+		status.tooltip_text = "Pronto. Sai da cidade quando a população chegar a %d." % (construction.population_cost() + 1)
+		status.add_theme_color_override("font_color", WARNING_COLOR)
+	elif construction.is_produced() and _city.active_unit(construction.producer()) != construction:
+		status.text = "na fila"
+		status.tooltip_text = "Espera a unidade da frente ficar pronta; os trabalhadores do prédio passam para ela."
+		status.add_theme_color_override("font_color", MUTED_COLOR)
+	row.add_child(status)
+
+	if with_workers:
+		var workers := _city.workers_on(construction)
+		var max_workers := 0 if construction.is_done() else workers + _city.free_citizens()
+		_add_worker_controls(row, workers, max_workers,
+				func(value: int) -> void: _city.set_construction_workers(construction, value))
+	else:
+		var spacer := Control.new()
+		spacer.custom_minimum_size.x = WORKER_CONTROLS_WIDTH
+		row.add_child(spacer)
+	var cancel := _make_button("X", _city.cancel_construction.bind(construction))
+	cancel.tooltip_text = "Cancelar a obra (o progresso é perdido)."
+	if construction.wood_paid > 0:
+		cancel.tooltip_text += "\nOs %d de madeira voltam para o estoque." % construction.wood_paid
+	cancel.disabled = _read_only
+	row.add_child(cancel)
+
+
+## Seção "Produção da cidade": o que a cidade tem pronto e produzindo
+## (fazendas e madeireiras).
+func _rebuild_farms() -> void:
+	_clear(_farms_box)
+	if _city.farms.is_empty() and _city.lumber_mills.is_empty():
+		_farms_box.add_child(_make_muted("Nenhuma fazenda ou madeireira pronta."))
+		return
+	for farm_cell: Vector2i in _city.farms:
+		var row := HBoxContainer.new()
+		row.add_theme_constant_override("separation", 6)
+		_farms_box.add_child(row)
+
+		var worked: bool = _city.farms[farm_cell] > 0
+		row.add_child(Icons.build_icon(City.Build.FARM, _city.owner_player.color))
+		var name_label := Label.new()
+		name_label.text = "Fazenda (%d, %d)" % [farm_cell.x, farm_cell.y]
+		name_label.custom_minimum_size.x = 130
+		row.add_child(name_label)
+		var status := Label.new()
+		status.text = "+%d alimento" % _city.farm_food(farm_cell) if worked else "sem trabalhador"
+		status.custom_minimum_size.x = 176
+		row.add_child(status)
+		_add_worker_controls(row, _city.farms[farm_cell], 1 if worked or _city.free_citizens() > 0 else 0,
+				func(value: int) -> void: _city.set_farm_worked(farm_cell, value > 0))
+	for mill_cell: Vector2i in _city.lumber_mills:
+		var row := HBoxContainer.new()
+		row.add_theme_constant_override("separation", 6)
+		_farms_box.add_child(row)
+
+		var workers: int = _city.lumber_mills[mill_cell]
+		row.add_child(Icons.build_icon(City.Build.LUMBER_MILL, _city.owner_player.color))
+		var name_label := Label.new()
+		name_label.text = "Madeireira (%d, %d)" % [mill_cell.x, mill_cell.y]
+		name_label.custom_minimum_size.x = 130
+		row.add_child(name_label)
+		# Barra azul: madeira que resta na floresta
+		var wood := _game.game_map.wood_left(mill_cell)
+		var bar := ProgressBar.new()
+		bar.max_value = Terrain.WOOD_PER_FOREST
+		bar.value = wood
+		bar.show_percentage = false
+		bar.custom_minimum_size = Vector2(50, 14)
+		bar.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		bar.add_theme_stylebox_override("background", _bar_style(Color(0.3, 0.3, 0.33)))
+		bar.add_theme_stylebox_override("fill", _bar_style(LumberMill.WOOD_BAR_COLOR))
+		bar.tooltip_text = "Madeira que resta na floresta: %d/%d. Quando acaba, vira cerrado." % [wood, Terrain.WOOD_PER_FOREST]
+		row.add_child(bar)
+		var status := Label.new()
+		status.text = "+%d madeira" % (workers * LumberMill.WOOD_PER_WORKER) if workers > 0 else "sem trabalhador"
+		status.custom_minimum_size.x = 120
+		row.add_child(status)
+		_add_worker_controls(row, workers, mini(LumberMill.MAX_WORKERS, workers + _city.free_citizens()),
+				func(value: int) -> void: _city.set_mill_workers(mill_cell, value))
+
+
+## Seção "Unidades na cidade": a unidade que está na casa da cidade (só cabe
+## uma por casa). Fortificada, ela fica escondida no mapa; "Ativar" a tira da
+## fortificação e a seleciona.
+func _rebuild_units() -> void:
+	_clear(_units_box)
+	var unit := _game.get_unit_at(_city.cell)
+	if unit == null:
+		_units_box.add_child(_make_muted("Nenhuma unidade na cidade."))
+		return
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 8)
+	_units_box.add_child(row)
+	var label := Label.new()
+	label.text = "%s  -  %s  |  Defesa %d  |  Energia %d/%d" % [
+		unit.type.display_name, "fortificada" if unit.fortified else "no mapa",
+		unit.defense, unit.energy, unit.max_energy,
+	]
+	label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	row.add_child(label)
+	var button := _make_button("Ativar" if unit.fortified else "Selecionar", _game.activate_unit.bind(unit))
+	button.disabled = _read_only
+	button.tooltip_text = "Tira a unidade da fortificação e a seleciona no mapa." if unit.fortified else ""
+	row.add_child(button)
+
+
+## Controle "− N +" de trabalhadores, limitado entre 0 e [param max_value].
+func _add_worker_controls(row: HBoxContainer, value: int, max_value: int, on_change: Callable) -> void:
+	var minus := _make_button("-", on_change.bind(value - 1))
+	minus.disabled = _read_only or value <= 0
+	minus.custom_minimum_size.x = 28
+	row.add_child(minus)
+	var count := Label.new()
+	count.text = "%d trab." % value
+	count.custom_minimum_size.x = 56
+	count.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	row.add_child(count)
+	var plus := _make_button("+", on_change.bind(value + 1))
+	plus.disabled = _read_only or value >= max_value
+	plus.custom_minimum_size.x = 28
+	plus.tooltip_text = "Nenhum cidadão livre." if not _read_only and value >= max_value else ""
+	row.add_child(plus)
+
+
+# --- Escolha do terreno -----------------------------------------------------
+
+func _start_pick(build: int) -> void:
+	_picking = build
+	_map_view.set_pick_cells(_game.buildable_cells(_city, build))
+	_queue_refresh()
+
+
+func _cancel_pick() -> void:
+	_picking = -1
+	_map_view.set_pick_cells([])
+	_queue_refresh()
+
+
+func _on_cell_picked(cell: Vector2i) -> void:
+	var build := _picking
+	_picking = -1
+	_map_view.set_pick_cells([])
+	_city.order_build(build, cell)
+
+
+# --- Auxiliares -------------------------------------------------------------
+
+func _make_section(text: String) -> Label:
+	var label := Label.new()
+	label.text = text
+	label.add_theme_color_override("font_color", SECTION_COLOR)
+	label.add_theme_font_size_override("font_size", 18)
+	return label
+
+
+func _make_muted(text: String) -> Label:
+	var label := Label.new()
+	label.text = text
+	label.add_theme_color_override("font_color", MUTED_COLOR)
+	return label
+
+
+func _bar_style(color: Color) -> StyleBoxFlat:
+	var style := StyleBoxFlat.new()
+	style.bg_color = color
+	style.set_corner_radius_all(3)
+	return style
+
+
+func _make_button(text: String, on_pressed: Callable) -> Button:
+	var button := Button.new()
+	button.text = text
+	button.focus_mode = Control.FOCUS_NONE
+	button.pressed.connect(on_pressed)
+	style_button(button)
+	return button
+
+
+## Botões com fundo visível sobre o painel escuro (o tema padrão some nele).
+## Também usado pela pergunta do nome da cidade.
+static func style_button(button: Button) -> void:
+	var colors := {
+		"normal": Color(0.26, 0.28, 0.34), "hover": Color(0.36, 0.39, 0.47),
+		"pressed": Color(0.2, 0.22, 0.27), "disabled": Color(0.17, 0.17, 0.2),
+	}
+	for state: String in colors:
+		var style := StyleBoxFlat.new()
+		style.bg_color = colors[state]
+		style.set_corner_radius_all(4)
+		style.content_margin_left = 10
+		style.content_margin_right = 10
+		style.content_margin_top = 4
+		style.content_margin_bottom = 4
+		button.add_theme_stylebox_override(state, style)
+	button.add_theme_color_override("font_disabled_color", Color(0.5, 0.5, 0.5))
+
+
+func _clear(box: Container) -> void:
+	for child in box.get_children():
+		box.remove_child(child)
+		child.queue_free()

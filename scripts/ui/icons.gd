@@ -1,0 +1,235 @@
+class_name Icons
+extends RefCounted
+
+## Ícones desenhados pelo código, usados no HUD e nas janelas: moeda de ouro
+## e o ícone de cada construção e unidade (build_icon).
+
+const GOLD_COLOR := Color8(255, 200, 40)
+const GOLD_DARK := Color8(170, 115, 0)
+const GOLD_LIGHT := Color8(255, 240, 160)
+
+## Tamanho padrão dos ícones de construção nas janelas.
+const ICON_SIZE := 24
+const STONE_COLOR := Color8(235, 228, 205)
+const STONE_SHADE := Color8(165, 155, 130)
+const STEEL_COLOR := Color8(215, 222, 232)
+const STEEL_SHADE := Color8(140, 150, 165)
+const LEATHER_COLOR := Color8(110, 65, 30)
+const WOOD_SHAFT_COLOR := Color8(165, 115, 60)
+const CORN_COLOR := Color8(250, 205, 50)
+const CORN_KERNEL_COLOR := Color8(215, 160, 20)
+const HUSK_COLOR := Color8(90, 170, 60)
+
+
+## Ícone de uma construção ou unidade (City.Build) para pôr numa linha da
+## janela. Não pega o mouse: o tooltip da linha continua funcionando.
+## [param player_color] pinta o fundo das unidades (como no mapa).
+static func build_icon(build: int, player_color: Color, size := ICON_SIZE) -> Control:
+	var icon := Control.new()
+	icon.custom_minimum_size = Vector2.ONE * size
+	icon.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	icon.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST # pixel art nítida
+	icon.draw.connect(func() -> void:
+		draw_build(icon, build, Rect2(Vector2.ZERO, icon.size), player_color))
+	return icon
+
+
+## Desenha o ícone de [param build] em [param rect]:
+##   unidades        sprite da unidade sobre um quadrado na cor do jogador;
+##   Fazenda         plantação (o mesmo desenho do mapa);
+##   Madeireira      pilha de toras (o mesmo desenho do mapa);
+##   Prefeitura      prédio romano (frontão e colunas);
+##   Quartel General espada;
+##   Marcenaria      serrote;
+##   armas           o desenho da arma (Lança: lança).
+static func draw_build(canvas: CanvasItem, build: int, rect: Rect2, player_color: Color) -> void:
+	var info: Dictionary = City.BUILDS[build]
+	if info.has("unit"):
+		var type: UnitType = info["unit"]
+		canvas.draw_rect(rect, player_color)
+		canvas.draw_rect(rect, Color.BLACK, false, maxf(1.0, rect.size.x / 14.0))
+		if type.sprite:
+			canvas.draw_texture_rect(Unit.team_texture(type.sprite, player_color), rect, false)
+		return
+	match build:
+		City.Build.FARM:
+			City.draw_farm(canvas, rect)
+		City.Build.LUMBER_MILL:
+			LumberMill.draw_icon(canvas, rect)
+		City.Build.CITY_HALL:
+			draw_city_hall(canvas, rect)
+		City.Build.HEADQUARTERS:
+			draw_sword(canvas, rect)
+		City.Build.CARPENTRY:
+			draw_saw(canvas, rect)
+	if info.has("weapon"):
+		draw_weapon(canvas, info["weapon"], rect)
+
+
+## Ícone de uma arma do arsenal (também usado no painel Arsenal do HUD).
+static func draw_weapon(canvas: CanvasItem, weapon: Arsenal.Weapon, rect: Rect2) -> void:
+	match weapon:
+		Arsenal.Weapon.SPEAR:
+			draw_spear(canvas, rect)
+
+
+## Lança na diagonal: cabo de madeira comprido e ponta de aço em folha.
+static func draw_spear(canvas: CanvasItem, rect: Rect2) -> void:
+	var w := rect.size.x
+	var length := w * 1.3
+	var line := maxf(1.0, w / 24.0)
+	var shaft := maxf(1.5, w * 0.07)
+	canvas.draw_set_transform(rect.get_center(), PI / 4.0, Vector2.ONE)
+	var tip := -length / 2.0
+	var head_base := tip + length * 0.28
+	# Cabo
+	_draw_block(canvas, Rect2(-shaft / 2.0, head_base, shaft, length / 2.0 - head_base), WOOD_SHAFT_COLOR, line)
+	# Ponta em forma de folha
+	var head := PackedVector2Array([Vector2(0, tip), Vector2(w * 0.11, tip + length * 0.16),
+			Vector2(0, head_base), Vector2(-w * 0.11, tip + length * 0.16), Vector2(0, tip)])
+	canvas.draw_colored_polygon(head, STEEL_COLOR)
+	canvas.draw_line(Vector2(0, tip + line * 2.0), Vector2(0, head_base - line), STEEL_SHADE, line)
+	canvas.draw_polyline(head, Color.BLACK, line)
+	# Amarração entre a ponta e o cabo
+	_draw_block(canvas, Rect2(-shaft * 0.9, head_base, shaft * 1.8, length * 0.05), LEATHER_COLOR, line)
+	canvas.draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+
+
+## Serrote de marceneiro: lâmina de aço com dentes embaixo e cabo de madeira.
+static func draw_saw(canvas: CanvasItem, rect: Rect2) -> void:
+	var o := rect.position
+	var w := rect.size.x
+	var h := rect.size.y
+	var line := maxf(1.0, w / 24.0)
+	# Lâmina: mais alta perto do cabo, afinando para a ponta
+	var top_left := o + Vector2(w * 0.32, h * 0.3)
+	var blade := PackedVector2Array([top_left, o + Vector2(w * 0.95, h * 0.52),
+			o + Vector2(w * 0.95, h * 0.66), o + Vector2(w * 0.32, h * 0.72), top_left])
+	canvas.draw_colored_polygon(blade, STEEL_COLOR)
+	# Dentes na borda de baixo
+	var teeth := 6
+	for i in teeth:
+		var a := o + Vector2(w * (0.34 + 0.6 * i / teeth), h * (0.72 - 0.06 * i / teeth))
+		var b := o + Vector2(w * (0.34 + 0.6 * (i + 1) / teeth), h * (0.72 - 0.06 * (i + 1) / teeth))
+		var point := (a + b) / 2.0 + Vector2(0, h * 0.07)
+		canvas.draw_colored_polygon(PackedVector2Array([a, point, b]), STEEL_SHADE)
+	canvas.draw_polyline(blade, Color.BLACK, line)
+	# Cabo com um furo para a mão
+	var handle := Rect2(o + Vector2(w * 0.06, h * 0.26), Vector2(w * 0.28, h * 0.5))
+	_draw_block(canvas, handle, WOOD_SHAFT_COLOR, line)
+	_draw_block(canvas, Rect2(handle.position + handle.size * Vector2(0.3, 0.25), handle.size * Vector2(0.4, 0.4)),
+			Color(0.1, 0.1, 0.12), line)
+
+
+## Prédio romano: frontão triangular, colunas e degraus de pedra clara.
+static func draw_city_hall(canvas: CanvasItem, rect: Rect2) -> void:
+	var o := rect.position
+	var w := rect.size.x
+	var h := rect.size.y
+	var line := maxf(1.0, w / 24.0)
+	var roof := PackedVector2Array([o + Vector2(w * 0.5, h * 0.06), o + Vector2(w * 0.96, h * 0.32),
+			o + Vector2(w * 0.04, h * 0.32), o + Vector2(w * 0.5, h * 0.06)])
+	canvas.draw_colored_polygon(roof, STONE_COLOR)
+	canvas.draw_polyline(roof, Color.BLACK, line)
+	_draw_block(canvas, Rect2(o + Vector2(w * 0.08, h * 0.32), Vector2(w * 0.84, h * 0.1)), STONE_SHADE, line)
+	for i in 4:
+		var x := w * (0.14 + i * 0.2)
+		_draw_block(canvas, Rect2(o + Vector2(x, h * 0.42), Vector2(w * 0.12, h * 0.38)), STONE_COLOR, line)
+	_draw_block(canvas, Rect2(o + Vector2(w * 0.06, h * 0.8), Vector2(w * 0.88, h * 0.07)), STONE_SHADE, line)
+	_draw_block(canvas, Rect2(o + Vector2(w * 0.02, h * 0.87), Vector2(w * 0.96, h * 0.09)), STONE_COLOR, line)
+
+
+## Espada na diagonal: lâmina de aço, guarda e pomo dourados, cabo de couro.
+static func draw_sword(canvas: CanvasItem, rect: Rect2) -> void:
+	var w := rect.size.x
+	var length := w * 1.15
+	var half_blade := w * 0.075
+	var guard_y := length * 0.12
+	var line := maxf(1.0, w / 24.0)
+	# Desenha a espada de pé, centrada, e gira 45° (ponta para cima e à direita)
+	canvas.draw_set_transform(rect.get_center(), PI / 4.0, Vector2.ONE)
+	var tip := -length / 2.0
+	var blade := PackedVector2Array([Vector2(-half_blade, guard_y), Vector2(-half_blade, tip + half_blade * 2.5),
+			Vector2(0, tip), Vector2(half_blade, tip + half_blade * 2.5), Vector2(half_blade, guard_y),
+			Vector2(-half_blade, guard_y)])
+	canvas.draw_colored_polygon(blade, STEEL_COLOR)
+	canvas.draw_line(Vector2(0, guard_y), Vector2(0, tip + half_blade * 3.0), STEEL_SHADE, maxf(1.0, half_blade * 0.6))
+	canvas.draw_polyline(blade, Color.BLACK, line)
+	_draw_block(canvas, Rect2(-length * 0.18, guard_y, length * 0.36, length * 0.065), GOLD_COLOR, line)
+	_draw_block(canvas, Rect2(-half_blade * 0.75, guard_y + length * 0.065, half_blade * 1.5, length * 0.2), LEATHER_COLOR, line)
+	var pommel := Vector2(0, guard_y + length * 0.3)
+	canvas.draw_circle(pommel, half_blade * 1.3 + line, Color.BLACK)
+	canvas.draw_circle(pommel, half_blade * 1.3, GOLD_COLOR)
+	canvas.draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+
+
+## Espiga de milho: grãos amarelos com palha verde dos lados, de baixo para
+## cima. A espiga ocupa o meio de [param rect] (para um número em cima dela).
+static func draw_corn(canvas: CanvasItem, rect: Rect2) -> void:
+	var w := rect.size.x
+	var h := rect.size.y
+	var center := rect.get_center() - Vector2(0, h * 0.04)
+	var radius := Vector2(w * 0.27, h * 0.42)
+	var line := maxf(1.0, w / 30.0)
+	# Espiga (elipse)
+	var ear := PackedVector2Array()
+	for i in 25:
+		var angle := TAU * i / 24.0
+		ear.append(center + Vector2(cos(angle) * radius.x, sin(angle) * radius.y))
+	canvas.draw_colored_polygon(ear, CORN_COLOR)
+	# Grãos: fileiras de pontinhos mais escuros dentro da espiga
+	var kernel := maxf(1.0, w / 26.0)
+	for row in range(-4, 5):
+		var y := center.y + row * radius.y * 0.2
+		var row_half := radius.x * sqrt(maxf(0.0, 1.0 - pow((y - center.y) / radius.y, 2.0)))
+		for column in range(-2, 3):
+			var x := center.x + column * radius.x * 0.38
+			if absf(x - center.x) < row_half - kernel:
+				canvas.draw_circle(Vector2(x, y), kernel, CORN_KERNEL_COLOR)
+	canvas.draw_polyline(ear, Color.BLACK, line)
+	# Palha: duas folhas verdes saindo de baixo, abraçando a espiga
+	var base := Vector2(center.x, rect.end.y - h * 0.02)
+	for side in [-1.0, 1.0]:
+		var leaf := PackedVector2Array([base,
+				Vector2(center.x + side * w * 0.42, center.y + h * 0.1),
+				Vector2(center.x + side * w * 0.3, center.y - h * 0.22),
+				Vector2(center.x + side * w * 0.12, center.y + h * 0.3), base])
+		canvas.draw_colored_polygon(leaf, HUSK_COLOR)
+		canvas.draw_polyline(leaf, Color.BLACK, line)
+
+
+## Retângulo preenchido com contorno preto.
+static func _draw_block(canvas: CanvasItem, block: Rect2, color: Color, line: float) -> void:
+	canvas.draw_rect(block, color)
+	canvas.draw_rect(block, Color.BLACK, false, line)
+
+## Texturas de moeda já desenhadas, por tamanho.
+static var _coins := {}
+
+
+## Moeda de ouro de [param size] x [param size] pixels: disco dourado com
+## borda escura, um anel interno e um brilho no canto.
+static func gold_coin(size := 20) -> Texture2D:
+	if _coins.has(size):
+		return _coins[size]
+	var image := Image.create(size, size, false, Image.FORMAT_RGBA8)
+	var center := Vector2(size, size) / 2.0
+	var radius := size / 2.0 - 0.5
+	for y in size:
+		for x in size:
+			var distance := (Vector2(x, y) + Vector2(0.5, 0.5)).distance_to(center)
+			if distance > radius:
+				continue
+			var color := GOLD_COLOR
+			if distance > radius - maxf(1.0, size / 10.0):
+				color = GOLD_DARK # borda
+			elif absf(distance - radius * 0.62) < maxf(0.6, size / 24.0):
+				color = GOLD_DARK.lightened(0.25) # anel interno
+			image.set_pixel(x, y, color)
+	# Brilho no canto superior esquerdo
+	var shine := Vector2i(roundi(size * 0.32), roundi(size * 0.3))
+	for offset in [Vector2i.ZERO, Vector2i(1, 0), Vector2i(0, 1)]:
+		image.set_pixelv(shine + offset, GOLD_LIGHT)
+	_coins[size] = ImageTexture.create_from_image(image)
+	return _coins[size]

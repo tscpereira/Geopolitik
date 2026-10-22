@@ -1,0 +1,1523 @@
+==============================================================
+ PROJETOGAME - DOCUMENTAÇÃO DE PROGRESSO
+==============================================================
+
+Tipo de jogo : Estratégia em turnos 2D
+Engine       : Godot 4.7.2 (versão padrão, GDScript)
+Linguagem    : GDScript
+Pasta        : C:\ProjetoGame
+Última atualização: 21/10/2026
+
+
+--------------------------------------------------------------
+1. DECISÕES TOMADAS
+--------------------------------------------------------------
+
+- Engine: Godot 4.x.
+- Linguagem: GDScript.
+    * Avaliamos usar Python, mas o Godot não tem suporte oficial
+      a ele. Os projetos da comunidade (godot-python, py4godot)
+      são experimentais ou estão abandonados.
+    * O GDScript tem sintaxe parecida com a do Python, então a
+      curva de aprendizado é pequena.
+    * Descartamos C# para manter o projeto simples e ter mais
+      tutoriais e material disponível.
+- Gênero: estratégia em turnos 2D.
+- Resolução base: 1280x720, com stretch mode "canvas_items"
+  (a imagem se adapta a outras resoluções).
+
+
+--------------------------------------------------------------
+2. AMBIENTE DE DESENVOLVIMENTO
+--------------------------------------------------------------
+
+Já estava instalado:
+- Git
+- .NET SDK (não é usado, porque o projeto é em GDScript)
+- VS Code
+
+Instalado nesta sessão:
+- Godot Engine 4.7.2, via winget:
+    winget install --id GodotEngine.GodotEngine -e
+  Executável em:
+    %LOCALAPPDATA%\Microsoft\WinGet\Packages\
+      GodotEngine.GodotEngine_Microsoft.Winget.Source_8wekyb3d8bbwe\
+
+Recomendado (opcional):
+- Extensão "godot-tools" no VS Code, para usar GDScript no editor.
+- Export templates, necessários só para gerar o executável final.
+  Instale pelo menu do editor:
+  Editor > Manage Export Templates.
+
+Como abrir o editor:
+    godot -e --path C:\ProjetoGame
+
+Atalhos de linha de comando:
+  Sem permissão de administrador, o winget não cria o comando
+  "godot". Por isso criamos dois atalhos manualmente em
+  C:\Users\Thiago\.local\bin (pasta que já está no PATH):
+    godot.cmd          abre o editor sem prender o terminal
+    godot_console.cmd  versão de console, que mostra os
+                       logs/prints no terminal
+  Se o Godot for atualizado, o nome do .exe muda (o número da
+  versão faz parte do nome). Nesse caso, ajuste o caminho
+  dentro dos dois .cmd.
+
+Atalho na Área de Trabalho:
+  O winget instala o Godot como versão portátil e não cria
+  atalhos. Criamos manualmente "Godot" na Área de Trabalho
+  (C:\Users\Thiago\OneDrive\Desktop\Godot.lnk). Ele abre o
+  gerenciador de projetos, onde está o ProjetoGame. Se o Godot
+  for atualizado, recrie o atalho apontando para o novo .exe.
+
+
+--------------------------------------------------------------
+3. ESTRUTURA DO PROJETO
+--------------------------------------------------------------
+
+C:\ProjetoGame
+|-- project.godot                  Configuração do projeto
+|-- documentação.txt               Este arquivo
+|-- .gitignore                     Ignora .godot/, builds etc.
+|-- scenes/
+|   `-- main.tscn                  Cena principal (mapa, unidades,
+|                                  câmera, HUD)
+|-- scripts/
+|   |-- main.gd                    Monta a partida de exemplo
+|   |-- autoload/
+|   |   `-- turn_manager.gd        Gerenciador de turnos (global)
+|   |-- map/
+|   |   |-- terrain.gd             Tipos de terreno e regras (Água,
+|   |   |                          Pradaria, Floresta, Cerrado)
+|   |   |-- game_map.gd            Mapa em grid (dados + desenho)
+|   |   |-- movement.gd            Alcance e caminho das unidades
+|   |   |-- move_overlay.gd        Destaque das casas alcançáveis
+|   |   `-- terrain.gdshader       Desenho do mapa com transições
+|   |                              naturais entre os terrenos
+|   |-- players/
+|   |   |-- player.gd              Jogador, unidades e cidades
+|   |   `-- arsenal.gd             Armas do arsenal (Lança)
+|   |-- cities/
+|   |   |-- city.gd                Cidade (regras, turno, desenho)
+|   |   `-- lumber_mill.gd         Madeireira remota (do Trabalhador)
+|   |-- units/
+|   |   |-- unit_type.gd           Definição de um tipo de unidade
+|   |   `-- unit.gd                Unidade no mapa
+|   |-- camera/
+|   |   `-- map_camera.gd          Câmera (mover, zoom, arrastar)
+|   |-- ai/
+|   |   |-- ai_controller.gd       Inteligência do jogador máquina
+|   |   |                          (turno, ataques, avanço)
+|   |   |-- ai_economy.gd          Economia, expansão e guarnição
+|   |   `-- ai_personality.gd      Personalidades da máquina
+|   |-- combat/
+|   |   `-- combat.gd              Regras e fórmula de batalha
+|   `-- ui/
+|       |-- hud.gd                 HUD (turno, fim de turno, info,
+|       |                          ações da unidade, mensagens)
+|       |-- city_window.gd         Janela da cidade
+|       |-- city_map_view.gd       Mapa da área da cidade (na janela)
+|       |-- city_name_dialog.gd    Pergunta do nome da nova cidade
+|       |-- notice_dialog.gd       Aviso "construção concluída"
+|       |-- icons.gd               Ícones desenhados (moeda de ouro,
+|       |                          construções e unidades)
+|       `-- floating_text.gd       Números de dano flutuantes
+|-- assets/
+|   |-- sprites/                   Imagens de unidades, objetos
+|   |-- tiles/                     Tilesets do mapa
+|   |-- theme/game_theme.tres     Tema do jogo (tooltips sólidos)
+|   |-- audio/                     Músicas e efeitos
+|   `-- fonts/                     Fontes
+`-- data/
+    |-- maps/
+    |   `-- mapa_teste.png         Mapa de teste 120x75 (era o
+    |                              TemplateMapaTeste.png)
+    `-- units/
+        |-- guerreiro.tres         Tipos de unidade
+        |-- arqueiro.tres
+        |-- cavaleiro.tres
+        |-- colono.tres
+        `-- trabalhador.tres
+
+
+--------------------------------------------------------------
+4. O QUE JÁ FUNCIONA
+--------------------------------------------------------------
+
+O jogo já é uma partida completa: você (Jogador 1) contra a
+máquina (Jogador 2). O objetivo é eliminar todas as unidades e
+cidades do adversário.
+
+COMO JOGAR
+1. No início do turno, a primeira unidade com movimento é
+   selecionada automaticamente. Ela pisca e a câmera vai até ela.
+2. As casas para onde a unidade pode ir ficam destacadas em
+   branco. Clique em uma delas para mover a unidade.
+3. Quando a unidade acaba os movimentos, ela fica escura e a
+   próxima unidade é selecionada sozinha.
+4. Para selecionar outra unidade sua, clique nela. Espaço faz a
+   unidade selecionada "pular" o turno (abre mão dos movimentos).
+   As ações da unidade também aparecem como botões no canto
+   inferior direito.
+   Com o Colono selecionado, B (ou o botão "Construir nova
+   cidade") funda uma cidade. Clique numa cidade sua para abrir
+   a janela dela (ver CIDADES).
+5. Quando nenhuma unidade tiver mais movimento possível, aparece
+   "Finalizar turno? [Enter]" ao lado do turno. Enter passa a vez
+   para o próximo jogador. Antes disso, Enter não faz nada.
+6. Na vez da máquina, o HUD mostra "Vez do Jogador 2 (máquina)".
+   Você assiste às jogadas dela; seus cliques ficam bloqueados.
+   Ao terminar, ela passa a vez sozinha.
+7. Quando um jogador perde todas as unidades e cidades, aparece a tela
+   "Jogador X venceu!". Enter começa uma nova partida.
+
+INTELIGÊNCIA DA MÁQUINA (scripts/ai/ai_controller.gd)
+- O jogador com is_ai = true (o Jogador 2) é controlado pela
+  máquina.
+- A máquina segue exatamente as mesmas regras e ações do jogador
+  humano: Game.attack() e Game.move_unit(). Ela não trapaceia.
+- A cada turno, ela dá uma nota para cada ação possível e
+  escolhe a melhor:
+  1. ATAQUES (sempre o de maior nota primeiro):
+       nota = dano esperado causado
+              - dano esperado recebido x CAUTION (0,8)
+              + KILL_BONUS (60) se o ataque deve destruir o alvo
+              - DEATH_PENALTY (200) se ela pode morrer sem
+                destruir o alvo (considerando a pior sorte)
+     Só ataca se a nota for positiva. Na prática: termina
+     inimigos feridos, evita ataques suicidas e aceita trocas
+     equilibradas.
+  2. AVANÇO: as unidades andam em direção ao inimigo mais
+     próximo. A distância é calculada por terra, contornando a
+     água. Duas regras limitam o avanço:
+     - Formação: nenhuma unidade fica mais de MAX_SPREAD (2)
+       casas à frente da aliada mais avançada. As mais atrasadas
+       se movem primeiro.
+     - Zona de ameaça: ela evita parar em casas que o inimigo
+       consegue atacar no próximo turno, para não entregar o
+       primeiro golpe. Fica esperando na borda dessa zona.
+     - Paciência: se esperou PATIENCE (2) turnos seguidos, avança
+       mesmo assim, para a partida não travar.
+  3. NOVOS ATAQUES: unidades que chegaram perto e ainda têm
+     movimento podem atacar.
+- Visual: antes de cada ação, a unidade é selecionada e a câmera
+  desliza até ela, com uma pausa de 0,4 s (ACTION_DELAY).
+- Personalidade: as constantes no topo do arquivo controlam o
+  comportamento. Por exemplo, CAUTION menor deixa a máquina mais
+  agressiva. No futuro, isso permite criar níveis de dificuldade.
+- Teste: em 3 partidas automáticas contra um "robô" que sempre
+  avança e ataca, a máquina venceu 2. Sem a regra da zona de
+  ameaça, ela perdia as 3 (entregava o primeiro golpe).
+
+VITÓRIA
+- Um jogador continua na partida enquanto tiver pelo menos uma
+  unidade ou uma cidade. Perde quem ficar sem nenhuma das duas.
+- Após cada unidade destruída (ou Colono transformado em
+  cidade), o jogo verifica se só um jogador continua na partida.
+  Se sim, a partida acaba e a tela de
+  vitória aparece com o nome do vencedor, na cor dele.
+- [Enter] na tela de vitória recarrega a cena e começa uma nova
+  partida.
+- Como as cidades ainda não podem ser atacadas (a conquista vem
+  depois), hoje só perde quem nunca fundou uma cidade e perde
+  todas as unidades.
+
+MAPA (scripts/map/)
+- Grid de casas quadradas, no estilo Civilization 1.
+- Tamanho pequeno: 120 de largura x 75 de altura.
+- Cada casa tem 40x40 pixels (constante TILE_SIZE em
+  scripts/map/game_map.gd) e uma linha de grade mais escura na
+  borda. O mapa pequeno inteiro mede 4800x3000 pixels.
+- Fontes, contornos, barra de energia e números de dano são
+  proporcionais a TILE_SIZE. Para mudar o tamanho das casas,
+  basta mudar essa constante e redesenhar as imagens no novo
+  tamanho.
+- O mapa é lido de uma imagem PNG em que cada pixel é uma casa.
+  A cor do pixel define o terreno (cores da paleta do Paint):
+    azul         (63, 72, 204)   -> Água
+    verde-claro  (181, 230, 29)  -> Pradaria
+    verde-escuro (34, 177, 76)   -> Floresta
+    bege         (239, 228, 176) -> Cerrado
+  Cada pixel vira o terreno de cor mais parecida
+  (Terrain.from_color). Para criar ou editar um mapa, basta
+  desenhar um PNG (no Paint, por exemplo) e trocar o arquivo em
+  data/maps/. O tamanho da imagem define o tamanho do mapa.
+  O mapa de teste atual tem 763 casas de pradaria e 44 de
+  floresta.
+- O visual de cada terreno vem de uma imagem PNG de 40x40 pixels:
+    assets/tiles/agua.png
+    assets/tiles/pradaria.png
+    assets/tiles/floresta.png
+    assets/tiles/cerrado.png
+  São desenhos provisórios. Água e pradaria foram redesenhadas em
+  21/10/2026 (capim com folhas e florzinhas; mar com manchas e
+  ondinhas). As texturas são "sem emenda": o desenho continua na
+  casa vizinha. O antigo assets/tiles/terra.png não é mais usado.
+  Para mudar o visual, basta editar esses arquivos e salvar. O
+  editor do Godot reimporta a imagem sozinho quando você volta
+  para ele; depois é só apertar F5. Os caminhos ficam em
+  Terrain.TEXTURE_PATHS (scripts/map/terrain.gd).
+- Se a imagem tiver outro tamanho, ela é redimensionada (com um
+  aviso no Output). Se o arquivo não existir, o terreno usa a cor
+  sólida de Terrain.COLORS.
+- A linha de grade é aplicada pelo código por cima da imagem. Não
+  é preciso desenhá-la; para desligar, use DRAW_GRID = false em
+  game_map.gd.
+- TRANSIÇÕES NATURAIS (scripts/map/terrain.gdshader): o mapa não
+  é mais desenhado tile por tile. Um shader pinta o mapa inteiro
+  (um Sprite2D "TerrainView" dentro do GameMap). Para cada pixel,
+  ele mistura os terrenos das 3x3 casas ao redor (spline
+  quadrática) e soma um ruído:
+    * costa arredondada e irregular, com faixa de areia, espuma
+      branca na beira e água mais clara perto da praia; as
+      "escadinhas" das diagonais viram curvas;
+    * florestas com borda recortada em moitas e uma sombra leve
+      na pradaria ao lado;
+    * pradaria e cerrado se misturam aos poucos;
+    * manchas grandes de cor (água mais funda/rasa, capim mais
+      claro/escuro) e cada casa espelha a textura de um jeito,
+      para o padrão não se repetir em grade.
+  O miolo de cada casa sempre fica com o terreno dela (até uma
+  ilha de 1 casa), então o desenho bate com as regras: o teste
+  confere o centro de todas as casas visíveis.
+  O visual continua em pixel art: o shader trabalha nos pixels do
+  tile (40 por casa).
+  Ajustes no topo do shader: coast_noise e forest_noise (quanto
+  as bordas ondulam), core_radius e core_strength (miolo da casa),
+  sand_color, foam_color e shallow_color.
+- FAZENDAS NO MAPA: também são pintadas pelo shader, integradas
+  ao terreno. As cidades avisam o GameMap onde estão as fazendas
+  (GameMap.set_improvement, mapa "improvement_map"):
+    * campo com borda orgânica (ruído) e uma cerca viva escura em
+      volta; fazendas vizinhas se juntam num só campo;
+    * fileiras levemente onduladas, numa direção sorteada por casa
+      (fica uma "colcha de retalhos"), e cor da plantação também
+      sorteada por fazenda (trigo, verde-claro ou verde);
+    * fazenda em obra: só terra arada (marrom, sem plantação);
+    * obra cancelada: a casa volta a ser só terreno.
+  Ajustes no shader: farm_noise, farm_rows e as cores soil_color,
+  hedge_color e crop_color_a/b/c.
+  Na janela da cidade e nos ícones, a fazenda é um campo de cantos
+  arredondados, com cerca viva e fileiras curvas (City.draw_farm);
+  em obra, só a terra arada.
+- Quando um terreno muda no jogo (floresta esgotada vira cerrado,
+  cidade na floresta vira pradaria), GameMap.set_terrain atualiza
+  o mapa do shader e o desenho muda na hora.
+- A janela da cidade ainda desenha os terrenos em quadrados (um
+  tile por casa).
+- Os desenhos originais de 16x16 (antes da mudança para 40x40)
+  estão guardados em assets/_originais_16px/. O Godot ignora essa
+  pasta por causa do arquivo .gdignore. As imagens atuais são
+  esses originais ampliados (2,5x), servindo de base para
+  redesenhar.
+- Atenção: a imagem do terreno (aparência) é diferente do mapa
+  em data/maps/ (onde fica cada terreno). Pintar o PNG do tile não
+  muda o formato da ilha.
+- Funções úteis do GameMap:
+    get_terrain(casa)      tipo de terreno da casa
+    set_terrain(casa, t)   troca o terreno (ex.: floresta -> cerrado)
+    wood_left(casa)        madeira que resta na floresta
+    is_in_bounds(casa)     se a casa existe no mapa
+    cell_to_world(casa)    posição em pixels do centro da casa
+    world_to_cell(pos)     casa em uma posição em pixels
+
+JOGADORES (scripts/players/player.gd)
+- Jogador 1 (vermelho) e Jogador 2 (amarelo).
+- Cada jogador tem id, nome, cor e uma lista de unidades.
+- No início do turno, os movimentos das unidades do jogador
+  são restaurados.
+
+UNIDADES (scripts/units/)
+- Atributos básicos: Ataque, Defesa, Movimento e Energia.
+- Energia: todas as unidades começam com 100. Ela é gasta nas
+  batalhas, e a unidade é destruída ao chegar a 0. Só se recupera
+  com a unidade fortificada (ver FORTIFICAR).
+- Quando a unidade já levou dano, aparece uma barra de energia
+  na base dela: verde acima de 60%, amarela acima de 30% e
+  vermelha abaixo disso.
+- Os tipos de unidade são arquivos de dados (.tres) em
+  data/units/ e podem ser editados no Inspector do Godot:
+    Tipo        Símbolo  Ataque  Defesa  Movimento  Energia
+    Guerreiro   G        1       1       1          100
+    Arqueiro    A        2       1       1          100
+    Cavaleiro   C        1       1       2          100
+    Colono      S        0       0       1          100
+    Trabalhador T        0       0       1          100
+- Cada unidade no mapa guarda o dono, a casa em que está e os
+  movimentos restantes no turno.
+- Visual (estilo Civilization 1): um quadrado na cor do jogador
+  com o sprite do tipo desenhado por cima.
+- Sprites: PNG de 40x40 pixels com fundo transparente, em
+    assets/sprites/units/guerreiro.png
+    assets/sprites/units/arqueiro.png
+    assets/sprites/units/cavaleiro.png
+    assets/sprites/units/colono.png
+    assets/sprites/units/trabalhador.png
+  Os que estão lá agora são provisórios. Para mudar, edite o
+  arquivo e salve; o Godot reimporta sozinho.
+- Cor de time: pixels pintados em magenta puro (#FF00FF, RGB
+  255,0,255) são trocados pela cor do jogador. Assim um único
+  desenho serve para todos os jogadores.
+- O sprite de cada tipo é definido no campo "Sprite" do .tres em
+  data/units/ (dá para trocar pelo Inspector). Sem sprite, a
+  unidade mostra a letra do campo "Symbol".
+- Para desenhar a unidade inteira, sem o quadrado colorido atrás,
+  use DRAW_BACKGROUND = false em scripts/units/unit.gd. Nesse caso,
+  use o magenta para mostrar de qual jogador ela é.
+- Os sprites são exibidos sem suavização (filtro "nearest"), então
+  a pixel art continua nítida com zoom.
+- Partida de teste atual: cada jogador começa só com 1 Colono,
+  sem tropas e sem guerra, para observar o gerenciamento das
+  cidades. Para voltar a ter tropas, use WITH_TROOPS = true no
+  topo de scripts/main.gd. Com isso, cada jogador também recebe
+  1 Guerreiro, 1 Arqueiro e 1 Cavaleiro, e os dois lados começam
+  frente a frente no centro da ilha, a 3 casas de distância
+  (J1 em x=57-58, J2 em x=61-62).
+- Uma unidade só é criada em casa de terra (qualquer terreno menos
+  Água). Se a casa for água ou estiver fora do mapa, aparece um
+  aviso no console.
+
+FLORESTA (scripts/map/terrain.gd)
+- Terreno novo, verde-escuro no mapa. As regras ficam em
+  constantes no topo de terrain.gd:
+    * Defesa: quem DEFENDE na floresta ganha +1 de defesa
+      (Terrain.DEFENSE_BONUS). Soma com a fortificação: Guerreiro
+      fortificado na floresta tem defesa 1 + 1 + 1 = 3. O painel
+      de informações mostra "Defesa 2 (+1 floresta)".
+    * Movimento: unidades com mais de 1 de movimento gastam 1 a
+      mais para ENTRAR numa casa de floresta (Terrain.MOVE_PENALTY).
+      O Cavaleiro (2) anda 2 casas na pradaria, mas só 1 casa por
+      turno na floresta. Unidades com movimento 1 não são afetadas.
+      Sair da floresta para a pradaria custa o normal (1).
+    * Não aceita fazenda (Terrain.can_farm).
+    * Cidade fundada na floresta: a casa vira Pradaria.
+    * Tem 30 de madeira por casa (Terrain.WOOD_PER_FOREST), tirada
+      pelas madeireiras. Quando a madeira acaba, a casa vira
+      Cerrado.
+- Cerrado: o que sobra da floresta explorada. Igual à Pradaria em
+  movimento e cidade, mas é um solo menos fértil: a fazenda no
+  cerrado rende +2 de alimento (na pradaria, +3; Terrain.FARM_FOOD).
+- Passar o mouse sobre uma floresta mostra a madeira que resta
+  (ex.: "Floresta (madeira 25/30, defesa +1...)").
+
+OURO (TESOURO)
+- Cada jogador tem um tesouro em ouro (Player.gold). Para testes,
+  todos começam com 200 (Player.START_GOLD). O ouro entra pelos
+  impostos das Marcenarias paradas (ver MARCENARIA E IMPOSTOS).
+- Comprar: na lista "Construir" da cidade, o botão da moeda (ex.:
+  "50") conclui a construção NA HORA e tira o preço do tesouro.
+  Hoje tudo custa 50 (campo "gold" em City.BUILDS).
+    * Unidade comprada: sai na cidade (ou na casa vizinha livre)
+      no mesmo instante e já pode se mover. Paga também a
+      população, como a unidade feita por produção.
+    * Prédio comprado (ex.: Quartel General): fica pronto na hora.
+      Se ele estava em obra, a obra sai da fila (o progresso é
+      perdido) e os trabalhadores dela vão para outra obra ou
+      fazenda.
+    * Melhorias de terreno (Fazenda, Madeireira) NÃO podem ser
+      compradas: elas não têm o botão da moeda.
+    * A unidade também precisa do prédio dela (ver PRÉDIOS).
+- A compra não acontece (botão desabilitado, com o motivo no
+  tooltip) quando: falta ouro, a cidade ficaria sem população
+  (precisa de pelo menos 2) ou não há casa livre ao redor da
+  cidade. Regras em Game.buy_error.
+- Depois da compra, a lista fecha e uma mensagem dourada confirma
+  ("Guerreiro comprado por 50 de ouro.").
+- A máquina também começa com 200, mas ainda não compra nada.
+
+RECURSOS ESTRATÉGICOS E MADEIRA
+- Recurso estratégico é um estoque do JOGADOR (não da cidade).
+  Por enquanto, só existe a madeira (Player.wood). Ela é gasta
+  por algumas construções (ver CONSTRUÇÕES QUE GASTAM RECURSOS).
+- Painel "Recursos estratégicos" no canto superior direito do
+  HUD: ícone de toras, "Madeira N" e o saldo "+N por turno"
+  (verde quando entra madeira). Quando o estoque muda, o número
+  pisca em verde (subiu) ou vermelho (caiu). Mostra o jogador
+  humano.
+- A madeira vem das madeireiras: cada trabalhador tira 1 de
+  madeira por turno (LumberMill.WOOD_PER_WORKER), no início da
+  vez do dono. Cada madeireira tem no máximo 2 trabalhadores
+  (LumberMill.MAX_WORKERS). Fazendas continuam com 1.
+- Há dois tipos de madeireira:
+  1. MADEIREIRA DA CIDADE: construída pela janela da cidade
+     ("Construir..." > Madeireira), numa casa de floresta da área
+     da cidade. Custa 4 de produção (o mesmo da fazenda). Pronta,
+     aparece em "Produção da cidade" com a barra azul da madeira
+     restante e os botões - / + (0 a 2 cidadãos).
+  2. MADEIREIRA REMOTA: construída por um Trabalhador em qualquer
+     casa de floresta, longe das cidades (ver TRABALHADOR).
+- Floresta esgotada (0 de madeira): vira Cerrado, a madeireira
+  some, e os trabalhadores ficam livres (cidadãos vão para outra
+  obra, fazenda ou madeireira; Trabalhadores voltam ao mapa). Uma
+  mensagem avisa no topo da tela.
+
+TRABALHADOR (data/units/trabalhador.tres)
+- Ataque 0, Defesa 0, Movimento 1. Sprite provisório: boneco com
+  um machado (assets/sprites/units/trabalhador.png).
+- Feito na cidade: 5 de produção + 1 de população (mesma regra do
+  Guerreiro: só sai se a cidade continuar com pelo menos 1).
+- Habilidade (campo "Can Build Lumber Mill" do .tres): tecla M ou
+  botão "Construir madeireira [M]". Precisa estar numa casa de
+  floresta, ter movimento sobrando e a casa não pode ser usada por
+  uma cidade. O Trabalhador entra na madeireira e passa a
+  trabalhar nela:
+    * ele some do mapa, não ocupa a casa e não é mais selecionado
+      sozinho;
+    * em obra: cada Trabalhador lá dentro faz 1 ponto por turno, até
+      4 (o custo da madeireira). Uma barra de progresso aparece no
+      topo da madeireira;
+    * pronta: cada Trabalhador tira 1 de madeira por turno, com um
+      "+N" azul subindo no mapa. A barra vira azul e vai diminuindo
+      com a madeira que resta (de 30).
+- Um segundo Trabalhador pode entrar: ande até a casa da
+  madeireira e aperte M ("Trabalhar na madeireira [M]"). Precisa
+  ter movimento sobrando, então quem chega no turno entra no
+  turno seguinte. Máximo de 2.
+- No mapa, a madeireira remota é uma pilha de toras com contorno
+  na cor do dono e um círculo com o número de Trabalhadores.
+  Enquanto está em obra, ela fica transparente.
+- Clicar na sua madeireira remota a seleciona: a barra de ações
+  mostra "Madeireira (x, y) - N/2 trabalhadores" e o botão
+  "Retirar trabalhador". Ele volta ao mapa (na casa da madeireira
+  ou na livre mais próxima) e fica selecionado. A madeireira em
+  obra sem ninguém fica parada.
+- Floresta esgotada: a madeireira remota é consumida, a casa vira
+  Cerrado e os Trabalhadores voltam ao mapa em casas livres
+  próximas.
+- Ainda não feito: a máquina não faz Trabalhadores nem
+  madeireiras, e madeireiras não podem ser atacadas.
+
+COLONO
+- Ataque 0, Defesa 0, Movimento 1 (data/units/colono.tres).
+  Sprite: assets/sprites/units/colono.png (boneco com uma pá).
+- Todo jogador começa com um Colono
+  (J1 em (55, 41), J2 em (64, 41)).
+- Não ataca (unidades com Ataque 0 não atacam) e, com Defesa 0,
+  é destruído com um único ataque.
+- Habilidade: construir uma nova cidade na casa em que está
+  (tecla B ou botão "Construir nova cidade"). O Colono é
+  consumido. Qualquer tipo de unidade com o campo
+  "Can Found City" marcado no .tres pode fazer o mesmo.
+- Para fundar, o Colono precisa ter movimento sobrando e estar a
+  pelo menos City.MIN_DISTANCE (3) casas de qualquer outra cidade,
+  contando as diagonais. Se não puder, a mensagem no topo da tela
+  explica o motivo.
+- Antes de fundar, uma janela pergunta o nome da cidade. Ela já
+  vem preenchida com uma sugestão da lista City.NAMES. Enter ou
+  "Fundar cidade" confirmam; nome vazio usa a sugestão. Esc ou
+  "Cancelar" desistem, e o Colono continua onde está. A máquina
+  não pergunta: usa os nomes da lista.
+- Depois de fundar, a janela da nova cidade abre sozinha.
+
+CIDADES (scripts/cities/city.gd)
+- Atributos: Nome, População, Estoque de Alimentos e Produção
+  (força de trabalho). O jogador escolhe o nome ao fundar; a
+  máquina usa a lista City.NAMES ("Aurora", "Porto Alto"...).
+- No mapa: quadrado na cor do dono com a população no meio
+  (estilo Civilization 1) e o nome embaixo. As fazendas são
+  pintadas pelo shader do terreno, integradas ao chão (ver
+  FAZENDAS NO MAPA); as madeireiras em obra ficam transparentes.
+- Área da cidade: as 8 casas vizinhas mais as 12 seguintes, sem
+  as 4 pontas (um quadrado 5x5 sem os cantos), ou seja, 20 casas
+  além da própria cidade.
+- Cidadãos: cada um trabalha em uma coisa só:
+    * numa obra: gera 1 ponto de produção por turno para ela;
+    * numa fazenda pronta: a fazenda gera 3 de alimento por turno
+      na pradaria e 2 no cerrado
+      (no máximo 1 cidadão por fazenda);
+    * numa madeireira pronta: gera 1 de madeira por turno para o
+      estoque do jogador (no máximo 2 cidadãos por madeireira);
+    * livre: não produz nada.
+- O que a cidade pode construir fica em City.BUILDS. Cada item
+  tem nome, custo, descrição e se é feito numa casa ou é uma
+  unidade:
+    Construção  Custo                       Onde
+    Fazenda     4 de produção               casa de pradaria ou
+                                            cerrado da área
+    Madeireira  4 de produção               casa de floresta da
+                                            área
+    Guerreiro   10 de produção + 1 de       Quartel General
+                população + 1 Lança
+    Colono      10 de produção + 1 de       Prefeitura
+                população
+    Trabalhador 5 de produção + 1 de        Prefeitura
+                população
+    Lança       5 de produção + 2 de        Marcenaria (vai para
+                madeira                     o arsenal)
+    Quartel     15 de produção + 15 de      prédio da cidade
+    General     madeira
+    Marcenaria  10 de produção + 10 de      prédio da cidade
+                madeira
+  Todos custam 50 de ouro para comprar na hora (menos as
+  melhorias de terreno, que não podem ser compradas).
+
+CONSTRUÇÕES QUE GASTAM RECURSOS (campos "wood" e "weapons" em City.BUILDS)
+- Algumas construções gastam madeira do estoque do jogador:
+    Quartel General  15 de madeira
+    Marcenaria       10 de madeira
+    Lança             2 de madeira
+- O Guerreiro NÃO gasta mais madeira: gasta 1 Lança do arsenal
+  (ver ARSENAL). Sem a Lança, a linha mostra "Faltam armas:
+  precisa de 1 Lança (arsenal: 0)." (City.weapons_error). A Lança
+  segue as mesmas regras da madeira abaixo: paga ao pedir ou
+  comprar, devolvida se a obra for cancelada
+  (Construction.weapons_paid).
+- Sem a madeira no estoque, não dá para PEDIR nem COMPRAR: os
+  botões "Escolher" e da moeda ficam desabilitados e a linha
+  mostra, em laranja, "Madeira insuficiente: precisa de 15
+  (estoque: 10)." (City.wood_error). O custo da linha mostra a
+  madeira (ex.: "15 de produção + 15 madeira").
+- A madeira é paga NA HORA em que a obra é pedida ("Escolher") ou
+  em que o item é comprado com ouro. Ela fica guardada na obra
+  (Construction.wood_paid):
+    * cancelar a obra (X) devolve a madeira para o estoque (o
+      tooltip do X avisa);
+    * comprar com ouro um prédio que já estava em obra NÃO cobra a
+      madeira de novo;
+    * cada unidade da fila paga a sua madeira ao ser pedida.
+- O painel de recursos do HUD mostra a madeira caindo (pisca em
+  vermelho) quando ela é gasta.
+- Fazenda e Madeireira: só na área da cidade, no terreno certo
+  (City.allows_terrain), em casa sem outra melhoria, obra (de
+  nenhuma cidade) ou madeireira remota. Se não houver casa
+  possível, o botão "Escolher" fica desabilitado com o motivo.
+- A lista "Construir" tem rolagem (para quando crescer além da
+  tela).
+- Guerreiro (e futuras unidades): quando a produção completa, a
+  unidade só sai se a cidade continuar com pelo menos 1 de
+  população depois de pagar o custo. Com 1 de população, a
+  unidade fica "pronta", esperando a cidade crescer (aparece um
+  aviso uma vez). Quando sai, a população cai 1 e, se faltar
+  gente, os cidadãos são tirados das obras e depois das
+  fazendas.
+- A unidade nasce na casa da cidade. Se a casa estiver ocupada,
+  nasce na primeira casa vizinha de terra livre; sem nenhuma
+  livre, tenta de novo no próximo turno. Ela já pode se mover no
+  turno em que nasce.
+- Para criar uma construção nova, adicione um item em
+  City.BUILDS (e no enum City.Build). Uma unidade nova precisa do
+  .tres em "unit" e do prédio que a produz em "requires". Uma
+  melhoria nova também precisa de efeito em City._complete().
+
+PRÉDIOS (City.buildings)
+- Prédios são construções da cidade (classe "Prédios" da lista
+  Construir). Cada cidade tem no máximo UM de cada: quando um
+  prédio fica pronto (por produção ou comprado), ele some da lista
+  "Construir". Enquanto está em obra, o "Escolher" fica
+  desabilitado ("Já está em obra."), mas dá para comprá-lo.
+- Prédios de hoje:
+    Prefeitura       toda cidade nasce com ela ("native"); não
+                     aparece na lista. Produz Colonos e
+                     Trabalhadores.
+    Quartel General  15 de produção + 15 de madeira (ou 50 de
+                     ouro + 15 de madeira). Produz as unidades
+                     militares (hoje, o Guerreiro).
+    Marcenaria       10 de produção + 10 de madeira (ou 50 de
+                     ouro + 10 de madeira). Produz as armas (hoje,
+                     a Lança). Parada, rende impostos (ver
+                     MARCENARIA E IMPOSTOS).
+- UNIDADES E ARMAS SÃO PRODUZIDAS NOS PRÉDIOS: cada uma só pode
+  ser feita se a cidade tiver o prédio dela (campo "requires" em
+  City.BUILDS). Sem ele, a linha fica desabilitada com "Precisa de
+  Quartel General." (e a compra também).
+- Fila do prédio: unidades e armas pedidas entram na fila do
+  prédio que as produz. Só a primeira da fila avança; as outras
+  aparecem "na fila".
+- TRABALHADORES DO PRÉDIO (City.building_workers): os cidadãos
+  ficam alocados NO PRÉDIO, não na unidade. A cada turno, eles
+  fazem avançar a primeira da fila; quando ela fica pronta (ou é
+  cancelada), seguem direto na próxima. Quando a fila acaba:
+    * Prefeitura e Quartel General liberam os cidadãos (o ícone
+      "!" azul e o aviso de construção concluída avisam);
+    * a Marcenaria fica com eles, rendendo ouro (impostos).
+- Ao pedir uma unidade ou arma, os cidadãos livres vão para o
+  prédio que a produz. A realocação automática só põe cidadãos
+  num prédio que tem algo na fila.
+- Quartel General pronto gera o aviso "A construção do quartel
+  general foi concluída.".
+- A máquina ainda não constrói prédios nem unidades.
+
+ARSENAL (scripts/players/arsenal.gd, Player.arsenal)
+- O arsenal guarda as armas de todo o império (do jogador, não da
+  cidade). Por enquanto existe só a Lança.
+- Para formar um exército: primeiro a matéria-prima (madeira),
+  depois as armas (Lança, na Marcenaria) e, por fim, a tropa
+  (Guerreiro, no Quartel General, levando 1 Lança).
+- Lança: classe "Armas" da lista Construir. 5 de produção + 2 de
+  madeira (ou 50 de ouro + 2 de madeira). Entra na fila da
+  Marcenaria; pronta, vai direto para o arsenal (mensagem "Lança
+  pronta (arsenal: 3 Lanças)", sem o aviso de construção
+  concluída, porque os trabalhadores continuam na Marcenaria).
+- Painel ARSENAL no topo da tela, à esquerda do painel de ouro e
+  recursos: ícone de cada arma, "Lanças N" e, se houver,
+  "(+N em produção)". O número pisca quando o estoque muda.
+- Para uma arma nova: entre no enum Arsenal.Weapon, nos nomes do
+  arsenal.gd, em City.BUILDS (com "weapon" e "requires") e em
+  Icons.draw_weapon.
+
+MARCENARIA E IMPOSTOS (campo "idle_gold" em City.BUILDS)
+- Se não houver nenhuma arma na fila da Marcenaria, o jogador pode
+  manter trabalhadores nela: cada um produz bens e serviços para a
+  população e recolhe impostos, rendendo +1 de ouro por turno
+  (City.gold_per_turn). É a primeira fonte de ouro do jogo.
+- Na janela da cidade, a Marcenaria parada mostra a linha
+  "Impostos (sem armas na fila)" com "+N ouro" e os botões - / +.
+  O resumo mostra "Ouro: +N por turno (impostos da Marcenaria)".
+- Com uma Lança na fila, os mesmos trabalhadores voltam a
+  produzir armas e o ouro para.
+- O ouro entra no início da vez do dono, junto com a produção das
+  cidades.
+- Alimento por turno (regra do Civilization II desde 20/10/2026):
+    + 2 da casa da cidade (CENTER_FOOD)
+    + 3 por fazenda com trabalhador na pradaria, 2 no cerrado
+      (Terrain.FARM_FOOD, City.farm_food)
+    - 2 por habitante (FOOD_PER_CITIZEN)
+  A casa da cidade produz alimento sozinha. Sem isso, uma cidade
+  nova passaria fome antes de terminar a primeira fazenda. Essa
+  regra é uma suposição nossa e pode ser ajustada.
+- Estoque de alimentos: a sobra de cada turno vai para o estoque.
+  O tamanho do estoque depende do tamanho da cidade:
+    tamanho do estoque = (população atual + 1) x 10
+  ou seja, 20 com 1 habitante, 30 com 2, 40 com 3... (constante
+  FOOD_BOX_PER_SIZE e função City.food_capacity()).
+- Crescimento: quando o estoque enche, a população sobe 1 e o
+  estoque esvazia (volta a 0, como no Civilization II).
+- Barra do estoque: na janela da cidade ("Estoque", com x/y) e no
+  mapa, uma barrinha logo acima da cidade. A barrinha do mapa fica
+  verde normalmente e vermelha quando a cidade está passando
+  fome.
+- Equilíbrio: cada cidadão numa fazenda de pradaria produz 3 e
+  come 2 (no cerrado, produz 2 e não sobra nada), ou
+  seja, +1 de sobra por fazenda trabalhada, mais +2 da casa da
+  cidade. Cidadãos em obras comem 2 sem produzir alimento. (Com a
+  fazenda dando 2, as cidades quase não cresciam, por isso ela foi
+  para 3.) Próximo passo: melhorias que aumentem o alimento.
+- Fome: se o estoque ficaria negativo, ele volta a 0 e a cidade
+  perde 1 de população (nunca fica abaixo de 1). Quem perde o
+  trabalho primeiro são os cidadãos das obras, depois os das
+  madeireiras e por último os das fazendas.
+- Quando: as cidades são processadas no início da vez do dono.
+  A ordem é: primeiro as obras avançam, depois as madeireiras
+  tiram madeira e por fim o alimento é somado. A cidade fundada
+  neste turno começa a produzir no próximo.
+- Realocação automática (para evitar cidadãos ociosos): no fim do
+  turno da cidade, quem ficou livre naquele turno vai trabalhar
+  na primeira obra da fila que ainda não terminou. Isso vale para
+  os trabalhadores de uma obra concluída e para o cidadão novo do
+  crescimento. Sem obras na fila, eles vão para fazendas sem
+  trabalhador (1 por fazenda) e depois para madeireiras com vaga
+  (até 2 por madeireira). Se não houver vaga, ficam livres.
+  O mesmo vale ao cancelar uma obra (X) e quando a floresta de
+  uma madeireira acaba.
+- Quem o jogador deixar livre de propósito (botão "-") continua
+  livre: a realocação automática não mexe nele.
+- TRABALHADORES OCIOSOS NO MAPA: quando uma cidade sua tem
+  cidadãos livres, aparece acima dela (sobre a barra de
+  alimentos) um círculo azul com "!" e, à direita, a quantidade
+  de livres (ex.: "! 2"). Some quando todos estão trabalhando.
+  Só aparece nas cidades do jogador humano (City.IDLE_COLOR,
+  City._draw_idle_warning).
+- AVISO DE CONSTRUÇÃO CONCLUÍDA: no início da sua vez, para cada
+  construção concluída numa cidade sua (melhoria pronta ou
+  unidade que saiu da cidade), aparece um aviso:
+    título: nome da cidade
+    texto : "A construção da fazenda foi concluída." e quantos
+            cidadãos ficaram sem tarefa (em azul), ou "Todos os
+            cidadãos da cidade estão trabalhando."
+    botões: "Abrir cidade" (abre a janela da cidade) e
+            "Fechar [Enter]" (Enter ou Esc também fecham)
+  A câmera vai até a cidade e o aviso fica na metade de baixo da
+  tela, para a cidade continuar visível. Com várias construções,
+  aparece um aviso por vez; depois de "Abrir cidade", o próximo
+  espera a janela fechar. Só depois dos avisos a primeira unidade
+  é selecionada. A frase usa o artigo do item ("da fazenda", "do
+  guerreiro"): campo "article" em City.BUILDS.
+  Unidade pronta que ainda espera população não gera aviso (só
+  quando sai da cidade). A máquina não recebe avisos.
+- Fazenda concluída começa sem trabalhador. Se não houver outra
+  obra na fila, os trabalhadores liberados vão para ela.
+- Nova obra: todos os cidadãos livres passam a trabalhar nela.
+  Dá para mudar depois.
+- Cidades ainda não podem ser atacadas (a conquista vem depois).
+  Elas contam para a vitória: quem tem uma cidade continua na
+  partida. Unidades inimigas podem andar sobre a cidade.
+- Constantes ajustáveis no topo de city.gd: FARM_FOOD,
+  CENTER_FOOD, FOOD_PER_CITIZEN, FOOD_BOX_PER_SIZE, MIN_DISTANCE e
+  BUILDS (custos).
+
+JANELA DA CIDADE (scripts/ui/city_window.gd e city_map_view.gd)
+- Abre ao clicar numa cidade sua e logo depois de fundar uma.
+- Clicar numa cidade do adversário abre a janela no modo
+  "observando": mostra tudo, mas os botões de ordem ficam
+  desabilitados. Serve para acompanhar como a IA cuida da cidade
+  dela.
+  Esc ou "Fechar" fecham. Com a janela aberta, o mapa e as
+  teclas do jogo ficam bloqueados.
+- Esquerda, MAPA DA CIDADE: as 21 casas com terreno, fazendas,
+  obras (barrinha e "progresso/custo") e um círculo branco com o
+  número de cidadãos trabalhando em cada casa. Passar o mouse
+  sobre uma casa mostra os detalhes dela. Casas usadas por outra
+  cidade aparecem escurecidas.
+  Fazenda trabalhada: uma espiga de milho no centro da casa com o
+  alimento que ela produz por turno no meio (3 na pradaria, 2 no
+  cerrado). Fazenda
+  sem trabalhador não mostra o milho (Icons.draw_corn,
+  CityMapView._draw_food).
+- Direita:
+    * RESUMO: população (e quantos estão livres), estoque de
+      alimentos (x/tamanho do estoque, com barra de progresso,
+      saldo por turno, turnos até crescer, de
+      onde vem e para onde vai o alimento) e produção. O saldo
+      de alimento por turno aparece em verde quando sobra e em
+      vermelho quando falta (com um aviso em vermelho);
+    * botão "Construir...": abre uma lista (modal) com o que a
+      cidade pode construir, dividida em três classes
+      (City.Category / campo "category" em City.BUILDS):
+        Unidades             Guerreiro, Colono, Trabalhador
+        Melhorias de terreno Fazenda, Madeireira
+        Prédios              Quartel General
+      No topo da lista aparece o tesouro ("Tesouro: N", com a
+      moeda). Cada linha mostra o nome, o custo em produção (e
+      população), o botão "Escolher" e o botão da moeda de ouro
+      com o preço (melhorias de terreno não têm a moeda). Quando
+      não dá para fazer o item, o motivo aparece em laranja no
+      lugar do custo. A descrição do item aparece num TOOLTIP ao
+      passar o mouse sobre a linha, em até 3 linhas de 50 letras
+      (CityWindow.wrap_tooltip / TOOLTIP_WIDTH). Ao escolher:
+        - Melhoria de terreno: o mapa destaca em verde as casas
+          possíveis. Clique numa delas para ordenar a obra; Esc,
+          botão direito ou "Cancelar" desistem;
+        - Unidade: entra na fila do prédio que a produz;
+        - Prédio: entra nas obras em andamento.
+      Botão da moeda: compra com ouro (ver OURO).
+    * ÍCONES: cada construção e unidade tem um ícone ao lado do
+      nome, na lista "Construir" e nas seções da janela (prédios,
+      unidades em produção, obras e produção da cidade). Ficam em
+      scripts/ui/icons.gd (Icons.build_icon / draw_build):
+        Prefeitura       prédio romano (frontão e colunas)
+        Quartel General  espada
+        Fazenda          plantação (o desenho do mapa)
+        Madeireira       pilha de toras (o desenho do mapa)
+        unidades         sprite da unidade sobre um quadrado na
+                         cor do jogador (como no mapa)
+      Para uma construção nova, acrescente o desenho dela em
+      Icons.draw_build (unidades usam o sprite do .tres sozinhas).
+    * TOOLTIPS: fundo sólido (opaco), definido no tema do jogo
+      assets/theme/game_theme.tres (TooltipPanel), registrado em
+      project.godot (gui/theme/custom). Vale para todas as telas.
+    * PRÉDIOS DA CIDADE: cada prédio pronto (Prefeitura, Quartel
+      General...), com tooltip da descrição. Embaixo de cada
+      prédio, as unidades que ele está produzindo, uma por linha:
+      barra, "progresso/custo (N t)", os botões - / + dos
+      trabalhadores (só na unidade que está avançando; os
+      trabalhadores são do prédio) e X para cancelar. As que
+      esperam aparecem "na fila". Sem unidades: "Nenhuma unidade
+      em produção.";
+    * Largura: a coluna da direita tem 620 pixels
+      (RIGHT_COLUMN_WIDTH), para cada obra caber numa linha só; as
+      barras crescem e os botões e o X ficam alinhados à direita.
+    * OBRAS EM ANDAMENTO: melhorias de terreno e prédios em
+      construção, cada um com barra de progresso,
+      "progresso/custo (N t)" (turnos até terminar), botões
+      - / + para alocar cidadãos e X para cancelar (o progresso
+      é perdido). Uma unidade pronta esperando população aparece
+      como "pronto", em laranja;
+    * PRODUÇÃO DA CIDADE: o que a cidade já tem produzindo. Hoje
+      são as fazendas prontas, com - / + para pôr ou tirar o
+      trabalhador.
+    * UNIDADES NA CIDADE: a unidade que está na casa da cidade
+      (só cabe uma), com defesa e energia. "Ativar" tira a
+      unidade da fortificação, fecha a janela e a seleciona no
+      mapa. Se ela não estiver fortificada, o botão é "Selecionar".
+- Esc fecha, nesta ordem: a lista de construções, a escolha da
+  casa e, por fim, a janela.
+
+IA: ECONOMIA, EXPANSÃO E DEFESA (scripts/ai/ai_economy.gd)
+- A máquina usa TODAS as regras do jogo, com as mesmas funções do
+  jogador (City.build_error / order_build, Game.buy_build,
+  Game.found_city, Game.work_lumber_mill...). Não trapaceia.
+- Ordem do turno da máquina (AIController.play_turn):
+  1. economia das cidades (AIEconomy.manage_cities);
+  2. Colonos e Trabalhadores andam e agem;
+  3. guarnição das cidades;
+  4. ataques dos soldados de campo;
+  5. avanço contra o inimigo, só com exército pronto;
+  6. novos ataques.
+- Economia, a cada turno:
+  * Compra de defesa (primeiro, em todas as cidades): inimigo
+    militar a até threat_radius casas e cidade sem guarnição ->
+    compra um Guerreiro com ouro (e a Lança, se der).
+  * Pedidos de cada cidade, um de cada tipo por vez: fazenda nova
+    (se o alimento não chega a food_surplus, na casa que rende
+    mais), Guerreiro e Lança para a guarnição, madeireira na
+    floresta da cidade (ou Trabalhador, se não houver floresta),
+    Colono (população >= settler_population, até max_cities),
+    Marcenaria e depois Quartel General (na capital e em cidades
+    de 4+; a madeira fica guardada para eles), Lanças (até
+    spears_per_city por cidade) e Guerreiros para o exército (até
+    army_to_attack fora das cidades).
+  * Cidadãos redistribuídos do zero (City.clear_workers): fazendas
+    até o alimento bastar (no máximo 2/3 da cidade, se não há
+    fome), impostos reservados (tax_workers), 1 em cada madeireira
+    se falta madeira, obras por prioridade (comida > defesa >
+    madeira > prédios > expansão > armas > exército; todos na mais
+    importante, para ela terminar logo), madeireiras cheias e o
+    resto na Marcenaria parada (impostos).
+- Colonos: procuram, a até settler_search_radius casas, o melhor
+  lugar para uma cidade (área com pradaria 3, cerrado e floresta
+  2, água 1, menos casas já usadas e menos a distância), andam até
+  lá com a ordem "Mover" e fundam. O primeiro Colono pode andar
+  1-2 casas para achar um lugar melhor.
+- Trabalhadores: andam até a floresta livre mais próxima (ou uma
+  madeireira sua com vaga) e trabalham nela.
+- Guarnição: cada cidade fica com garrison_per_city soldados
+  fortificados: o primeiro dentro da cidade (escondido), os outros
+  nas casas vizinhas (floresta primeiro). A guarnição não sai para
+  atacar nem avançar.
+- Exército: os soldados de campo só avançam contra o inimigo
+  quando são pelo menos army_to_attack (0 = nunca); antes disso
+  só atacam inimigos ao alcance.
+- Na zona de ameaça, ela ignora unidades inimigas sem ataque.
+
+PERSONALIDADES (scripts/ai/ai_personality.gd, Player.personality)
+- Os números que guiam a máquina ficam numa personalidade. Hoje o
+  Jogador 2 usa a Equilibrada. Já existem, prontas para usar:
+    Equilibrada    comida +2, Colono com 4 de população, até 4
+                   cidades, 1 de guarnição, 2 Lanças por cidade,
+                   ataca com 3 soldados
+    Expansionista  Colono com 3, até 8 cidades, 1 Lança por
+                   cidade, ataca com 5
+    Econômica      comida +3, Colono com 5, mais madeira, 2
+                   cidadãos sempre nos impostos, nunca ataca
+    Defensiva      2 de guarnição, 3 Lanças por cidade, nunca ataca
+- Para trocar: Player.personality = AIPersonality.expansionist()
+  (por exemplo, em main.gd ao criar os jogadores).
+- Ritmo: com as regras de hoje (cidades crescem devagar e os
+  prédios custam caro), em 100 rodadas a máquina chega a 2 cidades,
+  madeireiras, Marcenaria e Lanças, e o Quartel General e os
+  Guerreiros vêm logo depois. Cada personalidade troca um objetivo
+  por outro (expandir x exército x impostos).
+
+Validação: um teste automatizado jogou 7 turnos contra a
+máquina e confirmou que:
+- o Colono é 0/0/1 e os dois jogadores começam com um;
+- a barra de ações aparece com os 2 botões;
+- B funda a cidade, consome o Colono e abre a janela;
+- a área tem 21 casas;
+- a escolha do terreno e a criação da obra funcionam;
+- a obra avança 1 por turno, a fazenda fica pronta em 4 turnos e
+  o trabalhador passa para ela;
+- o saldo de alimento vai de +1 para +3 com a fazenda, e a
+  cidade cresce para 2 no turno 7;
+- os limites de alocação de cidadãos são respeitados;
+- a máquina funda a cidade e ordena uma fazenda.
+Screenshots também confirmaram o visual.
+
+FORTIFICAR (todas as unidades)
+- Tecla F ou botão "Fortificar [F]". A unidade encerra os
+  movimentos do turno e fica fortificada:
+    * +1 de defesa (Unit.FORTIFY_DEFENSE_BONUS), que entra no
+      cálculo do combate;
+    * no início de cada turno do dono, se estiver ferida,
+      recupera 5 de energia (Unit.FORTIFY_HEAL), com um "+5"
+      verde subindo sobre ela.
+- Visual: uma muralha de pedra cinza em volta da unidade.
+- A unidade fica fortificada até se mover ou atacar. Ela não é
+  selecionada sozinha nos turnos seguintes e não impede o fim do
+  turno. Para dar outra ordem, clique nela.
+- O painel de informações mostra "Defesa N (fortificada)".
+- Fortificada DENTRO de uma cidade, a unidade some do mapa (a
+  cidade aparece no lugar). Ela continua lá, defendendo, e aparece
+  na seção "Unidades na cidade" da janela da cidade, que tem o
+  botão "Ativar" para tirá-la da fortificação. Clicar na casa da
+  cidade abre a cidade, e não seleciona a unidade escondida.
+- Dar a ordem "Mover" (G) cancela a fortificação.
+- A máquina ainda não usa a fortificação.
+
+MOVER PARA UM DESTINO (tecla G)
+- Com uma unidade selecionada, tecla G ou botão "Mover [G]". O
+  cursor vira "Go >" (assets/sprites/ui/cursor_go.png, editável)
+  e aparece uma mensagem no topo da tela.
+- Ao passar o mouse, o mapa mostra o caminho: pontos amarelos e
+  uma bandeira no destino com o número de turnos para chegar
+  (ex.: "7t").
+- Clique numa casa (mesmo longe) para guardar o destino. A unidade
+  já anda o que puder neste turno e, nos próximos, anda sozinha no
+  início da sua vez, até chegar. Ela não é selecionada sozinha
+  enquanto tiver um destino.
+- O caminho é recalculado a cada turno: contorna água, inimigos e
+  unidades paradas no caminho. Se não houver caminho por terra, a
+  ordem é recusada (ou cancelada, se o caminho fechar depois).
+- Esc ou botão direito cancelam a escolha do destino.
+- Para cancelar uma caminhada já definida: selecione a unidade
+  (clique nela) e aperte Esc, ou use o botão "Cancelar caminhada
+  [Esc]". A unidade para onde está. Um segundo Esc tira a seleção.
+- Uma ordem manual (clicar
+  para mover ou atacar), fortificar ou chegar ao destino encerram
+  a ordem. Selecionar a unidade mostra o caminho até o destino, e
+  o painel de informações mostra "Indo para (x, y)".
+- Se o destino estiver ocupado por uma unidade aliada, a unidade
+  para ao lado e a ordem acaba (não dá para empilhar).
+- Ainda não ataca no caminho, e a máquina não usa essa ordem.
+
+MOVIMENTO (scripts/map/movement.gd)
+- 8 direções (diagonais incluídas), custo 1 por casa, como no
+  Civilization 1. Exceção: entrar na floresta custa 2 para
+  unidades com mais de 1 de movimento (ver FLORESTA). Sem
+  movimento suficiente, a unidade espera o próximo turno para
+  entrar.
+- Unidades só andam em terra (Pradaria, Floresta, Cerrado).
+- Uma unidade por casa, sem empilhar, em terrenos e em cidades:
+  dá para atravessar casas com unidades aliadas, mas não parar
+  nelas. Uma unidade treinada numa cidade ocupada nasce numa casa
+  vizinha livre.
+- Mover para a casa de um inimigo é um ataque (ver COMBATE).
+- O alcance é calculado por busca de menor custo (Dijkstra). O
+  caminho escolhido é sempre um dos mais baratos em movimentos.
+  A ordem "Mover" (G) usa a mesma busca, e o número de turnos
+  na bandeira considera a floresta.
+- Trabalhadores dentro de uma madeireira remota não ocupam a casa.
+- O movimento é animado casa a casa.
+- Uma unidade "pode se mover" se ainda tem movimento E existe
+  pelo menos uma casa livre ao alcance. Assim, uma unidade
+  cercada não trava o fim do turno.
+
+COMBATE (scripts/combat/combat.gd)
+Batalha por desgaste de energia, inspirada no Civilization V/VI:
+um ataque raramente decide a luta sozinho, e cada combate tira
+energia dos dois lados.
+
+- Quem move sua unidade para a casa de um inimigo é o ATACANTE.
+  A unidade que já estava na casa é o DEFENSOR.
+- Inimigos ao alcance aparecem destacados em vermelho. Se o
+  inimigo estiver longe, a unidade anda até uma casa vizinha a
+  ele e ataca dali.
+- Atacar custa 1 movimento e encerra os movimentos da unidade
+  no turno.
+- Todas as unidades atacam corpo a corpo. O ataque à distância
+  do Arqueiro fica para depois.
+
+Fórmula:
+  fator de energia = 0,5 + 0,5 x (energia / energia máxima)
+      (com energia cheia, a unidade luta com 100% da força; quase
+      sem energia, luta com 50%)
+  força de ataque  = Ataque x fator de energia x bônus de ataque
+  força de defesa  = Defesa x fator de energia x bônus de defesa
+  razão            = força de ataque / força de defesa
+  dano ao defensor = 30 x raiz(razão) x sorte
+  dano ao atacante = 30 / raiz(razão) x sorte
+  sorte            = sorteio entre 0,9 e 1,1 (±10%), separado
+                     para cada lado
+  O dano mínimo é 1.
+
+Resultado:
+  - Defensor chega a 0: é destruído, e o atacante avança para a
+    casa dele.
+  - Atacante chega a 0: é destruído.
+  - Os dois chegariam a 0: o defensor é destruído e o atacante
+    sobrevive com 1 de energia.
+  - Ninguém chega a 0: os dois perdem energia, e o atacante
+    continua na casa de onde atacou.
+
+Previsão: com uma unidade selecionada, passar o mouse sobre um
+inimigo em vermelho mostra as forças e o dano estimado.
+Exemplo: "Atacar: Arqueiro (força 2.00) x Guerreiro
+(força 1.00) - dano estimado: causa ~42 | recebe ~21".
+
+Números conferidos em 2000 simulações por confronto (unidades
+com energia cheia):
+  Guerreiro ataca Guerreiro: ~30 / ~30; destrói em ~3,6 ataques
+  Arqueiro ataca Guerreiro:  ~42 / ~21; destrói em ~3 ataques
+  Guerreiro ataca Arqueiro:  ~30 / ~30; destrói em ~3,6 ataques
+
+Ajustes: as constantes BASE_DAMAGE (30), LUCK (0,10) e
+MIN_ENERGY_FACTOR (0,5) ficam no topo de combat.gd.
+Bônus de terreno: quem defende na floresta ganha +1 de defesa
+(somado à Defesa, junto com a fortificação; ver FLORESTA). A
+previsão de dano e a IA já levam isso em conta. Bônus em
+porcentagem podem entrar em attack_bonus() e defense_bonus(),
+que hoje retornam 1,0.
+
+Visual: o atacante faz uma investida até o alvo, os danos
+aparecem como números vermelhos flutuantes e a unidade
+destruída some aos poucos.
+
+TURNOS (scripts/autoload/turn_manager.gd)
+- Autoload global, acessível de qualquer script como
+  "TurnManager".
+- Alterna a vez entre os jogadores.
+- O número do turno conta rodadas completas: o "Turno 1" vale
+  para a vez do Jogador 1 e também para a do Jogador 2. O
+  contador vira "Turno 2" quando a vez volta ao Jogador 1
+  (padrão do Civilization).
+- Sinais: turn_started(jogador, turno), turn_ended(jogador).
+- Funções: start_game(jogadores), end_turn(), current_player().
+
+CÂMERA E CONTROLES
+- Setas ou WASD: mover a câmera.
+- Roda do mouse: zoom, na direção do cursor (de 0,25x a 3x).
+- Com a janela da cidade (ou a pergunta do nome da cidade) aberta,
+  a câmera fica travada (MapCamera.locked): setas, roda do mouse e
+  arraste não mexem no mapa por trás da janela.
+- Arrastar com o botão esquerdo (ou do meio): mover o mapa. O
+  arraste só começa depois de o mouse andar 8 pixels com o botão
+  apertado (DRAG_THRESHOLD em map_camera.gd). Movimento menor
+  conta como clique. O clique agora vale ao soltar o botão.
+- Clique esquerdo: selecionar unidade / mover para a casa.
+- Clique esquerdo na sua cidade: abrir a janela da cidade. Se a
+  unidade selecionada puder andar até a cidade, o clique move a
+  unidade; nesse caso, cancele a seleção antes (botão direito).
+- Botão direito ou Esc: cancelar a seleção.
+- Espaço: pular a unidade selecionada.
+- F: fortificar a unidade selecionada.
+- G: mover a unidade selecionada até um destino (ver MOVER PARA
+  UM DESTINO).
+- B: o Colono selecionado constrói uma nova cidade.
+- M: o Trabalhador selecionado constrói uma madeireira na
+  floresta (ou entra na que já existe ali).
+- Clique na sua madeireira remota: seleciona a madeireira
+  (botão "Retirar trabalhador").
+- Enter: confirmar o fim do turno (só depois de aparecer o
+  pedido de confirmação).
+
+HUD (scripts/ui/hud.gd)
+- Canto superior esquerdo: "Turno N" e, abaixo, "Vez do
+  Jogador X" na cor do jogador. Quando acabam os movimentos,
+  aparece ao lado do turno, piscando, o pedido de confirmação
+  "Finalizar turno? [Enter]".
+- Canto inferior esquerdo: coordenadas e terreno da casa sob o
+  mouse, atributos da unidade nessa casa (ou da unidade
+  selecionada) e uma linha de ajuda com os controles. Sobre uma
+  cidade ou fazenda, mostra também os dados dela.
+- Canto inferior direito: botões de ação da unidade selecionada
+  (só na sua vez). Hoje: "Construir nova cidade [B]" (Colono),
+  "Construir madeireira [M]" / "Trabalhar na madeireira [M]"
+  (Trabalhador), "Mover [G]", "Fortificar [F]" e "Pular turno
+  [Espaço]" (todas). Com uma madeireira remota selecionada:
+  "Retirar trabalhador".
+- Canto superior direito: painel ARSENAL (armas; ver ARSENAL),
+  "Ouro N +N por turno" (tesouro, com a moeda; ver
+  OURO) e, abaixo, o painel "Recursos estratégicos" (ver
+  RECURSOS ESTRATÉGICOS E MADEIRA). Os números piscam em verde ou
+  vermelho quando sobem ou descem.
+  Um botão desabilitado explica o
+  motivo ao passar o mouse. Para criar uma ação nova, adicione-a
+  em Game._update_unit_actions() e trate o id em
+  Game._on_unit_action().
+- Topo da tela: mensagens rápidas que somem sozinhas (ex.:
+  "Aurora: cresceu para 2 de população", ou o motivo de não poder
+  fundar a cidade).
+- Meio/baixo da tela: aviso de construção concluída (ver CIDADES).
+  Enquanto ele está aberto, o mapa e as teclas do jogo ficam
+  bloqueados.
+
+Validação: um teste automatizado jogou dois turnos completos e
+confirmou que:
+- o Enter é ignorado antes do fim dos movimentos;
+- o pedido de confirmação aparece no momento certo;
+- a troca de jogador e a contagem de turnos funcionam;
+- o Espaço pula a unidade;
+- os movimentos são restaurados no novo turno.
+Screenshots também confirmaram o visual.
+
+
+--------------------------------------------------------------
+5. PRÓXIMOS PASSOS
+--------------------------------------------------------------
+
+[x] Decidir o tipo de grid: quadrado (estilo Civilization 1)
+[x] Mapa em grid com TileMapLayer (terra e água)
+[x] Jogadores 1 e 2
+[x] Unidades com Ataque, Defesa e Movimento
+[x] Unidades: seleção por clique, área de movimento,
+    movimentação animada
+[x] Regras de terreno: unidades terrestres não entram na água
+[x] HUD com turno, jogador da vez e confirmação de fim de turno
+[x] Combate por desgaste de energia (corpo a corpo)
+[x] Bônus de combate por terreno: +1 de defesa na floresta
+[ ] Outros terrenos com bônus (ex.: montanha, colina)
+[x] Recuperação de energia: unidade fortificada recupera 5 por
+    turno
+[x] Ação Fortificar (+1 de defesa)
+[x] Arrastar o mapa com o botão esquerdo do mouse
+[x] Realocação automática dos cidadãos liberados
+[x] IA: fortificar unidades que defendem cidades (guarnição)
+[ ] IA: fortificar unidades feridas
+[ ] Melhorias que aumentem a produção de alimentos (ex.:
+    irrigação, celeiro)
+[x] Saldo de alimento colorido na janela da cidade
+[x] Unidade fortificada na cidade fica escondida; seção
+    "Unidades na cidade" com "Ativar"
+[x] Uma unidade por casa (sem empilhar)
+[x] Ordem "Mover" (G) com destino distante, em vários turnos
+[ ] Mover: atacar ou parar ao encontrar um inimigo no caminho
+[ ] Mover: preferir caminhos mais retos (hoje pode fazer curvas
+    com o mesmo número de casas)
+[ ] Ataque à distância do Arqueiro
+[x] Condição de vitória: elimina o adversário (tela de vitória)
+[ ] Botão clicável de "Encerrar turno" (hoje só pelo Enter)
+[x] IA do Jogador 2 (ataques por nota, avanço em formação,
+    zona de ameaça)
+[ ] IA: usar terrenos de defesa (quando existirem bônus)
+[ ] IA: recuar unidades feridas (quando houver recuperação)
+[ ] Níveis de dificuldade (Fácil / Normal / Difícil)
+[x] Transições naturais entre terrenos (costa arredondada, borda
+    das florestas, pradaria <-> cerrado) e novos tiles de água e
+    pradaria
+[ ] Transições também no mapa da janela da cidade
+[x] Fazendas orgânicas, integradas ao terreno (shader)
+[x] Fazenda no cerrado rende menos (+2; na pradaria, +3)
+[ ] Mais gráficos: redesenhar os tiles e os sprites em 40x40
+[x] Colono e fundação de cidades (tecla B / botão de ação)
+[x] Cidades: população, alimentos, produção, crescimento e fome
+[x] Fazendas: construção por produção e alocação de cidadãos
+[x] Janela da cidade (resumo, mapa, construções, obras,
+    fazendas)
+[ ] Cidades: atacar, conquistar ou destruir cidades inimigas
+[x] Cidades contam para a vitória (perde quem ficar sem
+    unidades e sem cidades)
+[x] Observar a cidade do adversário (janela em modo leitura)
+[x] Cidades: produzir unidades (Guerreiro: 10 de produção + 1 de
+    população)
+[ ] Cidades: produzir outras unidades (Arqueiro, Cavaleiro,
+    Colono)
+[x] IA: produzir unidades nas cidades
+[x] Terreno Floresta (+1 de defesa, movimento mais caro, sem
+    fazenda) e Cerrado (floresta esgotada)
+[x] Recursos estratégicos: madeira (estoque do jogador e painel
+    no HUD)
+[x] Madeireira da cidade (até 2 cidadãos, 1 de madeira cada)
+[x] Trabalhador e madeireira remota (tecla M)
+[x] Construções que gastam madeira (Quartel General 15, Guerreiro 2)
+[ ] Outros recursos estratégicos (ex.: pedra, ferro)
+[x] IA: produzir Trabalhadores e construir madeireiras
+[ ] Madeireiras remotas: ataque/captura pelo inimigo
+[ ] Cerrado com regras próprias (hoje é igual à Pradaria)
+[ ] Desenhos definitivos de pradaria, floresta, cerrado,
+    madeireira e Trabalhador
+[x] Aviso de construção concluída (câmera na cidade, "Abrir
+    cidade" / "Fechar")
+[x] Ícone de trabalhadores ociosos sobre a cidade ("!" azul +
+    quantidade)
+[ ] Aviso também para a madeireira remota pronta ou esgotada
+[x] Lista "Construir" em três classes (Unidades, Melhorias de
+    terreno, Prédios), com a descrição no tooltip
+[x] Ouro: tesouro do jogador (200 para testes), no HUD, e compra
+    na hora de unidades (50 de ouro)
+[x] Roda do mouse não dá zoom no mapa com a janela da cidade aberta
+[x] Arsenal (Lança) e Marcenaria; Guerreiro leva 1 Lança
+[x] Primeira fonte de ouro: impostos da Marcenaria parada
+[ ] Mais armas (ex.: arco, espada) e tropas que usem cada uma
+[ ] Economia: outras formas de ganhar ouro (comércio...)
+[x] Prédios na cidade: Prefeitura (nativa) e Quartel General,
+    únicos por cidade, com compra por ouro
+[x] Unidades produzidas nos prédios (fila e trabalhadores por
+    prédio)
+[x] Colono pode ser produzido (Prefeitura)
+[x] Ícones das construções e unidades nas janelas
+[x] Tooltips com fundo sólido (tema do jogo)
+[ ] Ícones desenhados à mão (PNG) no lugar dos desenhos do código
+[ ] Mais prédios (ex.: celeiro, mercado, muralha)
+[x] IA: construir prédios, armas e unidades; expandir com Colonos
+[ ] Comprar melhorias de terreno com ouro
+[ ] Comprar com ouro uma obra que já está em andamento (pagar
+    só o que falta)
+[x] IA: usar o ouro (compra de defesa) e cobrar impostos
+[ ] Cidades: outras melhorias além da fazenda e da madeireira
+    (mina, estrada...)
+[x] Cidades: o jogador escolhe o nome ao fundar
+[ ] Cidades: renomear uma cidade já fundada
+[ ] Cidades: impedir que unidades inimigas entrem na cidade
+[ ] Imagem própria (PNG) para a cidade e a fazenda (hoje são
+    desenhadas pelo código)
+[x] Primeiro commit no Git (21/10/2026)
+
+
+--------------------------------------------------------------
+6. HISTÓRICO
+--------------------------------------------------------------
+
+19/10/2026
+- Definida a engine (Godot) e a linguagem (GDScript).
+- Godot 4.7.2 instalado via winget.
+- Estrutura inicial do projeto criada, com o gerenciador de
+  turnos.
+- Repositório Git iniciado.
+- O comando "godot" não ficou no PATH. Criamos atalhos .cmd em
+  ~/.local/bin (ver seção 2).
+- Estrutura inicial do jogo:
+    * mapa 120x75 em grid quadrado, com terra e água, lido de
+      data/maps/mapa_teste.png;
+    * jogadores 1 e 2;
+    * unidades com Ataque, Defesa e Movimento (Guerreiro,
+      Arqueiro, Cavaleiro);
+    * câmera com movimento e zoom;
+    * HUD com informações da casa e da unidade.
+- Jogo jogável (hot seat):
+    * seleção e movimento das unidades em 8 direções, só em
+      terra;
+    * seleção automática da próxima unidade;
+    * Espaço para pular a unidade selecionada;
+    * HUD com "Turno N" e o pedido "Finalizar turno? [Enter]"
+      quando acabam os movimentos.
+- Novos atributos das unidades:
+    Arqueiro  2/1/1
+    Cavaleiro 1/1/2
+- Novo atributo Energia (100).
+- Combate por desgaste de energia, com sorte de ±10%,
+  previsão de dano, barra de energia e animações.
+- Partida de teste com os jogadores frente a frente.
+- Visual personalizável:
+    * terrenos vêm de assets/tiles/*.png;
+    * unidades vêm de assets/sprites/units/*.png, com suporte a
+      cor de time (magenta).
+- Resolução das casas, tiles e sprites aumentada de 16x16 para
+  40x40. Os originais de 16px foram guardados em
+  assets/_originais_16px/.
+- O Jogador 2 passou a ser controlado pela máquina
+  (AIController).
+- Vitória por eliminação, com tela "Jogador X venceu!" e
+  [Enter] para jogar novamente.
+- O main.gd agora tem class_name Game. As ações mover e atacar
+  são compartilhadas entre o jogador humano e a máquina.
+
+20/10/2026
+- Nova unidade: Colono (0/0/1), com sprite de um boneco com uma
+  pá. Todo jogador começa com um.
+- Cidades: fundadas pelo Colono (tecla B ou botão), com
+  população, estoque de alimentos e produção (força de trabalho).
+- Fazendas: ordenadas na janela da cidade, construídas com
+  produção e trabalhadas pelos cidadãos para gerar alimento.
+  Crescimento ao juntar 10 de alimento; fome reduz a população.
+- Janela da cidade com resumo, mapa das 21 casas, opções de
+  construção, obras com barra de progresso, alocação de
+  trabalhadores e lista de fazendas.
+- Barra de ações da unidade selecionada no canto inferior
+  direito do HUD, e mensagens rápidas no topo da tela.
+- A IA funda a cidade no primeiro turno e cuida dela com regras
+  simples.
+- Unidades com Ataque 0 não atacam.
+- Partida de teste só com os Colonos (WITH_TROOPS = false), para
+  observar a IA cuidando da cidade.
+- Vitória: perde quem ficar sem unidades e sem cidades.
+- A cidade do adversário pode ser aberta em modo de observação.
+- Janela da cidade: botão "Construir..." com uma lista (modal) de
+  construções; a seção "Fazendas" virou "Produção da cidade".
+- Nova construção: Guerreiro (10 de produção + 1 de população),
+  que sai na cidade quando fica pronto.
+- O nome da cidade é perguntado ao fundar (a máquina continua
+  usando a lista de nomes).
+- Botões da janela da cidade com fundo visível.
+- Cidadãos liberados (obra pronta, crescimento, obra cancelada)
+  vão sozinhos para a próxima obra da fila ou para uma fazenda.
+- Mapa arrastável com o botão esquerdo do mouse.
+- Nova ação para todas as unidades: Fortificar [F] (+1 de
+  defesa e recupera 5 de energia por turno).
+- Saldo de alimento da cidade em verde (sobra) ou vermelho (falta).
+- Unidade fortificada na cidade fica escondida e aparece na nova
+  seção "Unidades na cidade" da janela, com o botão "Ativar".
+- Regra de uma unidade por casa documentada (já valia).
+- Nova ação para todas as unidades: Mover [G], com cursor "Go >",
+  prévia do caminho e destino que continua nos turnos seguintes.
+- Esc (com a unidade selecionada) cancela a caminhada; novo botão
+  "Cancelar caminhada [Esc]".
+- Alimento no estilo do Civilization II: cada habitante come 2, e o
+  estoque tem tamanho (população + 1) x 10 e esvazia ao crescer.
+- Barra do estoque de alimentos na janela da cidade e no mapa,
+  acima da cidade.
+- Fazenda passou a produzir +3 de alimento (antes +2), para as
+  cidades crescerem com a nova regra de consumo.
+
+21/10/2026
+- Mapa repintado pelo usuário: pradaria (verde-claro) e pontos de
+  floresta (verde-escuro). O terreno "Terra" virou Pradaria e
+  entraram Floresta e Cerrado, com tiles provisórios de 40x40.
+- Floresta: +1 de defesa para quem defende (soma com a
+  fortificação), entrar custa 2 para unidades com mais de 1 de
+  movimento, não aceita fazenda, cidade fundada nela vira
+  pradaria e cada casa tem 30 de madeira.
+- O movimento passou a usar custo por terreno (busca de menor
+  custo); a ordem "Mover" calcula os turnos com a floresta.
+- Recursos estratégicos: madeira, estoque do jogador, com painel
+  no canto superior direito do HUD.
+- Madeireira da cidade (4 de produção, só na floresta, até 2
+  cidadãos, 1 de madeira por cidadão por turno).
+- Nova unidade: Trabalhador (0/0/1, 5 de produção + 1 de
+  população). Constrói madeireiras remotas na floresta (tecla M),
+  trabalha dentro delas (até 2) e pode ser retirado clicando na
+  madeireira. No mapa: barra de progresso na obra e barra azul
+  da madeira restante.
+- Floresta esgotada vira Cerrado; a madeireira some e os
+  trabalhadores ficam livres.
+- Lista "Construir" da janela da cidade com rolagem.
+- Validação: teste automatizado com 57 verificações (terreno,
+  custo de movimento, defesa, cidade na floresta, madeireira da
+  cidade e remota, limite de 2 trabalhadores, esgotamento para
+  cerrado, painel do HUD e um turno completo da máquina sem
+  erros), mais screenshots do mapa, da janela da cidade e da
+  lista de construções.
+- Aviso (modal) de construção concluída no início da vez do
+  jogador: "A construção da fazenda foi concluída.", com a
+  quantidade de cidadãos sem tarefa, a câmera na cidade e os
+  botões "Abrir cidade" e "Fechar". Um aviso por construção.
+- Ícone de trabalhadores ociosos acima das cidades do jogador:
+  círculo azul com "!" e a quantidade de cidadãos livres.
+- Validação: teste automatizado com 21 verificações (texto com
+  "da"/"do", câmera na cidade, Enter fecha sem encerrar o turno,
+  dois avisos seguidos, "Abrir cidade" segura o próximo aviso,
+  seleção da unidade depois dos avisos, ícone some sem ociosos),
+  mais screenshots. O teste anterior (floresta e madeira) também
+  passou de novo.
+- Correção: com a janela da cidade aberta, a roda do mouse dava
+  zoom no mapa por trás. Agora a câmera fica travada
+  (MapCamera.locked) enquanto a janela ou a pergunta do nome da
+  cidade estão abertas.
+- Lista "Construir" reorganizada em três classes: Unidades,
+  Melhorias de terreno e Prédios (vazia por enquanto). Linhas
+  compactas; a descrição foi para o tooltip.
+- Ouro: tesouro de cada jogador (200 para testes), mostrado no
+  HUD superior ("Ouro N"). Botão da moeda na lista "Construir":
+  compra a unidade na hora por 50 de ouro. Melhorias de terreno
+  ainda não podem ser compradas.
+- Validação: teste automatizado com 28 verificações (zoom
+  bloqueado com a janela e a lista abertas e liberado depois,
+  ordem das classes, tooltip com a descrição, 4 botões de 50,
+  melhorias bloqueadas, compra: ouro, população e unidade na
+  cidade, sem ouro não compra, HUD), mais screenshots. Os testes
+  anteriores (floresta/madeira e avisos) passaram de novo.
+- Tooltips da lista "Construir" em até 3 linhas (50 letras por
+  linha); descrições encurtadas. Melhorias de terreno não têm mais
+  o botão de compra.
+- Prédios: toda cidade nasce com a Prefeitura; novo prédio Quartel
+  General (15 de produção ou 50 de ouro). Cada prédio é único por
+  cidade e some da lista quando fica pronto. Nova seção "Prédios
+  da cidade" na janela da cidade.
+- Unidades passam a ser produzidas nos prédios: Colono e
+  Trabalhador na Prefeitura, unidades militares (Guerreiro) no
+  Quartel General. Cada prédio tem uma fila; os trabalhadores
+  ficam no prédio e passam para a próxima unidade da fila quando
+  uma fica pronta. O Colono entrou na lista (10 de produção + 1 de
+  população).
+- O turno da cidade agora avança todas as obras primeiro e depois
+  resolve as prontas.
+- Validação: novo teste com 43 verificações (Prefeitura nativa,
+  requisitos das unidades, tooltips em 3 linhas, lista sem
+  Prefeitura e sem compra nas melhorias, Quartel General por
+  produção e por compra, prédio único, fila: só a primeira avança,
+  trabalhadores passam para a próxima sem produzir duas vezes,
+  cancelar passa os trabalhadores, seções da janela), mais
+  screenshots. Os 3 testes anteriores foram ajustados à regra nova
+  e passaram.
+- Tooltips com fundo sólido: novo tema do jogo
+  (assets/theme/game_theme.tres), registrado em project.godot.
+- Ícones ao lado de cada construção e unidade, na lista
+  "Construir" e na janela da cidade: Prefeitura (prédio romano),
+  Quartel General (espada), Fazenda, Madeireira e as unidades
+  (sprite na cor do jogador).
+- Validação: teste com 6 verificações (tema carregado, tooltip
+  opaco, ícones em cada seção e na lista), mais screenshots com o
+  tooltip aberto. Os 4 testes anteriores passaram de novo.
+- Mapa da cidade (janela): espiga de milho no centro de cada
+  fazenda trabalhada, com o alimento por turno no meio; some
+  quando a fazenda fica sem trabalhador. Validado com teste
+  (milho na fazenda trabalhada, nenhum na fazenda sem
+  trabalhador) e screenshot ampliado.
+- Gráficos do mapa: novo shader (scripts/map/terrain.gdshader) que
+  desenha o mapa inteiro com transições naturais: costa
+  arredondada com areia, espuma e água rasa; florestas com borda
+  em moitas e sombra; pradaria e cerrado misturados aos poucos;
+  manchas de cor para não ficar repetitivo. Novos tiles de água e
+  pradaria (sem emenda).
+- Validação: novo teste que confere o centro de todas as casas
+  visíveis em 3 vistas (água azul, terra não) e a troca de
+  floresta para cerrado, mais screenshots. Os 6 testes anteriores
+  passaram de novo.
+- Construções passam a gastar recursos: Quartel General custa 15 de
+  madeira e o Guerreiro, 2 de madeira, para pedir ou comprar. A
+  madeira é paga na hora e volta se a obra for cancelada. Sem
+  madeira, os botões ficam desabilitados com "Madeira
+  insuficiente".
+- Validação: novo teste com 19 verificações (sem madeira não pede
+  nem compra, motivo na linha, custo com a madeira, pagar ao pedir,
+  devolver ao cancelar, comprar prédio em obra sem pagar de novo,
+  Guerreiro na fila e comprado, itens sem madeira inalterados),
+  mais screenshots. Os testes anteriores passaram (com madeira
+  dada no início dos testes que pedem Guerreiros).
+- Fazendas com visual orgânico: no mapa principal são pintadas
+  pelo shader do terreno (campo com borda irregular, cerca viva,
+  fileiras onduladas em direções diferentes, terra arada quando em
+  obra); na janela da cidade e nos ícones, campo arredondado com
+  fileiras curvas.
+- Fazenda no cerrado rende +2 de alimento (solo menos fértil); na
+  pradaria continua +3 (Terrain.FARM_FOOD). Tooltip, painel de
+  informações, milho e "Produção da cidade" mostram o valor certo.
+- Correção feita durante o trabalho: uma troca de texto tinha
+  quebrado a conclusão de fazendas no turno; o teste dos avisos
+  pegou o erro e ele foi corrigido.
+- Validação: novo teste com 10 verificações (alimento por terreno,
+  plantação e terra arada no mapa, obra cancelada volta a ser
+  pradaria, tooltip e produção da cidade), mais screenshots. Os 8
+  testes anteriores passaram.
+- Janela da cidade mais larga (coluna da direita de 470 para 620
+  pixels). Os trabalhadores das unidades em produção passaram da
+  linha do prédio para a linha da unidade que está avançando, ao
+  lado do X; cada obra cabe numa linha, com barras e botões
+  alinhados. Testes da janela (ícones, prédios, fazendas, avisos)
+  passaram de novo.
+- Arsenal: estoque de armas do império, com painel próprio no topo
+  da tela. Primeira arma: a Lança (5 de produção + 2 de madeira),
+  feita no novo prédio Marcenaria (10 de produção + 10 de
+  madeira). O Guerreiro agora gasta 1 Lança em vez de madeira.
+- Os trabalhadores das unidades e armas passaram a ficar no
+  prédio (City.building_workers): seguem de um item da fila para o
+  próximo; Prefeitura e Quartel General os liberam quando a fila
+  acaba.
+- Economia: a Marcenaria sem armas na fila rende +1 de ouro por
+  trabalhador por turno (impostos). O HUD mostra o ouro com o saldo
+  por turno.
+- Lista "Construir" com a classe "Armas" e mais larga (o custo não
+  quebra linha).
+- Validação: novo teste com 33 verificações (Marcenaria, Lança,
+  fila e trabalhadores no prédio, arsenal, Guerreiro com Lança,
+  impostos, compras, Prefeitura liberando cidadãos, HUD e janela),
+  mais screenshots. Os 10 testes anteriores foram ajustados às
+  regras novas e passaram.
+- IA com as regras completas (scripts/ai/ai_economy.gd): a máquina
+  planeja cada cidade (comida, defesa, madeira, expansão, prédios,
+  armas, exército), redistribui os cidadãos por prioridade, compra
+  defesa com ouro, manda Colonos fundarem cidades em bons lugares,
+  manda Trabalhadores para a floresta, mantém guarnição fortificada
+  nas cidades e só ataca com exército formado.
+- Personalidades (scripts/ai/ai_personality.gd): Equilibrada (em
+  uso no Jogador 2), Expansionista, Econômica e Defensiva.
+- Cada jogador máquina tem o seu AIController. Nova função
+  City.clear_workers.
+- Correções feitas pelos testes: Colono que nunca parava de
+  procurar lugar; cidade que fazia fazendas demais; impostos que
+  apagavam os trabalhadores reservados; compra de defesa que
+  perdia a Lança para outra cidade.
+- Validação: teste de cenário (cidade desenvolvida) com 8
+  verificações (Lanças, Guerreiros, guarnição, sem fome, compra de
+  defesa, impostos, Trabalhador na floresta) e partida de 100
+  rodadas máquina x máquina (Econômica x Equilibrada) sem erros,
+  com as duas chegando a 2 cidades, madeireiras, Marcenaria e
+  Lanças. Testes anteriores passaram.
+- Novo item 7. BACKLOG: personalidades em jogo, ciência, cultura,
+  diplomacia, balanceamento do ritmo.
+
+
+--------------------------------------------------------------
+7. BACKLOG (ideias para depois)
+--------------------------------------------------------------
+
+[ ] Personalidades da máquina em jogo (já existem como dados):
+    expansionista, econômica (crescimento), defensiva; depois
+    científica e cultural
+[ ] Ciência (pesquisa, tecnologias)
+[ ] Cultura
+[ ] Diplomacia (paz, guerra, acordos entre jogadores)
+[ ] Escolher a personalidade de cada jogador máquina ao começar
+    a partida
+[ ] Balancear o ritmo do jogo (crescimento das cidades e custo
+    dos prédios), para a máquina e o jogador montarem exército
+    mais cedo
