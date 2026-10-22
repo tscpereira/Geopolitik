@@ -1,4 +1,4 @@
-[gd_scene load_steps=11 format=3]
+[gd_scene load_steps=12 format=3]
 
 [ext_resource type="Script" path="res://scripts/main.gd" id="1"]
 [ext_resource type="Script" path="res://scripts/map/game_map.gd" id="2"]
@@ -8,6 +8,7 @@
 [ext_resource type="Script" path="res://scripts/ui/city_window.gd" id="6"]
 [ext_resource type="Script" path="res://scripts/ui/city_name_dialog.gd" id="7"]
 [ext_resource type="Script" path="res://scripts/ui/notice_dialog.gd" id="8"]
+[ext_resource type="Script" path="res://scripts/ui/save_dialog.gd" id="9"]
 
 [sub_resource type="StyleBoxFlat" id="PanelStyle"]
 bg_color = Color(0, 0, 0, 0.6)
@@ -164,7 +165,7 @@ theme_override_styles/panel = SubResource("PanelStyle")
 theme_override_colors/font_color = Color(0.75, 0.75, 0.75, 1)
 theme_override_font_sizes/font_size = 13
 text = "Clique: selecionar / mover   |   Clique no inimigo (vermelho): atacar   |   Clique na sua cidade: abrir
-Botão direito / Esc: cancelar   |   Setas/WASD, roda do mouse: câmera"
+Botão direito / Esc: cancelar   |   Setas/WASD, roda do mouse: câmera   |   F5: salvar   |   F9: carregar"
 
 [node name="ActionPanel" type="PanelContainer" parent="HUD"]
 visible = false
@@ -231,6 +232,16 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 script = ExtResource("8")
+
+[node name="SaveDialog" type="Control" parent="HUD"]
+visible = false
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("9")
 
 [node name="VictoryScreen" type="ColorRect" parent="HUD"]
 visible = false

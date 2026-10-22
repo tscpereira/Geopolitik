@@ -103,6 +103,33 @@ func set_terrain(cell: Vector2i, type: Terrain.Type) -> void:
 	_wood.erase(cell)
 	_terrain_image.set_pixelv(cell, Color8(type, 0, 0))
 	_terrain_map.update(_terrain_image)
+
+
+## Terreno de cada casa (as florestas viram cerrado ou pradaria durante o jogo)
+## e a madeira que resta nas florestas exploradas, para o save.
+func to_dict() -> Dictionary:
+	return {"width": width, "height": height, "terrain": Marshalls.raw_to_base64(_terrain),
+			"wood": SaveGame.cell_map_to_json(_wood)}
+
+
+## Volta ao terreno de um jogo salvo. O mapa precisa ter o mesmo tamanho (é
+## carregado de data/maps/ antes). As melhorias são apagadas: cada cidade
+## pinta as suas de novo.
+func from_dict(data: Dictionary) -> void:
+	var terrain := Marshalls.base64_to_raw(data["terrain"])
+	if int(data["width"]) != width or int(data["height"]) != height or terrain.size() != width * height:
+		push_error("O save é de um mapa de outro tamanho (%dx%d)." % [int(data["width"]), int(data["height"])])
+		return
+	_terrain = terrain
+	for y in height:
+		for x in width:
+			_terrain_image.set_pixel(x, y, Color8(_terrain[y * width + x], 0, 0))
+	_terrain_map.update(_terrain_image)
+	_wood = SaveGame.json_to_cell_map(data["wood"])
+	_improvement_image.fill(Color8(Improvement.NONE, 0, 0))
+	_improvement_map.update(_improvement_image)
+
+
 ## Madeira que ainda resta na casa (0 se não for floresta).
 func wood_left(cell: Vector2i) -> int:
 	if not is_in_bounds(cell) or get_terrain(cell) != Terrain.Type.FOREST:

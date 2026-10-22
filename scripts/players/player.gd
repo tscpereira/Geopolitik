@@ -64,6 +64,31 @@ func weapons_in_production(weapon: Arsenal.Weapon) -> int:
 	return total
 
 
+## Jogador inteiro para o save, com as unidades, cidades e madeireiras remotas.
+## Os trabalhadores das madeireiras são guardados pela posição na lista de
+## unidades.
+func to_dict() -> Dictionary:
+	return {
+		"id": id, "name": display_name, "color": color.to_html(), "is_ai": is_ai,
+		"personality": personality.to_dict(), "wood": wood, "gold": gold,
+		"arsenal": SaveGame.int_map_to_json(arsenal),
+		"units": units.map(func(unit: Unit) -> Dictionary: return unit.to_dict()),
+		"cities": cities.map(func(city: City) -> Dictionary: return city.to_dict()),
+		"lumber_mills": lumber_mills.map(func(mill: LumberMill) -> Dictionary: return mill.to_dict(units)),
+	}
+
+
+## Jogador de um save, sem as unidades, cidades e madeireiras (que são nós da
+## cena; o Game cria cada uma, ver Game.restore_state).
+static func from_dict(data: Dictionary) -> Player:
+	var player := Player.new(int(data["id"]), data["name"], Color.html(data["color"]), data["is_ai"])
+	player.personality = AIPersonality.from_dict(data["personality"])
+	player.wood = int(data["wood"])
+	player.gold = int(data["gold"])
+	player.arsenal.merge(SaveGame.json_to_int_map(data["arsenal"]), true)
+	return player
+
+
 func start_turn() -> void:
 	for unit in units:
 		unit.reset_moves()

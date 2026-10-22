@@ -49,6 +49,25 @@ var buy_defense := true
 var threat_radius := 3
 
 
+## Todos os números da personalidade, para o save.
+func to_dict() -> Dictionary:
+	var data := {}
+	for property in get_property_list():
+		if property["usage"] & PROPERTY_USAGE_SCRIPT_VARIABLE:
+			data[property["name"]] = get(property["name"])
+	return data
+
+
+## Personalidade de um save. Campos que não existem mais são ignorados; os que
+## faltam (save antigo) ficam com o valor da Equilibrada.
+static func from_dict(data: Dictionary) -> AIPersonality:
+	var p := balanced()
+	for key: String in data:
+		if key in p:
+			p.set(key, type_convert(data[key], typeof(p.get(key))))
+	return p
+
+
 ## Equilibrada: cresce, junta madeira, monta uma defesa e um pequeno exército.
 static func balanced() -> AIPersonality:
 	var p := AIPersonality.new()

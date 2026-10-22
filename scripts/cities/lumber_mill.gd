@@ -49,6 +49,13 @@ func setup(p_owner: Player, p_cell: Vector2i, map: GameMap) -> void:
 	name = "Madeireira_%d_%d" % [p_cell.x, p_cell.y]
 
 
+## Estado para o save. Os trabalhadores lá dentro são guardados pela posição
+## deles em [param owner_units] (a lista de unidades do dono).
+func to_dict(owner_units: Array[Unit]) -> Dictionary:
+	return {"cell": SaveGame.cell_to_json(cell), "progress": progress,
+			"workers": workers.map(func(worker: Unit) -> int: return owner_units.find(worker))}
+
+
 static func cost() -> int:
 	return City.BUILDS[City.Build.LUMBER_MILL]["cost"]
 

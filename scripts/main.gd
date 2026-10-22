@@ -82,13 +82,20 @@ func _process(_delta: float) -> void:
 func _unhandled_input(event: InputEvent) -> void:
 	var is_enter: bool = (event is InputEventKey and event.pressed and not event.echo
 			and event.keycode in [KEY_ENTER, KEY_KP_ENTER])
+	var key: int = event.keycode if event is InputEventKey and event.pressed and not event.echo else KEY_NONE
+	if hud.city_window.visible or hud.city_name_dialog.visible or hud.notice_dialog.visible or hud.save_dialog.visible:
+		return # as janelas cuidam dos próprios cliques e teclas
+	if key == KEY_F9 and not _is_busy:
+		_open_save_dialog(false) # carregar também vale na tela de vitória
+		return
 	if game_over:
 		if is_enter:
 			get_tree().reload_current_scene()
 		return
-	if hud.city_window.visible or hud.city_name_dialog.visible or hud.notice_dialog.visible:
-		return # as janelas cuidam dos próprios cliques e teclas
 	if _is_busy or TurnManager.current_player().is_ai:
+		return
+	if key == KEY_F5:
+		_open_save_dialog(true)
 		return
 
 	if is_enter:
@@ -727,11 +734,15 @@ func _on_turn_started(player: Player, turn_number: int) -> void:
 		_start_human_turn(player)
 
 
-## Vez do humano: primeiro as ordens "Mover" andam sozinhas, depois aparecem
-## os avisos de construção concluída e, por fim, a primeira unidade sem ordem
-## é selecionada.
-func _start_human_turn(player: Player) -> void:
+## Vez do humano: primeiro o salvamento automático, depois as ordens "Mover"
+## andam sozinhas, aparecem os avisos de construção concluída e, por fim, a
+## primeira unidade sem ordem é selecionada.
+func _start_human_turn(player: Player, autosave := true) -> void:
 	_is_busy = true
+	if autosave and not game_over:
+		var error := SaveGame.write(SaveGame.AUTOSAVE_SLOT, capture_state())
+		if error != OK:
+			push_warning("Salvamento automático falhou (%s)." % error_string(error))
 	await _run_goto_orders(player)
 	await _show_completion_notices()
 	_is_busy = false
@@ -880,6 +891,122 @@ func _check_victory() -> void:
 	hud.show_end_turn_prompt(false)
 	hud.show_victory(alive[0])
 	print("%s venceu!" % alive[0].display_name)
+
+
+# --- Salvar e carregar (ver SaveGame) ----------------------------------------
+
+## F5 / F9: janela dos espaços de save. Salvar só na vez do humano, sem nada
+## acontecendo; carregar também na tela de vitória.
+func _open_save_dialog(saving: bool) -> void:
+	_set_goto_mode(false)
+	camera.locked = true
+	hud.save_dialog.open(saving)
+	var slot: int = await hud.save_dialog.closed
+	camera.locked = false
+	if slot < 0:
+		return
+	if saving:
+		var error := save_game(slot)
+		if error == OK:
+			hud.show_message("Partida salva (%s)." % SaveGame.slot_name(slot), Color(0.75, 1, 0.75))
+		else:
+			hud.show_message("Não foi possível salvar: %s." % error_string(error), Color(1, 0.6, 0.4))
+	elif not load_game(slot):
+		hud.show_message("Não foi possível carregar %s." % SaveGame.slot_name(slot), Color(1, 0.6, 0.4))
+
+
+func save_game(slot: int) -> Error:
+	return SaveGame.write(slot, capture_state())
+
+
+## Carrega o espaço e continua a partida de onde ela foi salva. Retorna false
+## se o arquivo não existir ou não puder ser lido.
+func load_game(slot: int) -> bool:
+	var data := SaveGame.read(slot)
+	if data.is_empty():
+		return false
+	restore_state(data)
+	hud.show_message("Partida carregada (%s, turno %d)." % [SaveGame.slot_name(slot), TurnManager.turn_number],
+			Color(0.75, 1, 0.75))
+	return true
+
+
+## Tudo o que muda durante a partida, pronto para virar JSON: o turno, o mapa
+## (terreno e madeira das florestas) e cada jogador com as unidades, cidades e
+## madeireiras dele (ver os to_dict de cada classe). O estado da máquina
+## (personalidade, turnos esperando) vai junto com o jogador.
+func capture_state() -> Dictionary:
+	var players_data := []
+	for player in players:
+		var data := player.to_dict()
+		if _ais.has(player):
+			data["ai_turns_waiting"] = _ais[player].turns_waiting
+		players_data.append(data)
+	return {"turn_manager": TurnManager.to_dict(), "map": game_map.to_dict(), "players": players_data}
+
+
+## Troca a partida atual pela de [param data] (de capture_state, já lida do
+## arquivo) e continua a vez de quem estava jogando, sem processar o início do
+## turno de novo (as cidades já tinham produzido quando o jogo foi salvo).
+func restore_state(data: Dictionary) -> void:
+	select_unit(null)
+	_set_goto_mode(false)
+	_completion_notices.clear()
+	_awaiting_end_turn = false
+	hud.show_end_turn_prompt(false)
+	hud.hide_victory()
+	game_over = false
+	for root: Node in [units_root, cities_root]:
+		for child in root.get_children():
+			root.remove_child(child)
+			child.queue_free()
+
+	game_map.from_dict(data["map"])
+	players = []
+	_ais = {}
+	for player_data: Dictionary in data["players"]:
+		var player := Player.from_dict(player_data)
+		players.append(player)
+		if player.is_ai:
+			_ais[player] = AIController.new()
+			_ais[player].turns_waiting = int(player_data.get("ai_turns_waiting", 0))
+		var mills: Array[LumberMill] = []
+		for mill_data: Dictionary in player_data["lumber_mills"]:
+			var mill := LumberMill.new()
+			mill.setup(player, SaveGame.json_to_cell(mill_data["cell"]), game_map)
+			mill.progress = int(mill_data["progress"])
+			cities_root.add_child(mill)
+			player.lumber_mills.append(mill)
+			mills.append(mill)
+		for unit_data: Dictionary in player_data["units"]:
+			var unit := Unit.new()
+			unit.setup(load(unit_data["type"]), player, SaveGame.json_to_cell(unit_data["cell"]), game_map)
+			unit.position = game_map.cell_to_world(unit.cell)
+			unit.name = "%s_%s_%d" % [unit.type.display_name, player.id, player.units.size() + 1]
+			units_root.add_child(unit)
+			player.units.append(unit)
+			unit.apply_dict(unit_data)
+		# Trabalhadores dentro das madeireiras (pela posição na lista de unidades)
+		for i in mills.size():
+			for index in player_data["lumber_mills"][i]["workers"]:
+				var worker := player.units[int(index)]
+				worker.working_mill = mills[i]
+				mills[i].workers.append(worker)
+			mills[i].queue_redraw()
+		for city_data: Dictionary in player_data["cities"]:
+			var city := City.new()
+			city.setup(city_data["name"], player, SaveGame.json_to_cell(city_data["cell"]), game_map)
+			city.apply_dict(city_data)
+			cities_root.add_child(city)
+			player.cities.append(city)
+	TurnManager.restore(players, data["turn_manager"])
+	var current := TurnManager.current_player()
+	print("Partida carregada: turno %d, vez do %s" % [TurnManager.turn_number, current.display_name])
+	hud.set_turn(TurnManager.turn_number, current)
+	if current.is_ai:
+		_play_ai_turn(current)
+	else:
+		_start_human_turn(current, false)
 
 
 # --- Montagem da partida e HUD ----------------------------------------------

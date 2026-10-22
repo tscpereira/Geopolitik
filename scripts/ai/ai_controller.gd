@@ -36,7 +36,8 @@ const PATIENCE := 2
 const UNREACHABLE := 1 << 30
 
 ## Turnos seguidos em que alguma unidade segurou o avanço por causa da ameaça.
-var _turns_waiting := 0
+## Vai para o save (Game.capture_state).
+var turns_waiting := 0
 var _economy: AIEconomy
 
 
@@ -85,7 +86,7 @@ func _attack_phase(game: Game, player: Player) -> void:
 ## adiantadas, para que as da frente respeitem a formação.
 func _advance_phase(game: Game, player: Player) -> void:
 	var distance := _distance_to_enemies(game, player)
-	var threatened := _threatened_cells(game, player) if _turns_waiting < PATIENCE else {}
+	var threatened := _threatened_cells(game, player) if turns_waiting < PATIENCE else {}
 	var held_back := false
 	# Só os soldados de campo avançam (nem civis nem a guarnição)
 	var movers := player.units.filter(func(unit: Unit) -> bool: return _is_field_soldier(unit) and game.can_move(unit))
@@ -99,7 +100,7 @@ func _advance_phase(game: Game, player: Player) -> void:
 		if advance["cell"] != unit.cell:
 			await _focus(game, unit)
 			await game.move_unit(unit, advance["cell"])
-	_turns_waiting = _turns_waiting + 1 if held_back else 0
+	turns_waiting = turns_waiting + 1 if held_back else 0
 
 
 ## Melhor ataque disponível com nota positiva:

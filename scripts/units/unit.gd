@@ -86,6 +86,26 @@ func setup(p_type: UnitType, p_owner: Player, p_cell: Vector2i, map: GameMap) ->
 	energy = max_energy
 
 
+## Estado da unidade para o save. Se ela está dentro de uma madeireira, quem
+## guarda isso é a madeireira (LumberMill.to_dict).
+func to_dict() -> Dictionary:
+	return {
+		"type": type.resource_path, "cell": SaveGame.cell_to_json(cell), "moves_left": moves_left,
+		"energy": energy, "fortified": fortified, "hidden_in_city": hidden_in_city,
+		"goto": SaveGame.cell_to_json(goto_target),
+	}
+
+
+## Volta ao estado salvo (depois de setup, que já deu o tipo, o dono e a casa).
+func apply_dict(data: Dictionary) -> void:
+	moves_left = int(data["moves_left"])
+	energy = int(data["energy"])
+	fortified = data["fortified"]
+	hidden_in_city = data["hidden_in_city"]
+	goto_target = SaveGame.json_to_cell(data["goto"])
+	_update_exhausted_look()
+
+
 ## Defesa extra do terreno em que a unidade está (Terrain.DEFENSE_BONUS).
 func terrain_defense_bonus() -> int:
 	return Terrain.DEFENSE_BONUS.get(_map.get_terrain(cell), 0) if _map else 0

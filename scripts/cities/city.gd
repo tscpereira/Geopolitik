@@ -216,6 +216,22 @@ class Construction:
 	func is_done() -> bool:
 		return progress >= cost()
 
+	func to_dict() -> Dictionary:
+		return {"build": build, "cell": SaveGame.cell_to_json(cell), "progress": progress, "workers": workers,
+				"waiting_reported": waiting_reported, "wood_paid": wood_paid,
+				"weapons_paid": SaveGame.int_map_to_json(weapons_paid)}
+
+	static func from_dict(data: Dictionary) -> Construction:
+		var construction := Construction.new()
+		construction.build = int(data["build"])
+		construction.cell = SaveGame.json_to_cell(data["cell"])
+		construction.progress = int(data["progress"])
+		construction.workers = int(data["workers"])
+		construction.waiting_reported = data["waiting_reported"]
+		construction.wood_paid = int(data["wood_paid"])
+		construction.weapons_paid = SaveGame.json_to_int_map(data["weapons_paid"])
+		return construction
+
 
 var city_name := ""
 var owner_player: Player
@@ -258,6 +274,34 @@ func setup(p_name: String, p_owner: Player, p_cell: Vector2i, map: GameMap) -> v
 	for build: int in BUILDS:
 		if BUILDS[build].get("native", false):
 			buildings.append(build)
+
+
+## Estado da cidade para o save.
+func to_dict() -> Dictionary:
+	return {
+		"name": city_name, "cell": SaveGame.cell_to_json(cell), "population": population,
+		"food_stock": food_stock, "farms": SaveGame.cell_map_to_json(farms),
+		"lumber_mills": SaveGame.cell_map_to_json(lumber_mills),
+		"constructions": constructions.map(func(construction: Construction) -> Dictionary: return construction.to_dict()),
+		"buildings": buildings.duplicate(), "building_workers": SaveGame.int_map_to_json(building_workers),
+	}
+
+
+## Volta ao estado salvo (depois de setup, que já deu o nome, o dono e a casa).
+func apply_dict(data: Dictionary) -> void:
+	population = int(data["population"])
+	food_stock = int(data["food_stock"])
+	farms = SaveGame.json_to_cell_map(data["farms"])
+	lumber_mills = SaveGame.json_to_cell_map(data["lumber_mills"])
+	constructions.clear()
+	for construction_data: Dictionary in data["constructions"]:
+		constructions.append(Construction.from_dict(construction_data))
+	buildings.clear()
+	for build in data["buildings"]:
+		buildings.append(int(build))
+	building_workers = SaveGame.json_to_int_map(data["building_workers"])
+	_painted_improvements.clear()
+	_notify_changed()
 
 
 func has_building(build: int) -> bool:

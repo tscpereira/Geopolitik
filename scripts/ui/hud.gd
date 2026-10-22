@@ -32,6 +32,7 @@ const MESSAGE_TIME := 3.0
 @onready var city_window: CityWindow = $CityWindow
 @onready var city_name_dialog: CityNameDialog = $CityNameDialog
 @onready var notice_dialog: NoticeDialog = $NoticeDialog
+@onready var save_dialog: SaveDialog = $SaveDialog
 
 var _prompt_tween: Tween
 var _message_tween: Tween
@@ -160,6 +161,11 @@ func show_victory(winner: Player) -> void:
 	_victory_screen.modulate.a = 0.0
 	_victory_screen.show()
 	create_tween().tween_property(_victory_screen, "modulate:a", 1.0, 0.5)
+
+
+## Esconde a tela de fim de jogo (ao carregar uma partida salva).
+func hide_victory() -> void:
+	_victory_screen.hide()
 
 
 func set_info(text: String) -> void:
