@@ -545,6 +545,46 @@ func add_rebuild_progress(target: Vector2i, points: int) -> bool:
 	return true
 
 
+## A casa sai do território (vai para outra cidade do mesmo jogador, ver
+## Game.transfer_cell) e leva junto o que a cidade tinha nela: fazenda,
+## madeireira, ruína ou obra. Quem trabalhava ali fica livre nesta cidade.
+## Retorna o que saiu, para receive_cell.
+func give_up_cell(target: Vector2i) -> Dictionary:
+	var taken := {}
+	if farms.has(target):
+		taken["farm"] = true
+		farms.erase(target)
+	if lumber_mills.has(target):
+		taken["lumber_mill"] = true
+		lumber_mills.erase(target)
+	if ruins.has(target):
+		taken["ruin"] = ruins[target]
+		ruins.erase(target)
+	var construction := construction_at(target)
+	if construction:
+		constructions.erase(construction)
+		construction.workers = 0
+		taken["construction"] = construction
+	territory.erase(target)
+	_notify_changed()
+	return taken
+
+
+## A casa entra no território com o que veio dela (de give_up_cell), sem
+## trabalhadores: a melhoria vem de graça.
+func receive_cell(target: Vector2i, taken: Dictionary) -> void:
+	territory.append(target)
+	if taken.has("farm"):
+		farms[target] = 0
+	if taken.has("lumber_mill"):
+		lumber_mills[target] = 0
+	if taken.has("ruin"):
+		ruins[target] = taken["ruin"]
+	if taken.has("construction"):
+		constructions.append(taken["construction"])
+	_notify_changed()
+
+
 ## Um Trabalhador migrou para a cidade: +1 de população, e o cidadão novo vai
 ## trabalhar na primeira obra (ou fazenda, madeireira...).
 func add_citizen() -> void:

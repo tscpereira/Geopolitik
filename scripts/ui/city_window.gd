@@ -80,6 +80,7 @@ func open(city: City, game: Game, read_only := false) -> void:
 	_picking = -1
 	_build_modal.hide()
 	_city.changed.connect(_queue_refresh)
+	_map_view.allow_transfer = not read_only
 	_map_view.setup(city, game)
 	_refresh()
 	show()
@@ -105,6 +106,27 @@ func _input(event: InputEvent) -> void:
 		else:
 			close()
 		get_viewport().set_input_as_handled()
+
+
+## Clique numa casa vermelha do mapa da cidade: ela passa de outra cidade do
+## jogador para esta (Game.transfer_cell), com a melhoria.
+func _on_cell_claimed(cell: Vector2i) -> void:
+	if _read_only or _picking >= 0:
+		return
+	var previous: City = _game.transfer_cell(_city, cell)
+	_game.hud.show_message("Casa (%d, %d) passou de %s para %s." % [cell.x, cell.y, previous.city_name, _city.city_name],
+			Color(0.75, 1, 0.75))
+	_queue_refresh()
+
+
+## Se alguma casa do raio de ação é de outra cidade do jogador (vermelha).
+func _has_transferable() -> bool:
+	if _read_only:
+		return false
+	for offset in City.territory_offsets(_city.is_capital):
+		if _game.transfer_error(_city, _city.cell + offset).is_empty():
+			return true
+	return false
 
 
 ## Fundo dos painéis das janelas (também usado pela pergunta do nome da cidade).
@@ -144,6 +166,7 @@ func _build_layout() -> void:
 	_map_view = CityMapView.new()
 	_map_view.cell_picked.connect(_on_cell_picked)
 	_map_view.pick_cancelled.connect(_cancel_pick)
+	_map_view.cell_claimed.connect(_on_cell_claimed)
 	left.add_child(_map_view)
 	_hint = Label.new()
 	_hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -289,7 +312,8 @@ func _refresh() -> void:
 			if _read_only else
 			"Clique em um terreno destacado para construir. Esc ou botão direito cancela."
 			if _picking >= 0 else
-			"Passe o mouse sobre uma casa para ver detalhes. Os números brancos indicam os cidadãos trabalhando ali.")
+			"Passe o mouse sobre uma casa para ver detalhes. Os números brancos indicam os cidadãos trabalhando ali."
+			+ (" Casas em vermelho são de outra cidade sua: clique para trazê-las." if _has_transferable() else ""))
 	_rebuild_build_button()
 	_rebuild_constructions()
 	_rebuild_farms()

@@ -6,10 +6,16 @@ extends Control
 ## fazendas, as madeireiras (com a madeira que resta), as obras (com progresso)
 ## e os cidadãos trabalhando. A borda na cor do dono marca o território (a
 ## área de trabalho); as casas de fora aparecem escurecidas.
+## Casas do raio de ação que são território de outra cidade do mesmo jogador
+## ficam em vermelho translúcido, com a melhoria da outra cidade por baixo:
+## clicar numa delas a traz para esta cidade (cell_claimed; ver
+## Game.transfer_cell).
 ## No modo de escolha, destaca as casas onde dá para construir e avisa o clique.
 
 signal cell_picked(cell: Vector2i)
 signal pick_cancelled
+## Clique numa casa vermelha (de outra cidade do jogador, no raio de ação).
+signal cell_claimed(cell: Vector2i)
 
 ## Tamanho de cada casa na janela, em pixels.
 const CELL_SIZE := 72
@@ -17,11 +23,15 @@ const HIGHLIGHT_COLOR := Color(0.4, 1.0, 0.4)
 const BLOCKED_TINT := Color(0, 0, 0, 0.55)
 ## Casas fora do território da cidade.
 const OUTSIDE_TINT := Color(0, 0, 0, 0.6)
+## Casas de outra cidade do jogador que podem vir para esta (clique).
+const TRANSFER_TINT := Color(1, 0.12, 0.1, 0.42)
 const HOVER_COLOR := Color(1, 1, 1, 0.9)
 ## Espiga de milho (com o alimento por turno) no centro da fazenda trabalhada.
 const CORN_SIZE := Vector2(38, 50)
 const FOOD_FONT_SIZE := 20
 
+## false = observando a cidade de outro jogador: sem casas vermelhas.
+var allow_transfer := true
 var _city: City
 var _game: Game
 ## Casas destacadas no modo de escolha (vazio = fora do modo de escolha).
@@ -63,6 +73,15 @@ func _gui_input(event: InputEvent) -> void:
 			cell_picked.emit(_cell_at(event.position))
 		elif event.button_index == MOUSE_BUTTON_RIGHT:
 			pick_cancelled.emit()
+	elif event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
+		var cell := _cell_at(event.position)
+		if _is_transferable(cell):
+			cell_claimed.emit(cell)
+
+
+## Casa vermelha: de outra cidade do jogador e no raio de ação desta.
+func _is_transferable(cell: Vector2i) -> bool:
+	return _city != null and allow_transfer and _view_cells().has(cell) and _game.transfer_error(_city, cell).is_empty()
 
 
 func _notification(what: int) -> void:
@@ -80,7 +99,11 @@ func _get_tooltip(at_position: Vector2) -> String:
 	var text := "(%d, %d) %s" % [cell.x, cell.y, Terrain.NAMES[map.get_terrain(cell)]]
 	if map.get_terrain(cell) == Terrain.Type.FOREST:
 		text += " (madeira %d/%d)" % [map.wood_left(cell), Terrain.WOOD_PER_FOREST]
-	if not _city.territory.has(cell):
+	if _is_transferable(cell):
+		var other := _game.territory_owner(cell)
+		text += " - território de %s%s.\nClique para passar esta casa para %s: a melhoria vem junto e quem trabalhava nela fica livre em %s." % [
+			other.city_name, _improvement_text(other, cell), _city.city_name, other.city_name]
+	elif not _city.territory.has(cell):
 		var owner_city := _game.territory_owner(cell)
 		text += " - fora do território%s" % (" (território de %s)" % owner_city.city_name if owner_city else "")
 		if _game.lumber_mill_at(cell):
@@ -138,9 +161,13 @@ func _draw() -> void:
 			_draw_progress(rect, construction)
 			if construction.workers > 0:
 				_draw_worker(rect, construction.workers)
+		elif _is_transferable(cell):
+			# De outra cidade do jogador: mostra a melhoria dela sob o vermelho
+			_draw_other_improvement(_game.territory_owner(cell), cell, rect)
+			draw_rect(rect, TRANSFER_TINT)
 		elif cell != _city.cell and (_game.claiming_city(cell) or _game.lumber_mill_at(cell)):
 			draw_rect(rect, BLOCKED_TINT)
-		if not _city.territory.has(cell):
+		if not _city.territory.has(cell) and not _is_transferable(cell):
 			draw_rect(rect, OUTSIDE_TINT) # fora do território: a cidade não trabalha aqui
 
 		if is_picking() and cell != _city.cell:
@@ -154,12 +181,44 @@ func _draw() -> void:
 			_city.owner_player.color, _city.population, int(CELL_SIZE * 0.45))
 
 	if _view_cells().has(_hover) and (not is_picking() or _pick_cells.has(_hover)):
-		draw_rect(_cell_rect(_hover), HOVER_COLOR, false, 2.0)
+		draw_rect(_cell_rect(_hover), HOVER_COLOR, false, 2.0 if not _is_transferable(_hover) else 3.0)
 
 	if is_picking():
 		var hint := "Escolha o terreno"
 		draw_string_outline(font, Vector2(6, 18), hint, HORIZONTAL_ALIGNMENT_LEFT, -1, 16, 4, Color.BLACK)
 		draw_string(font, Vector2(6, 18), hint, HORIZONTAL_ALIGNMENT_LEFT, -1, 16, HIGHLIGHT_COLOR)
+
+
+## Melhoria de outra cidade na casa (fazenda, madeireira, ruína ou obra), com
+## os cidadãos dela, para o jogador ver o que ganha ao trazer a casa.
+func _draw_other_improvement(other: City, cell: Vector2i, rect: Rect2) -> void:
+	var construction := other.construction_at(cell)
+	if other.farms.has(cell):
+		City.draw_farm(self, rect)
+		if other.farms[cell] > 0:
+			_draw_worker(rect, other.farms[cell])
+	elif other.lumber_mills.has(cell):
+		LumberMill.draw_icon(self, rect)
+		if other.lumber_mills[cell] > 0:
+			_draw_worker(rect, other.lumber_mills[cell])
+	elif other.ruins.has(cell):
+		City.draw_ruin(self, other.ruins[cell]["build"], rect)
+	elif construction:
+		City.draw_improvement(self, construction.build, rect, City.CONSTRUCTION_ALPHA)
+
+
+## " (fazenda com 1 cidadão)", " (ruína de madeireira)"... ou "".
+func _improvement_text(other: City, cell: Vector2i) -> String:
+	if other.farms.has(cell):
+		return " (fazenda, %d %s)" % [other.farms[cell], "cidadão" if other.farms[cell] == 1 else "cidadãos"]
+	if other.lumber_mills.has(cell):
+		return " (madeireira, %d %s)" % [other.lumber_mills[cell], "cidadão" if other.lumber_mills[cell] == 1 else "cidadãos"]
+	if other.ruins.has(cell):
+		return " (%s destruída)" % String(City.BUILDS[other.ruins[cell]["build"]]["name"]).to_lower()
+	if other.construction_at(cell):
+		var construction := other.construction_at(cell)
+		return " (%s em obra, %d/%d)" % [construction.display_name().to_lower(), construction.progress, construction.cost()]
+	return ""
 
 
 ## Fronteira do território da cidade, na cor do dono (como no mapa).

@@ -216,6 +216,38 @@ func _claim_territory(city: City) -> void:
 			city.territory.append(cell)
 
 
+## Motivo pelo qual a casa não pode passar para [param city] ("" = pode): ela
+## precisa estar no raio de ação da cidade (City.territory_offsets: 9 casas no
+## povoado, 21 na capital) e ser território de outra cidade do mesmo jogador
+## (menos a casa dessa outra cidade).
+func transfer_error(city: City, cell: Vector2i) -> String:
+	var current := territory_owner(cell)
+	if current == city:
+		return "A casa já é de %s." % city.city_name
+	if current == null:
+		return "A casa não é território de nenhuma cidade."
+	if current.owner_player != city.owner_player:
+		return "A casa é território de outro jogador."
+	if current.cell == cell:
+		return "É a casa de %s." % current.city_name
+	if not City.territory_offsets(city.is_capital).has(cell - city.cell):
+		return "Fora do raio de ação de %s." % city.city_name
+	return ""
+
+
+## A casa passa do território de outra cidade do jogador para [param city]
+## (use transfer_error antes). A melhoria vem junto, de graça e sem
+## trabalhador; quem trabalhava nela fica livre na cidade antiga. Retorna a
+## cidade antiga.
+func transfer_cell(city: City, cell: Vector2i) -> City:
+	var previous := territory_owner(cell)
+	city.receive_cell(cell, previous.give_up_cell(cell))
+	refresh_territories()
+	print("%s: casa (%d, %d) passou de %s para %s" % [city.owner_player.display_name, cell.x, cell.y,
+			previous.city_name, city.city_name])
+	return previous
+
+
 ## Cidade que tem uma fazenda ou obra na casa (ou null).
 func claiming_city(cell: Vector2i) -> City:
 	for city in cities():

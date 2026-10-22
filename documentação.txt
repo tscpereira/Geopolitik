@@ -878,6 +878,22 @@ scripts/map/territory_overlay.gd)
   pega casas que já são de outra cidade (de qualquer jogador) nem
   a casa de uma madeireira remota de outro jogador. Ex.: uma
   cidade a 3 casas da capital fica com 6 casas em vez de 9.
+- CASAS ENTRE CIDADES DO MESMO JOGADOR (Game.transfer_cell): na
+  janela de uma cidade, as casas do raio de ação dela (9 no
+  povoado, 21 na capital) que são território de OUTRA cidade sua
+  aparecem em vermelho translúcido, com a melhoria e os cidadãos
+  da outra cidade por baixo. O tooltip explica. Clicar numa delas
+  passa a casa para esta cidade:
+    * a melhoria vem junto, de graça e sem trabalhador: fazenda,
+      madeireira, ruína (com o progresso da reconstrução) ou obra
+      em andamento (com o progresso e a madeira já paga);
+    * quem trabalhava nela fica livre na cidade antiga (a
+      população dela não muda);
+    * vale nos dois sentidos: na janela da cidade antiga, a casa
+      aparece em vermelho e pode voltar.
+  Não muda: a casa de uma cidade, casas fora do raio de ação e
+  casas de outro jogador. Observando a cidade do adversário, não
+  aparece nada em vermelho. A máquina ainda não usa.
 - Não dá para fundar uma cidade dentro de um território
   ("Esta casa é território de Aurora.").
 - A área de trabalho da cidade é o território. As unidades
@@ -1425,6 +1441,9 @@ Screenshots também confirmaram o visual.
 [x] Classe da cidade pelo tamanho (Povoado, Vila, Cidade,
     Metrópole) e capital com estrela
 [x] Área de trabalho limitada ao território
+[x] Passar casas entre cidades do mesmo jogador (clique na casa
+    vermelha da janela da cidade; a melhoria vem junto)
+[ ] IA: redistribuir casas entre as próprias cidades
 
 
 --------------------------------------------------------------
@@ -1765,6 +1784,18 @@ Screenshots também confirmaram o visual.
 - Correção feita pelos testes: carregar um save enquanto as
   ordens "Mover" andavam no início da vez dava erro; agora o
   código confere se a unidade ainda existe.
+- Casas entre cidades vizinhas do mesmo jogador: na janela da
+  cidade, as casas do raio de ação que são de outra cidade sua
+  ficam em vermelho translúcido; um clique traz a casa, com a
+  melhoria de graça, e libera os cidadãos que trabalhavam nela na
+  cidade antiga.
+- Validação: teste com 21 verificações (regras: raio, casa da
+  cidade, inimigo; vermelho, tooltip e dica; clique de verdade na
+  fazenda trabalhada, madeireira e obra; cidadãos livres na
+  capital; pintura da fazenda no mapa; volta pela janela da
+  capital; sem vermelho no modo observação; save), mais
+  screenshots antes e depois. Testes de território, pilhagem,
+  save, prédios, fazendas e avisos passaram de novo.
 
 
 --------------------------------------------------------------
@@ -1798,11 +1829,12 @@ histórico):
       cultura acumulada por turno (quando existir cultura)? Quanto
       cresce a cada vez e em que ordem (casas mais perto primeiro?).
 
-[ ] TROCA DE TERRITÓRIOS
-    - Mecânica para uma casa mudar de cidade ou de jogador (hoje,
-      quem constrói primeiro fica com a casa para sempre).
-    - Ideias: troca entre cidades do mesmo jogador; acordo entre
-      jogadores (diplomacia); pressão cultural da cidade vizinha.
+[ ] TROCA DE TERRITÓRIOS ENTRE JOGADORES
+    - Entre cidades do mesmo jogador já existe (22/10: clique na
+      casa vermelha da janela da cidade). Falta entre jogadores:
+      hoje, quem constrói primeiro fica com a casa para sempre.
+    - Ideias: acordo entre jogadores (diplomacia); pressão
+      cultural da cidade vizinha.
 
 [ ] Fronteiras e diplomacia: entrar no território de outro jogador
     sem acordo = declaração de guerra surpresa.
