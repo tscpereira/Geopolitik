@@ -16,6 +16,8 @@ extends RefCounted
 ##   5. avanço contra o inimigo, só com exército de army_to_attack soldados,
 ##      mantendo a formação e sem parar na zona de ameaça do inimigo;
 ##   6. novos ataques de quem chegou perto e ainda tem movimento.
+## Depois dos ataques, os soldados de campo pilham a fazenda ou madeireira
+## inimiga em que estão; no avanço, preferem parar numa delas.
 
 ## Pausa antes de cada ação, para o jogador acompanhar.
 const ACTION_DELAY := 0.4
@@ -56,11 +58,26 @@ func play_turn(game: Game, player: Player) -> void:
 	await _attack_phase(game, player)
 	if game.game_over:
 		return
+	await _pillage_phase(game, player)
 	if _army_ready(player):
 		await _advance_phase(game, player)
 		if game.game_over:
 			return
 		await _attack_phase(game, player)
+		if game.game_over:
+			return
+		await _pillage_phase(game, player)
+
+
+## Soldados de campo em cima de uma melhoria inimiga pilham (a guarnição não sai
+## da cidade).
+func _pillage_phase(game: Game, player: Player) -> void:
+	for unit in player.units.duplicate():
+		if game.game_over:
+			return
+		if is_instance_valid(unit) and _is_field_soldier(unit) and game.pillage_error(unit).is_empty():
+			await _focus(game, unit)
+			game.hud.show_message(game.pillage(unit), Color(1, 0.75, 0.45))
 
 
 ## Soldados de campo (fora da guarnição) suficientes para partir para o ataque.
@@ -147,6 +164,11 @@ func _best_advance(game: Game, player: Player, unit: Unit, distance: Dictionary,
 	var best := unit.cell
 	var best_distance: int = distance.get(unit.cell, UNREACHABLE)
 	var held_back := false
+	# Melhoria inimiga ao alcance (fora da zona de ameaça): para nela e pilha
+	if not game.is_pillageable_by(player, unit.cell):
+		for cell in Movement.destinations(reachable, occupants):
+			if game.is_pillageable_by(player, cell) and not (avoid_threat and threatened.has(cell)):
+				return {"cell": cell, "held_back": false}
 	for cell in Movement.destinations(reachable, occupants):
 		var cell_distance: int = distance.get(cell, UNREACHABLE)
 		if cell_distance < front_limit or cell_distance >= best_distance:

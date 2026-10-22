@@ -31,6 +31,7 @@ script = ExtResource("2")
 [node name="TerrainLayer" type="TileMapLayer" parent="GameMap"]
 
 [node name="Cities" type="Node2D" parent="."]
+texture_filter = 1
 
 [node name="MoveOverlay" type="Node2D" parent="." node_paths=PackedStringArray("map")]
 script = ExtResource("4")

@@ -58,6 +58,13 @@ var working_mill: LumberMill = null:
 ## Destino da ordem "Mover" (tecla G): a unidade anda até lá sozinha, turno
 ## após turno. NO_TARGET = sem ordem.
 var goto_target := NO_TARGET
+## Trabalhador reconstruindo a melhoria pilhada da casa em que está (tecla R):
+## faz 1 ponto por turno, no início da vez do dono (Game._process_rebuilds).
+## Não é selecionado sozinho; mover a unidade interrompe a obra.
+var rebuilding := false:
+	set(value):
+		rebuilding = value
+		queue_redraw()
 
 var attack: int:
 	get:
@@ -92,7 +99,7 @@ func to_dict() -> Dictionary:
 	return {
 		"type": type.resource_path, "cell": SaveGame.cell_to_json(cell), "moves_left": moves_left,
 		"energy": energy, "fortified": fortified, "hidden_in_city": hidden_in_city,
-		"goto": SaveGame.cell_to_json(goto_target),
+		"goto": SaveGame.cell_to_json(goto_target), "rebuilding": rebuilding,
 	}
 
 
@@ -103,6 +110,7 @@ func apply_dict(data: Dictionary) -> void:
 	fortified = data["fortified"]
 	hidden_in_city = data["hidden_in_city"]
 	goto_target = SaveGame.json_to_cell(data["goto"])
+	rebuilding = data.get("rebuilding", false)
 	_update_exhausted_look()
 
 
@@ -122,10 +130,17 @@ func skip_turn() -> void:
 	_update_exhausted_look()
 
 
+## Gasta movimentos numa ação (ex.: pilhar custa 1).
+func spend_moves(amount: int) -> void:
+	moves_left = maxi(moves_left - amount, 0)
+	_update_exhausted_look()
+
+
 ## Fortifica a unidade; isso encerra os movimentos dela neste turno e cancela
 ## a ordem de mover.
 func fortify() -> void:
 	fortified = true
+	rebuilding = false
 	goto_target = NO_TARGET
 	skip_turn()
 
@@ -148,6 +163,7 @@ func heal_if_fortified() -> int:
 ## (Movement.step_cost: 1, ou 2 na floresta para quem tem mais de 1 de movimento).
 func move_along(path: Array[Vector2i], map: GameMap) -> void:
 	fortified = false
+	rebuilding = false
 	var tween := create_tween()
 	for step in path:
 		tween.tween_property(self, "position", map.cell_to_world(step), MOVE_STEP_TIME)
@@ -225,6 +241,9 @@ func _draw() -> void:
 		draw_string(font, Vector2(-text_width / 2.0, baseline), type.symbol,
 				HORIZONTAL_ALIGNMENT_LEFT, -1, FONT_SIZE, Color.BLACK)
 
+	if rebuilding:
+		_draw_hammer(rect)
+
 	# Barra de energia na base da unidade, só quando ela já levou dano
 	if energy < max_energy:
 		var ratio := float(energy) / max_energy
@@ -245,6 +264,21 @@ func _draw_fortification(rect: Rect2) -> void:
 		var x := outer.position.x + i * 2 * merlon_width
 		draw_rect(Rect2(x, outer.position.y - wall, merlon_width, wall), FORTIFY_COLOR)
 	draw_rect(outer.grow(wall / 2.0), Color.BLACK, false, 1.0)
+
+
+## Martelo num círculo no canto superior direito: o Trabalhador está
+## reconstruindo a melhoria pilhada da casa.
+func _draw_hammer(rect: Rect2) -> void:
+	var radius := GameMap.TILE_SIZE * 0.17
+	var center := Vector2(rect.end.x - radius * 0.6, rect.position.y + radius * 0.6)
+	draw_circle(center, radius + 1.0, Color.BLACK)
+	draw_circle(center, radius, Color(1, 0.85, 0.3))
+	var handle := radius * 0.12
+	draw_line(center + Vector2(-radius * 0.5, radius * 0.55), center + Vector2(radius * 0.2, -radius * 0.15), Color8(110, 70, 35), handle * 3.0)
+	draw_colored_polygon(PackedVector2Array([
+		center + Vector2(-radius * 0.05, -radius * 0.65), center + Vector2(radius * 0.65, radius * 0.05),
+		center + Vector2(radius * 0.4, radius * 0.3), center + Vector2(-radius * 0.3, -radius * 0.4),
+	]), Color8(70, 70, 75))
 
 
 ## Sprite do tipo com os pixels magenta trocados pela cor do jogador (com cache).

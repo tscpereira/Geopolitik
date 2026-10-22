@@ -12,6 +12,11 @@ extends Node2D
 ##     para o estoque do jogador. Quando a madeira da casa acaba, a floresta
 ##     vira cerrado, a madeireira some e os trabalhadores saem (Game cuida disso).
 ##
+## Pilhada por um inimigo (Game.pillage): os Trabalhadores lá dentro são
+## executados, a obra volta a 0 e ela aparece destruída. A floresta não ganha
+## de volta a madeira já tirada. Um Trabalhador do dono reconstrói entrando
+## nela (tecla R): é a mesma obra de uma madeireira nova.
+##
 ## Também desenha as madeireiras da cidade (draw_icon, draw_wood_bar).
 
 ## Trabalhadores por madeireira (da cidade ou remota).
@@ -37,6 +42,9 @@ var cell: Vector2i
 var progress := 0
 ## Trabalhadores (unidades) trabalhando aqui dentro.
 var workers: Array[Unit] = []
+## Destruída por um inimigo: não produz até ser reconstruída (a obra, de 0
+## até cost(), é a reconstrução).
+var pillaged := false
 
 var _map: GameMap
 
@@ -52,8 +60,16 @@ func setup(p_owner: Player, p_cell: Vector2i, map: GameMap) -> void:
 ## Estado para o save. Os trabalhadores lá dentro são guardados pela posição
 ## deles em [param owner_units] (a lista de unidades do dono).
 func to_dict(owner_units: Array[Unit]) -> Dictionary:
-	return {"cell": SaveGame.cell_to_json(cell), "progress": progress,
+	return {"cell": SaveGame.cell_to_json(cell), "progress": progress, "pillaged": pillaged,
 			"workers": workers.map(func(worker: Unit) -> int: return owner_units.find(worker))}
+
+
+## Destruída por um inimigo: a obra volta a 0 (os Trabalhadores de dentro são
+## tirados pelo Game, que os executa).
+func pillage() -> void:
+	pillaged = true
+	progress = 0
+	queue_redraw()
 
 
 static func cost() -> int:
@@ -85,6 +101,8 @@ func process_turn() -> int:
 	var wood := 0
 	if not is_done():
 		progress = mini(progress + workers.size(), cost())
+		if is_done():
+			pillaged = false # reconstruída
 	else:
 		wood = _map.harvest_wood(cell, workers.size() * WOOD_PER_WORKER)
 	queue_redraw()
@@ -98,12 +116,15 @@ func is_exhausted() -> bool:
 
 func _draw() -> void:
 	var tile := Rect2(-Vector2.ONE * GameMap.TILE_SIZE / 2.0, Vector2.ONE * GameMap.TILE_SIZE)
-	draw_icon(self, tile, 1.0 if is_done() else CONSTRUCTION_ALPHA)
+	if pillaged:
+		City.draw_ruin(self, City.Build.LUMBER_MILL, tile)
+	else:
+		draw_icon(self, tile, 1.0 if is_done() else CONSTRUCTION_ALPHA)
 	# Contorno na cor do dono: madeireira remota não tem cidade por perto
 	draw_rect(tile.grow(-MARGIN), owner_player.color, false, MARGIN)
 	if is_done():
 		draw_wood_bar(self, tile, _map.wood_left(cell))
-	else:
+	elif not pillaged or progress > 0:
 		draw_bar(self, tile, float(progress) / cost(), PROGRESS_BAR_COLOR)
 	if not workers.is_empty():
 		_draw_badge(tile, workers.size())

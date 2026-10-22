@@ -20,3 +20,7 @@ extends Resource
 @export var can_found_city := false
 ## Pode construir madeireiras remotas na floresta e trabalhar nelas (tecla M).
 @export var can_build_lumber_mill := false
+## Pode reconstruir fazendas e madeireiras pilhadas (tecla R).
+@export var can_rebuild := false
+## Pode migrar para uma cidade (tecla J): vira 1 de população dela.
+@export var can_join_city := false

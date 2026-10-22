@@ -310,8 +310,9 @@ func _summary_text() -> String:
 		_city.food_stock, _city.food_capacity(), food_color.to_html(false), food,
 		("   (cresce em %d %s)" % [growth, "turno" if growth == 1 else "turnos"]) if growth > 0 else "",
 	])
+	var center_food := City.CENTER_FOOD if _city.population > 0 else 0
 	lines.append("    produção %d (cidade %d + fazendas %d)  -  consumo %d" % [
-		_city.food_produced(), City.CENTER_FOOD, _city.food_produced() - City.CENTER_FOOD, _city.food_consumed(),
+		_city.food_produced(), center_food, _city.food_produced() - center_food, _city.food_consumed(),
 	])
 	if not _city.lumber_mills.is_empty():
 		lines.append("Madeira: [color=#%s]+%d[/color] por turno   (%d em madeireiras)" % [
@@ -326,6 +327,11 @@ func _summary_text() -> String:
 	])
 	if food < 0:
 		lines.append("[color=#%s]Atenção: a cidade está consumindo mais alimento do que produz![/color]" % NEGATIVE_COLOR.to_html(false))
+	if _city.population <= 0:
+		lines.append("[color=#%s]Cidade vazia: não produz nem cresce. Um Trabalhador de outra cidade pode migrar para ela (tecla J).[/color]" % NEGATIVE_COLOR.to_html(false))
+	if not _city.ruins.is_empty():
+		lines.append("[color=#%s]%d %s pela pilhagem: um Trabalhador pode reconstruir (tecla R).[/color]" % [
+			WARNING_COLOR.to_html(false), _city.ruins.size(), "melhoria destruída" if _city.ruins.size() == 1 else "melhorias destruídas"])
 	return "\n".join(lines)
 
 
@@ -621,7 +627,7 @@ func _add_construction_row(box: VBoxContainer, construction: City.Construction, 
 ## (fazendas e madeireiras).
 func _rebuild_farms() -> void:
 	_clear(_farms_box)
-	if _city.farms.is_empty() and _city.lumber_mills.is_empty():
+	if _city.farms.is_empty() and _city.lumber_mills.is_empty() and _city.ruins.is_empty():
 		_farms_box.add_child(_make_muted("Nenhuma fazenda ou madeireira pronta."))
 		return
 	for farm_cell: Vector2i in _city.farms:
@@ -670,6 +676,29 @@ func _rebuild_farms() -> void:
 		row.add_child(status)
 		_add_worker_controls(row, workers, mini(LumberMill.MAX_WORKERS, workers + _city.free_citizens()),
 				func(value: int) -> void: _city.set_mill_workers(mill_cell, value))
+	# Melhorias pilhadas: não produzem até um Trabalhador reconstruir
+	for ruin_cell: Vector2i in _city.ruins:
+		var ruin: Dictionary = _city.ruins[ruin_cell]
+		var row := HBoxContainer.new()
+		row.add_theme_constant_override("separation", 6)
+		_farms_box.add_child(row)
+		var icon := Control.new()
+		icon.custom_minimum_size = Vector2.ONE * Icons.ICON_SIZE
+		icon.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		icon.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+		icon.draw.connect(func() -> void: City.draw_ruin(icon, ruin["build"], Rect2(Vector2.ZERO, icon.size)))
+		row.add_child(icon)
+		var name_label := Label.new()
+		name_label.text = "%s (%d, %d)" % [City.BUILDS[ruin["build"]]["name"], ruin_cell.x, ruin_cell.y]
+		name_label.custom_minimum_size.x = 130
+		row.add_child(name_label)
+		var status := Label.new()
+		status.text = "destruída - reconstrução %d/%d" % [ruin["progress"], City.BUILDS[ruin["build"]]["cost"]]
+		status.add_theme_color_override("font_color", WARNING_COLOR)
+		status.tooltip_text = "Pilhada por um inimigo. Um Trabalhador na casa reconstrói (tecla R), 1 ponto por turno."
+		status.mouse_filter = Control.MOUSE_FILTER_PASS
+		row.add_child(status)
 
 
 ## Seção "Unidades na cidade": a unidade que está na casa da cidade (só cabe

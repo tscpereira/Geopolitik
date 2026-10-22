@@ -84,6 +84,10 @@ func _get_tooltip(at_position: Vector2) -> String:
 	elif _city.lumber_mills.has(cell):
 		text += " - Madeireira, %d/%d trabalhadores (+%d madeira)" % [
 			_city.lumber_mills[cell], LumberMill.MAX_WORKERS, _city.lumber_mills[cell] * LumberMill.WOOD_PER_WORKER]
+	elif _city.ruins.has(cell):
+		var ruin: Dictionary = _city.ruins[cell]
+		text += " - %s destruída (pilhada); um Trabalhador reconstrói (%d/%d)" % [
+			City.BUILDS[ruin["build"]]["name"], ruin["progress"], City.BUILDS[ruin["build"]]["cost"]]
 	elif _city.construction_at(cell):
 		var construction := _city.construction_at(cell)
 		text += " - %s em obra (%d/%d)" % [construction.display_name(), construction.progress, construction.cost()]
@@ -119,6 +123,8 @@ func _draw() -> void:
 			LumberMill.draw_wood_bar(self, rect, map.wood_left(cell))
 			if _city.lumber_mills[cell] > 0:
 				_draw_worker(rect, _city.lumber_mills[cell])
+		elif _city.ruins.has(cell):
+			City.draw_ruin(self, _city.ruins[cell]["build"], rect)
 		elif construction:
 			City.draw_improvement(self, construction.build, rect, City.CONSTRUCTION_ALPHA)
 			_draw_progress(rect, construction)

@@ -19,6 +19,15 @@ const START_CAMERA_CELL := Vector2i(60, 41)
 ## Desligado para observar só o gerenciamento das cidades, sem guerra.
 const WITH_TROOPS := false
 
+## Pilhagem (tecla P): custo em movimentos, energia que a unidade recupera ao
+## pilhar uma fazenda e ouro que o jogador ganha ao pilhar uma madeireira.
+const PILLAGE_COST := 1
+const PILLAGE_FARM_ENERGY := 30
+const PILLAGE_MILL_GOLD := 5
+## Pontos de reconstrução que um Trabalhador faz por turno numa ruína da cidade
+## (a melhoria custa City.BUILDS[...]["cost"]: 4 turnos, como uma obra nova).
+const REBUILD_PER_TURN := 1
+
 var players: Array[Player] = []
 var selected_unit: Unit = null
 var game_over := false
@@ -124,6 +133,12 @@ func _unhandled_input(event: InputEvent) -> void:
 				_found_city_with_selected()
 			KEY_M:
 				_work_lumber_mill_with_selected()
+			KEY_P:
+				_pillage_with_selected()
+			KEY_R:
+				_rebuild_with_selected()
+			KEY_J:
+				_join_city_with_selected()
 			KEY_ESCAPE:
 				_on_escape()
 
@@ -270,6 +285,8 @@ func lumber_mill_error(unit: Unit) -> String:
 	if mill:
 		if mill.owner_player != unit.owner_player:
 			return "Esta madeireira é de outro jogador."
+		if mill.pillaged:
+			return "A madeireira foi destruída: use Reconstruir [R]."
 		if not mill.has_room():
 			return "A madeireira já tem %d trabalhadores (o máximo)." % LumberMill.MAX_WORKERS
 		return ""
@@ -278,6 +295,187 @@ func lumber_mill_error(unit: Unit) -> String:
 	if claiming_city(unit.cell):
 		return "Esta casa já é usada por %s." % claiming_city(unit.cell).city_name
 	return ""
+
+
+## O que dá para pilhar na casa: {"build": City.Build.FARM ou LUMBER_MILL,
+## "owner": Player, "city": City ou null, "mill": LumberMill ou null}, ou {}
+## se não houver fazenda nem madeireira pronta (ruínas e obras não contam).
+func pillage_target(cell: Vector2i) -> Dictionary:
+	var city := claiming_city(cell)
+	if city and city.improvement_at(cell) >= 0:
+		return {"build": city.improvement_at(cell), "owner": city.owner_player, "city": city, "mill": null}
+	var mill := lumber_mill_at(cell)
+	if mill and mill.is_done():
+		return {"build": City.Build.LUMBER_MILL, "owner": mill.owner_player, "city": null, "mill": mill}
+	return {}
+
+
+## Se a casa tem uma melhoria que [param player] pode pilhar: pronta e de outro
+## jogador.
+func is_pillageable_by(player: Player, cell: Vector2i) -> bool:
+	var target := pillage_target(cell)
+	return not target.is_empty() and target["owner"] != player
+
+
+## Motivo pelo qual a unidade não pode pilhar a casa em que está ("" = pode).
+func pillage_error(unit: Unit) -> String:
+	if unit.attack <= 0:
+		return "Só unidades militares pilham."
+	var target := pillage_target(unit.cell)
+	if target.is_empty():
+		var city := claiming_city(unit.cell)
+		var mill := lumber_mill_at(unit.cell)
+		if (city and city.ruins.has(unit.cell)) or (mill and mill.pillaged):
+			return "Esta melhoria já foi destruída."
+		return "Não há fazenda nem madeireira pronta nesta casa."
+	if not is_pillageable_by(unit.owner_player, unit.cell):
+		return "Não dá para pilhar as próprias melhorias."
+	if unit.moves_left < PILLAGE_COST:
+		return "A unidade não tem mais movimentos neste turno."
+	return ""
+
+
+## A unidade militar destrói a fazenda ou madeireira inimiga da casa em que
+## está (use pillage_error antes). Custa PILLAGE_COST movimento.
+##   fazenda    : a unidade recupera PILLAGE_FARM_ENERGY de energia;
+##   madeireira : o jogador ganha PILLAGE_MILL_GOLD de ouro.
+## Da cidade: os cidadãos que trabalhavam ali são executados (a população
+## pode chegar a 0). Remota: os Trabalhadores lá dentro são executados. A
+## melhoria vira ruína, que um Trabalhador do dono pode reconstruir.
+## Retorna a mensagem do que aconteceu.
+func pillage(unit: Unit) -> String:
+	var target := pillage_target(unit.cell)
+	var player := unit.owner_player
+	var build: int = target["build"]
+	unit.spend_moves(PILLAGE_COST)
+	unit.fortified = false
+	unit.goto_target = Unit.NO_TARGET
+	var top := unit.position - Vector2(0, GameMap.TILE_SIZE / 2.0)
+	var reward := ""
+	if build == City.Build.FARM:
+		var healed := mini(PILLAGE_FARM_ENERGY, unit.max_energy - unit.energy)
+		unit.energy += healed
+		reward = "+%d de energia" % healed if healed > 0 else "energia já estava cheia"
+		if healed > 0:
+			FloatingText.spawn(units_root, top, "+%d" % healed, Color(0.4, 1, 0.4))
+	else:
+		player.gold += PILLAGE_MILL_GOLD
+		reward = "+%d de ouro" % PILLAGE_MILL_GOLD
+		FloatingText.spawn(units_root, top, "+%d" % PILLAGE_MILL_GOLD, Icons.GOLD_COLOR)
+	var executed := 0
+	var victim := ""
+	if target["city"]:
+		var city: City = target["city"]
+		executed = city.pillage(unit.cell)
+		victim = city.city_name
+	else:
+		var mill: LumberMill = target["mill"]
+		executed = mill.workers.size()
+		for worker in mill.workers:
+			worker.owner_player.units.erase(worker)
+			worker.queue_free()
+		mill.workers.clear()
+		mill.pillage()
+		victim = target["owner"].display_name
+	var text := "%s (%s) pilhou a %s de %s (%s)." % [unit.type.display_name, player.display_name,
+			String(City.BUILDS[build]["name"]).to_lower(), victim, reward]
+	if executed > 0:
+		text += " %d %s." % [executed, ("trabalhador executado" if executed == 1 else "trabalhadores executados") if target["mill"]
+				else ("cidadão executado" if executed == 1 else "cidadãos executados")]
+	print(text)
+	if target["mill"]:
+		_check_victory() # o dono pode ter perdido as últimas unidades
+	return text
+
+
+## Ruína na casa (fazenda ou madeireira pilhada), ou -1.
+func ruin_at(cell: Vector2i) -> int:
+	var city := claiming_city(cell)
+	if city and city.ruins.has(cell):
+		return city.ruins[cell]["build"]
+	var mill := lumber_mill_at(cell)
+	if mill and mill.pillaged:
+		return City.Build.LUMBER_MILL
+	return -1
+
+
+## Motivo pelo qual o trabalhador não pode reconstruir a ruína da casa em que
+## está ("" = pode).
+func rebuild_error(unit: Unit) -> String:
+	if not unit.type.can_rebuild:
+		return "Só trabalhadores reconstroem."
+	if unit.rebuilding:
+		return "Já está reconstruindo."
+	var city := claiming_city(unit.cell)
+	var mill := lumber_mill_at(unit.cell)
+	if mill and mill.pillaged:
+		if mill.owner_player != unit.owner_player:
+			return "Esta madeireira é de outro jogador."
+		if not mill.has_room():
+			return "A madeireira já tem %d trabalhadores (o máximo)." % LumberMill.MAX_WORKERS
+	elif city and city.ruins.has(unit.cell):
+		if city.owner_player != unit.owner_player:
+			return "Esta ruína é de %s." % city.city_name
+	else:
+		return "Não há fazenda nem madeireira destruída nesta casa."
+	if unit.moves_left <= 0:
+		return "O trabalhador não tem mais movimentos neste turno."
+	return ""
+
+
+## O trabalhador começa a reconstruir a ruína da casa (use rebuild_error
+## antes). Madeireira remota: ele entra nela, como numa obra nova. Ruína da
+## cidade: ele fica na casa e faz REBUILD_PER_TURN por turno até terminar
+## (_process_rebuilds); mover a unidade interrompe (o progresso fica).
+func rebuild(unit: Unit) -> void:
+	var mill := lumber_mill_at(unit.cell)
+	if mill and mill.pillaged:
+		work_lumber_mill(unit)
+		return
+	if unit == selected_unit:
+		select_unit(null)
+	unit.goto_target = Unit.NO_TARGET
+	unit.fortified = false
+	unit.rebuilding = true
+	unit.skip_turn()
+
+
+## Cidade do dono para onde a unidade pode migrar: a da casa em que ela está ou
+## uma vizinha (a de menor população). null se não houver.
+func join_target(unit: Unit) -> City:
+	var best: City = null
+	for city in unit.owner_player.cities:
+		if city.cell == unit.cell:
+			return city
+		if maxi(absi(city.cell.x - unit.cell.x), absi(city.cell.y - unit.cell.y)) <= 1 \
+				and (best == null or city.population < best.population):
+			best = city
+	return best
+
+
+## Motivo pelo qual a unidade não pode migrar para uma cidade ("" = pode).
+func join_city_error(unit: Unit) -> String:
+	if not unit.type.can_join_city:
+		return "Só trabalhadores migram para cidades."
+	if join_target(unit) == null:
+		return "Fique numa cidade sua ou numa casa vizinha a ela para migrar."
+	if unit.moves_left <= 0:
+		return "O trabalhador não tem mais movimentos neste turno."
+	return ""
+
+
+## A unidade migra para a cidade (use join_city_error antes): vira 1 de
+## população dela e deixa de existir. É assim que uma cidade vazia (população
+## 0, depois de uma pilhagem) volta a viver. Retorna a cidade.
+func join_city(unit: Unit) -> City:
+	var city := join_target(unit)
+	city.add_citizen()
+	if unit == selected_unit:
+		select_unit(null)
+	unit.owner_player.units.erase(unit)
+	unit.queue_free()
+	print("%s migrou para %s (população %d)" % [unit.type.display_name, city.city_name, city.population])
+	return city
 
 
 # --- Ações (usadas pelo jogador humano e pela máquina) ----------------------
@@ -591,6 +789,12 @@ func _on_unit_action(action_id: String) -> void:
 			_work_lumber_mill_with_selected()
 		"release_worker":
 			_release_worker_from_selected_mill()
+		"pillage":
+			_pillage_with_selected()
+		"rebuild":
+			_rebuild_with_selected()
+		"join_city":
+			_join_city_with_selected()
 
 
 ## Tecla B / botão "Construir nova cidade". Pergunta o nome da cidade, funda
@@ -628,6 +832,57 @@ func _work_lumber_mill_with_selected() -> void:
 	var status := "em obra %d/%d" % [mill.progress, mill.cost()] if not mill.is_done() else "pronta"
 	hud.show_message("Trabalhador na madeireira (%s, %d/%d trabalhadores)." % [
 			status, mill.workers.size(), LumberMill.MAX_WORKERS], Color(0.75, 1, 0.75))
+	_select_next_unit()
+
+
+## Tecla P / botão "Pilhar": a unidade militar selecionada destrói a fazenda ou
+## madeireira inimiga da casa em que está.
+func _pillage_with_selected() -> void:
+	var unit := selected_unit
+	if unit == null or unit.attack <= 0:
+		return
+	var error := pillage_error(unit)
+	if not error.is_empty():
+		hud.show_message(error, Color(1, 0.6, 0.4))
+		return
+	hud.show_message(pillage(unit), Color(1, 0.75, 0.45))
+	if game_over:
+		return
+	if can_move(unit):
+		select_unit(unit) # ainda tem movimento (ex.: Cavaleiro)
+	else:
+		_select_next_unit()
+
+
+## Tecla R / botão "Reconstruir": o trabalhador selecionado começa a
+## reconstruir a fazenda ou madeireira destruída da casa em que está.
+func _rebuild_with_selected() -> void:
+	var worker := selected_unit
+	if worker == null or not worker.type.can_rebuild:
+		return
+	var error := rebuild_error(worker)
+	if not error.is_empty():
+		hud.show_message(error, Color(1, 0.6, 0.4))
+		return
+	var build := ruin_at(worker.cell)
+	rebuild(worker)
+	hud.show_message("Trabalhador reconstruindo a %s (%d turnos com 1 trabalhador)." % [
+			String(City.BUILDS[build]["name"]).to_lower(), City.BUILDS[build]["cost"]], Color(0.75, 1, 0.75))
+	_select_next_unit()
+
+
+## Tecla J / botão "Migrar": o trabalhador selecionado vira população da cidade
+## em que está (ou da vizinha).
+func _join_city_with_selected() -> void:
+	var worker := selected_unit
+	if worker == null or not worker.type.can_join_city:
+		return
+	var error := join_city_error(worker)
+	if not error.is_empty():
+		hud.show_message(error, Color(1, 0.6, 0.4))
+		return
+	var city := join_city(worker)
+	hud.show_message("Trabalhador migrou para %s (população %d)." % [city.city_name, city.population], Color(0.75, 1, 0.75))
 	_select_next_unit()
 
 
@@ -711,7 +966,7 @@ func activate_unit(unit: Unit) -> void:
 ## ordem "Mover" ficam de fora (para dar outra ordem, clique nelas).
 func _select_next_unit() -> void:
 	for unit in TurnManager.current_player().units:
-		if not unit.fortified and not unit.has_goto() and can_move(unit):
+		if not unit.fortified and not unit.has_goto() and not unit.rebuilding and can_move(unit):
 			select_unit(unit)
 			return
 	select_unit(null)
@@ -728,6 +983,7 @@ func _on_turn_started(player: Player, turn_number: int) -> void:
 	_heal_fortified_units(player)
 	_process_cities(player)
 	_process_lumber_mills(player)
+	_process_rebuilds(player)
 	if player.is_ai:
 		_play_ai_turn(player)
 	else:
@@ -845,6 +1101,31 @@ func _process_lumber_mills(player: Player) -> void:
 		hud.show_message("\n".join(messages), Color(0.75, 1, 0.75))
 
 
+## Início da vez do jogador: cada Trabalhador reconstruindo faz
+## REBUILD_PER_TURN na ruína da casa em que está. Pronta, a melhoria volta a
+## funcionar (sem trabalhador) e o humano recebe o aviso de construção
+## concluída. Se a ruína não existe mais, ele para.
+func _process_rebuilds(player: Player) -> void:
+	var messages: Array[String] = []
+	for unit in player.units:
+		if not unit.rebuilding:
+			continue
+		var city := claiming_city(unit.cell)
+		if city == null or city.owner_player != player or not city.ruins.has(unit.cell):
+			unit.rebuilding = false
+			continue
+		var build: int = city.ruins[unit.cell]["build"]
+		if city.add_rebuild_progress(unit.cell, REBUILD_PER_TURN):
+			unit.rebuilding = false
+			messages.append("%s: %s reconstruída em (%d, %d)" % [city.city_name, City.BUILDS[build]["name"], unit.cell.x, unit.cell.y])
+			if not player.is_ai:
+				_completion_notices.append([city, build])
+	for message in messages:
+		print(message)
+	if not player.is_ai and not messages.is_empty():
+		hud.show_message("\n".join(messages), Color(0.75, 1, 0.75))
+
+
 ## Tira a madeireira do mapa; os trabalhadores voltam ao mapa ao redor dela.
 func _remove_lumber_mill(mill: LumberMill) -> void:
 	while not mill.workers.is_empty():
@@ -939,8 +1220,8 @@ func capture_state() -> Dictionary:
 	var players_data := []
 	for player in players:
 		var data := player.to_dict()
-		if _ais.has(player):
-			data["ai_turns_waiting"] = _ais[player].turns_waiting
+		if player.is_ai:
+			data["ai_turns_waiting"] = _ais[player].turns_waiting if _ais.has(player) else 0
 		players_data.append(data)
 	return {"turn_manager": TurnManager.to_dict(), "map": game_map.to_dict(), "players": players_data}
 
@@ -975,6 +1256,7 @@ func restore_state(data: Dictionary) -> void:
 			var mill := LumberMill.new()
 			mill.setup(player, SaveGame.json_to_cell(mill_data["cell"]), game_map)
 			mill.progress = int(mill_data["progress"])
+			mill.pillaged = mill_data.get("pillaged", false)
 			cities_root.add_child(mill)
 			player.lumber_mills.append(mill)
 			mills.append(mill)
@@ -1049,15 +1331,34 @@ func _update_unit_actions() -> void:
 		var error := city_site_error(unit)
 		actions.append({"id": "found_city", "label": "Construir nova cidade [B]",
 				"disabled": not error.is_empty(), "tooltip": error})
-	if unit.type.can_build_lumber_mill:
+	var existing := lumber_mill_at(unit.cell)
+	if unit.type.can_build_lumber_mill and not (existing and existing.pillaged): # destruída: botão Reconstruir
 		var error := lumber_mill_error(unit)
-		var existing := lumber_mill_at(unit.cell)
 		actions.append({"id": "lumber_mill",
 				"label": "Trabalhar na madeireira [M]" if existing else "Construir madeireira [M]",
 				"disabled": not error.is_empty(),
 				"tooltip": error if not error.is_empty() else
 					"O trabalhador entra na madeireira e trabalha nela (até %d por madeireira)." % LumberMill.MAX_WORKERS if existing else
 					"Madeireira nesta floresta (%d de produção, 1 por trabalhador por turno). Pronta, cada trabalhador tira 1 de madeira por turno." % LumberMill.cost()})
+	if unit.type.can_rebuild and ruin_at(unit.cell) >= 0:
+		var error := rebuild_error(unit)
+		var build := ruin_at(unit.cell)
+		actions.append({"id": "rebuild", "label": "Reconstruir [R]", "disabled": not error.is_empty(),
+				"tooltip": error if not error.is_empty() else
+					"Reconstrói a %s destruída: %d turnos com 1 trabalhador, como uma obra nova." % [
+						String(City.BUILDS[build]["name"]).to_lower(), City.BUILDS[build]["cost"]]})
+	if unit.type.can_join_city and join_target(unit):
+		var error := join_city_error(unit)
+		actions.append({"id": "join_city", "label": "Migrar para %s [J]" % join_target(unit).city_name,
+				"disabled": not error.is_empty(),
+				"tooltip": error if not error.is_empty() else
+					"O trabalhador vira 1 de população da cidade (e deixa de ser uma unidade). Assim uma cidade vazia volta a viver."})
+	if unit.attack > 0 and not pillage_target(unit.cell).is_empty():
+		var error := pillage_error(unit)
+		actions.append({"id": "pillage", "label": "Pilhar [P]", "disabled": not error.is_empty(),
+				"tooltip": error if not error.is_empty() else
+					"Destrói a melhoria inimiga (%d movimento). Fazenda: +%d de energia. Madeireira: +%d de ouro. Quem trabalhava nela é executado." % [
+						PILLAGE_COST, PILLAGE_FARM_ENERGY, PILLAGE_MILL_GOLD]})
 	actions.append({"id": "goto", "label": "Mover [G]",
 			"tooltip": "Escolha uma casa distante: a unidade anda até lá sozinha, turno após turno."})
 	if unit.has_goto():
@@ -1113,9 +1414,9 @@ func _update_info() -> void:
 		elif claiming_city(_hover_cell):
 			lines.append(_city_improvement_text(claiming_city(_hover_cell), _hover_cell))
 		elif mill:
-			lines.append("Madeireira de %s - %s | %d/%d trabalhadores" % [
-				mill.owner_player.display_name,
-				"em obra %d/%d" % [mill.progress, mill.cost()] if not mill.is_done() else
+			lines.append("Madeireira%s de %s - %s | %d/%d trabalhadores" % [
+				" destruída" if mill.pillaged else "", mill.owner_player.display_name,
+				("reconstrução %d/%d" if mill.pillaged else "em obra %d/%d") % [mill.progress, mill.cost()] if not mill.is_done() else
 					"+%d de madeira por turno" % mill.wood_per_turn(),
 				mill.workers.size(), LumberMill.MAX_WORKERS,
 			])
@@ -1135,6 +1436,8 @@ func _update_info() -> void:
 		])
 		if unit.has_goto():
 			lines[-1] += " | Indo para (%d, %d)" % [unit.goto_target.x, unit.goto_target.y]
+		if unit.rebuilding:
+			lines[-1] += " | Reconstruindo"
 	if selected_unit and _attack_targets.has(_hover_cell):
 		var defender := get_unit_at(_hover_cell)
 		var expected := Combat.expected_damage(selected_unit, defender)
@@ -1161,6 +1464,10 @@ func _city_improvement_text(city: City, cell: Vector2i) -> String:
 	var construction := city.construction_at(cell)
 	if construction:
 		return "%s de %s (em obra %d/%d)" % [construction.display_name(), city.city_name, construction.progress, construction.cost()]
+	if city.ruins.has(cell):
+		var ruin: Dictionary = city.ruins[cell]
+		return "%s destruída de %s - um Trabalhador pode reconstruir (%d/%d)" % [
+			City.BUILDS[ruin["build"]]["name"], city.city_name, ruin["progress"], City.BUILDS[ruin["build"]]["cost"]]
 	if city.lumber_mills.has(cell):
 		return "Madeireira de %s - %d/%d trabalhadores" % [city.city_name, city.lumber_mills[cell], LumberMill.MAX_WORKERS]
 	return "Fazenda de %s - %s" % [city.city_name,

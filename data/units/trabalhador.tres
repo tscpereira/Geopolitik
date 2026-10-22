@@ -11,4 +11,6 @@ attack = 0
 defense = 0
 movement = 1
 can_build_lumber_mill = true
+can_rebuild = true
+can_join_city = true
 sprite = ExtResource("2")

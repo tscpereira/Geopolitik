@@ -24,6 +24,13 @@ extends Node2D
 ##      esgotada) vai para a próxima obra da fila ou, sem obras, para uma
 ##      fazenda sem trabalhador e depois para uma madeireira com vaga.
 ##
+## PILHAGEM (Game.pillage): uma unidade militar inimiga destrói uma fazenda ou
+## madeireira pronta da cidade. A melhoria vira ruína (ruins) e não produz; os
+## cidadãos que trabalhavam nela são executados e saem da população, que pode
+## chegar a 0. Cidade vazia não produz nem come nem cresce: precisa que um
+## Trabalhador migre para ela (Game.join_city). Um Trabalhador do dono
+## reconstrói a ruína em cost() turnos (add_rebuild_progress).
+##
 ## Cada cidadão trabalha em uma coisa só: numa obra (gera produção), numa
 ## fazenda (gera alimento) ou numa madeireira (gera madeira). Quem o jogador
 ## deixar livre (botão "-") continua livre e não produz nada.
@@ -165,6 +172,13 @@ const IDLE_COLOR := Color(0.25, 0.55, 1.0)
 const IDLE_ICON_RADIUS := GameMap.TILE_SIZE * 0.22
 const IDLE_FONT_SIZE := int(GameMap.TILE_SIZE * 0.4)
 
+## Desenho das melhorias destruídas (pilhadas), no mapa e na janela da cidade.
+## PNGs de 40x40 em assets/sprites/improvements/ (dá para redesenhar).
+const RUIN_TEXTURES := {
+	Build.FARM: preload("res://assets/sprites/improvements/fazenda_destruida.png"),
+	Build.LUMBER_MILL: preload("res://assets/sprites/improvements/madeireira_destruida.png"),
+}
+
 const FARM_COLOR := Color8(205, 170, 80)
 const FARM_FURROW_COLOR := Color8(130, 90, 35)
 const FARM_SOIL_COLOR := Color8(150, 105, 58)
@@ -242,6 +256,9 @@ var food_stock := 0
 var farms := {}
 ## Madeireiras prontas: {casa: cidadãos trabalhando (0 a LumberMill.MAX_WORKERS)}.
 var lumber_mills := {}
+## Melhorias pilhadas: {casa: {"build": Build.FARM ou LUMBER_MILL, "progress":
+## pontos de reconstrução}}. A casa continua da cidade, mas não produz.
+var ruins := {}
 ## Construções (City.Build) concluídas no último turno: melhorias prontas e
 ## unidades que saíram da cidade. O Game mostra um aviso para cada uma.
 var completed: Array[int] = []
@@ -284,6 +301,8 @@ func to_dict() -> Dictionary:
 		"lumber_mills": SaveGame.cell_map_to_json(lumber_mills),
 		"constructions": constructions.map(func(construction: Construction) -> Dictionary: return construction.to_dict()),
 		"buildings": buildings.duplicate(), "building_workers": SaveGame.int_map_to_json(building_workers),
+		"ruins": ruins.keys().map(func(ruin_cell: Vector2i) -> Array:
+			return [ruin_cell.x, ruin_cell.y, ruins[ruin_cell]["build"], ruins[ruin_cell]["progress"]]),
 	}
 
 
@@ -300,6 +319,9 @@ func apply_dict(data: Dictionary) -> void:
 	for build in data["buildings"]:
 		buildings.append(int(build))
 	building_workers = SaveGame.json_to_int_map(data["building_workers"])
+	ruins.clear()
+	for entry: Array in data.get("ruins", []):
+		ruins[Vector2i(int(entry[0]), int(entry[1]))] = {"build": int(entry[2]), "progress": int(entry[3])}
 	_painted_improvements.clear()
 	_notify_changed()
 
@@ -406,9 +428,58 @@ func construction_at(target: Vector2i) -> Construction:
 	return null
 
 
-## Se a casa já tem uma fazenda, madeireira ou obra desta cidade.
+## Se a casa já tem uma fazenda, madeireira, ruína ou obra desta cidade.
 func is_claimed(target: Vector2i) -> bool:
-	return farms.has(target) or lumber_mills.has(target) or construction_at(target) != null
+	return farms.has(target) or lumber_mills.has(target) or ruins.has(target) or construction_at(target) != null
+
+
+# --- Pilhagem e reconstrução ---------------------------------------------------
+
+## Melhoria pronta que pode ser pilhada na casa (Build.FARM ou LUMBER_MILL), ou -1.
+func improvement_at(target: Vector2i) -> int:
+	if farms.has(target):
+		return Build.FARM
+	if lumber_mills.has(target):
+		return Build.LUMBER_MILL
+	return -1
+
+
+## Um inimigo pilhou a fazenda ou madeireira da casa: ela vira ruína e os
+## cidadãos que trabalhavam nela são executados (a população pode chegar a 0).
+## Retorna quantos cidadãos morreram.
+func pillage(target: Vector2i) -> int:
+	var build := improvement_at(target)
+	var executed: int = farms.get(target, 0) + lumber_mills.get(target, 0)
+	farms.erase(target)
+	lumber_mills.erase(target)
+	ruins[target] = {"build": build, "progress": 0}
+	population = maxi(population - executed, 0)
+	_release_extra_workers()
+	_notify_changed()
+	return executed
+
+
+## Um Trabalhador reconstrói a ruína da casa: +[param points] pontos. Quando
+## chega ao custo da melhoria, ela volta a funcionar (sem trabalhador).
+## Retorna true se ficou pronta.
+func add_rebuild_progress(target: Vector2i, points: int) -> bool:
+	var ruin: Dictionary = ruins[target]
+	ruin["progress"] += points
+	if ruin["progress"] < BUILDS[ruin["build"]]["cost"]:
+		_notify_changed()
+		return false
+	ruins.erase(target)
+	_complete_at(ruin["build"], target)
+	_notify_changed()
+	return true
+
+
+## Um Trabalhador migrou para a cidade: +1 de população, e o cidadão novo vai
+## trabalhar na primeira obra (ou fazenda, madeireira...).
+func add_citizen() -> void:
+	population += 1
+	_assign_free_citizens(1)
+	_notify_changed()
 
 
 ## Se a melhoria [param build] pode ser feita num terreno do tipo [param type]:
@@ -481,7 +552,11 @@ func wood_per_turn() -> int:
 	return total
 
 
+## Alimento produzido por turno. Cidade vazia (população 0) não produz nada,
+## nem na casa da cidade: ela só volta a viver com um Trabalhador que migre.
 func food_produced() -> int:
+	if population <= 0:
+		return 0
 	var total := CENTER_FOOD
 	for farm_cell: Vector2i in farms:
 		total += farm_food(farm_cell) * farms[farm_cell]
@@ -686,7 +761,7 @@ func process_turn(spawn_unit: Callable) -> Array[String]:
 		construction.workers = 0
 		if construction.is_on_tile():
 			constructions.erase(construction)
-			_complete(construction)
+			_complete_at(construction.build, construction.cell)
 			completed.append(construction.build)
 			events.append("%s concluída em (%d, %d)" % [construction.display_name(), construction.cell.x, construction.cell.y])
 		elif construction.is_building():
@@ -741,13 +816,14 @@ func process_turn(spawn_unit: Callable) -> Array[String]:
 	return events
 
 
-## A melhoria fica pronta (os trabalhadores dela são realocados no fim do turno).
-func _complete(construction: Construction) -> void:
-	match construction.build:
+## A melhoria fica pronta, sem trabalhador (obra concluída ou ruína
+## reconstruída; os trabalhadores da obra são realocados no fim do turno).
+func _complete_at(build: int, target: Vector2i) -> void:
+	match build:
 		Build.FARM:
-			farms[construction.cell] = 0
+			farms[target] = 0
 		Build.LUMBER_MILL:
-			lumber_mills[construction.cell] = 0
+			lumber_mills[target] = 0
 
 
 ## Evita cidadãos ociosos: põe até [param count] cidadãos livres na primeira
@@ -828,6 +904,12 @@ func _draw() -> void:
 	for construction in constructions:
 		if construction.is_on_tile() and construction.build != Build.FARM: # fazendas: no shader do mapa
 			draw_improvement(self, construction.build, Rect2(_local_center(construction.cell) - tile / 2.0, tile), CONSTRUCTION_ALPHA)
+	for ruin_cell: Vector2i in ruins:
+		var ruin_rect := Rect2(_local_center(ruin_cell) - tile / 2.0, tile)
+		draw_ruin(self, ruins[ruin_cell]["build"], ruin_rect)
+		if ruins[ruin_cell]["progress"] > 0:
+			LumberMill.draw_bar(self, ruin_rect, float(ruins[ruin_cell]["progress"]) / BUILDS[ruins[ruin_cell]["build"]]["cost"],
+					LumberMill.PROGRESS_BAR_COLOR)
 
 	draw_city_icon(self, Rect2(-tile / 2.0, tile).grow(-MARGIN), owner_player.color, population, FONT_SIZE)
 	_draw_food_bar(Rect2(-tile / 2.0, tile).grow(-MARGIN))
@@ -907,6 +989,11 @@ static func draw_improvement(canvas: CanvasItem, build: int, rect: Rect2, alpha 
 		LumberMill.draw_icon(canvas, rect, alpha)
 	else:
 		draw_farm(canvas, rect, alpha >= 1.0)
+
+
+## Melhoria destruída (pilhada): o PNG de RUIN_TEXTURES.
+static func draw_ruin(canvas: CanvasItem, build: int, rect: Rect2) -> void:
+	canvas.draw_texture_rect(RUIN_TEXTURES[build], rect, false)
 
 
 ## Fazenda (janela da cidade e ícones): campo arredondado de contorno um pouco

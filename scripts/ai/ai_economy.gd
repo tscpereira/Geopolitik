@@ -53,6 +53,14 @@ func manage_cities() -> void:
 
 ## Pedidos da cidade, em ordem de prioridade (ver o topo do arquivo).
 func _plan(city: City) -> void:
+	if city.population <= 0:
+		return # cidade vazia: espera um Trabalhador migrar para ela
+
+	# Reconstrução: Trabalhadores para as melhorias pilhadas e para repovoar as
+	# cidades vazias
+	if city.population >= 2 and _count_units(_is_free_worker) + _count_queued(City.Build.WORKER) < _rebuild_jobs():
+		_try_order(city, City.Build.WORKER)
+
 	# Comida (fazenda nova só quando todas as que existem já têm trabalhador;
 	# senão ela fica pedindo fazendas que ninguém vai trabalhar)
 	if city.food_per_turn() < _p.food_surplus and not _has_queued(city, City.Build.FARM) \
@@ -174,7 +182,9 @@ func _job_priority(city: City, job: City.Construction) -> int:
 			return 0 if city.food_per_turn() < _p.food_surplus else 5
 		City.Build.SPEAR, City.Build.WARRIOR:
 			return 1 if defense_short else 6
-		City.Build.LUMBER_MILL, City.Build.WORKER:
+		City.Build.WORKER:
+			return 1 if _rebuild_jobs() > 0 else 2 if wood_short else 7
+		City.Build.LUMBER_MILL:
 			return 2 if wood_short else 7
 		City.Build.CARPENTRY, City.Build.HEADQUARTERS:
 			return 4
@@ -231,17 +241,76 @@ func _move_settler(settler: Unit, focus: Callable) -> void:
 	await _game.advance_goto(settler)
 
 
+## Trabalhador, nesta ordem: reconstrói a ruína em que está; migra para a
+## cidade vazia vizinha; entra na madeireira em que está; senão anda até uma
+## cidade vazia, uma ruína ou, por fim, uma floresta.
 func _move_worker(worker: Unit, focus: Callable) -> void:
-	if _game.lumber_mill_error(worker).is_empty():
+	if worker.rebuilding:
+		return
+	if _game.rebuild_error(worker).is_empty():
+		await focus.call(worker)
+		_game.rebuild(worker)
+		return
+	if _game.join_city_error(worker).is_empty() and _game.join_target(worker).population <= 0:
+		await focus.call(worker)
+		_game.join_city(worker)
+		return
+	if _game.lumber_mill_error(worker).is_empty() and _rebuild_target(worker) == Unit.NO_TARGET:
 		await focus.call(worker)
 		_game.work_lumber_mill(worker)
 		return
-	if not worker.has_goto():
-		var target := _best_forest(worker)
-		if target == Unit.NO_TARGET:
-			return
-		worker.goto_target = target
+	var target := _rebuild_target(worker)
+	if target == Unit.NO_TARGET:
+		target = worker.goto_target if worker.has_goto() else _best_forest(worker)
+	if target == Unit.NO_TARGET:
+		return
+	worker.goto_target = target
 	await _game.advance_goto(worker)
+
+
+## Casa mais perto (em linha reta) aonde o Trabalhador deve ir para reconstruir
+## ou repovoar: uma cidade vazia primeiro, depois uma ruína (fazenda ou
+## madeireira pilhada). NO_TARGET se não houver nada.
+func _rebuild_target(worker: Unit) -> Vector2i:
+	var best := Unit.NO_TARGET
+	var best_distance := 1 << 30
+	for city in _player.cities:
+		if city.population <= 0:
+			var distance := maxi(absi(city.cell.x - worker.cell.x), absi(city.cell.y - worker.cell.y))
+			if distance < best_distance:
+				best_distance = distance
+				best = city.cell
+	if best != Unit.NO_TARGET:
+		return best
+	for cell in _ruin_cells():
+		var there := _game.get_unit_at(cell)
+		if there and there != worker:
+			continue # ocupada (ex.: o inimigo que pilhou ainda está lá)
+		var distance := maxi(absi(cell.x - worker.cell.x), absi(cell.y - worker.cell.y))
+		if distance < best_distance:
+			best_distance = distance
+			best = cell
+	return best
+
+
+## Ruínas do jogador: melhorias pilhadas das cidades e madeireiras remotas
+## destruídas com vaga.
+func _ruin_cells() -> Array[Vector2i]:
+	var cells: Array[Vector2i] = []
+	for city in _player.cities:
+		for ruin_cell: Vector2i in city.ruins:
+			cells.append(ruin_cell)
+	for mill in _player.lumber_mills:
+		if mill.pillaged and mill.has_room():
+			cells.append(mill.cell)
+	return cells
+
+
+## Trabalhadores que o jogador precisa para reconstruir: um por ruína e um por
+## cidade vazia (no máximo 2 de uma vez).
+func _rebuild_jobs() -> int:
+	var empty := _player.cities.filter(func(city: City) -> bool: return city.population <= 0).size()
+	return mini(_ruin_cells().size() + empty, 2)
 
 
 ## Melhor casa para uma cidade nova ao alcance do Colono (ou NO_TARGET).
@@ -330,6 +399,11 @@ func _is_settler(unit: Unit) -> bool:
 
 func _is_worker(unit: Unit) -> bool:
 	return unit.type.can_build_lumber_mill
+
+
+## Trabalhador no mapa (fora das madeireiras), que pode ir reconstruir.
+func _is_free_worker(unit: Unit) -> bool:
+	return unit.type.can_rebuild and unit.working_mill == null
 
 
 ## Unidade militar que não faz parte da guarnição de uma cidade.
