@@ -1238,7 +1238,14 @@ PILHAGEM (Game.pillage, tecla P)
   jogador (conta para a vitória). Volta a viver quando um
   Trabalhador migra para ela (tecla J, ver TRABALHADOR).
 - Não dá para pilhar as próprias melhorias nem nada dentro do
-  próprio território. Ruínas e obras não podem ser pilhadas.
+  próprio território. Ruína parada e obras da cidade não podem ser
+  pilhadas.
+- MADEIREIRA REMOTA INACABADA: os Trabalhadores lá dentro não
+  ocupam a casa e não podem ser atacados, então a obra também pode
+  ser pilhada (senão eles ficariam intocáveis). Não dá recompensa;
+  os Trabalhadores são executados e:
+    * obra nova: some (não havia nada construído);
+    * madeireira destruída em reconstrução: a reconstrução volta a 0.
 - RECONSTRUÇÃO: um Trabalhador do dono, parado na ruína, aperta R
   ("Reconstruir [R]"):
     * ruína da cidade: ele fica na casa e faz 1 ponto por turno
@@ -1917,6 +1924,16 @@ Screenshots também confirmaram o visual.
   humano com o valor do saque, guarnição derrotada antes da
   invasão, save, fase de invasão da máquina), mais screenshots da
   janela e das ruínas.
+- Correção (relatada pelo usuário): um Guerreiro não conseguia
+  matar um Trabalhador que estava dentro de uma madeireira remota
+  em obra. Quem está dentro da madeireira não pode ser atacado, e
+  a pilhagem só valia para madeireira pronta, então o Trabalhador
+  ficava intocável. Agora a obra (e a madeireira destruída em
+  reconstrução) pode ser pilhada: os Trabalhadores são
+  executados, sem recompensa. Um teste confirmou que, em todos os
+  outros casos (campo aberto, floresta, território inimigo, dentro
+  da cidade dele, reconstruindo), o ataque já funcionava; o teste
+  da pilhagem ganhou 6 verificações para os casos novos.
 
 
 --------------------------------------------------------------

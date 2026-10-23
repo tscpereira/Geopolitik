@@ -379,15 +379,19 @@ func lumber_mill_error(unit: Unit) -> String:
 
 
 ## O que dá para pilhar na casa: {"build": City.Build.FARM ou LUMBER_MILL,
-## "owner": Player, "city": City ou null, "mill": LumberMill ou null}, ou {}
-## se não houver fazenda nem madeireira pronta (ruínas e obras não contam).
+## "owner": Player, "city": City ou null, "mill": LumberMill ou null,
+## "unfinished": bool}, ou {} se não houver nada. Contam as fazendas e
+## madeireiras prontas e também a madeireira remota em obra ou em
+## reconstrução (unfinished; senão os Trabalhadores lá dentro ficariam
+## intocáveis). Ruína parada e obras da cidade não contam.
 func pillage_target(cell: Vector2i) -> Dictionary:
 	var city := claiming_city(cell)
 	if city and city.improvement_at(cell) >= 0:
-		return {"build": city.improvement_at(cell), "owner": city.owner_player, "city": city, "mill": null}
+		return {"build": city.improvement_at(cell), "owner": city.owner_player, "city": city, "mill": null, "unfinished": false}
 	var mill := lumber_mill_at(cell)
-	if mill and mill.is_done():
-		return {"build": City.Build.LUMBER_MILL, "owner": mill.owner_player, "city": null, "mill": mill}
+	if mill and (mill.is_done() or not mill.workers.is_empty() or mill.progress > 0 or not mill.pillaged):
+		return {"build": City.Build.LUMBER_MILL, "owner": mill.owner_player, "city": null, "mill": mill,
+				"unfinished": not mill.is_done()}
 	return {}
 
 
@@ -409,7 +413,7 @@ func pillage_error(unit: Unit) -> String:
 		var mill := lumber_mill_at(unit.cell)
 		if (city and city.ruins.has(unit.cell)) or (mill and mill.pillaged):
 			return "Esta melhoria já foi destruída."
-		return "Não há fazenda nem madeireira pronta nesta casa."
+		return "Não há fazenda nem madeireira nesta casa."
 	if target["owner"] == unit.owner_player:
 		return "Não dá para pilhar as próprias melhorias."
 	if not is_pillageable_by(unit.owner_player, unit.cell):
@@ -426,6 +430,8 @@ func pillage_error(unit: Unit) -> String:
 ## Da cidade: os cidadãos que trabalhavam ali são executados (a população
 ## pode chegar a 0). Remota: os Trabalhadores lá dentro são executados. A
 ## melhoria vira ruína, que um Trabalhador do dono pode reconstruir.
+## Madeireira remota inacabada (unfinished): não dá recompensa; a obra nova
+## some, e a reconstrução de uma ruína volta a 0.
 ## Retorna a mensagem do que aconteceu.
 func pillage(unit: Unit) -> String:
 	var target := pillage_target(unit.cell)
@@ -436,7 +442,9 @@ func pillage(unit: Unit) -> String:
 	unit.goto_target = Unit.NO_TARGET
 	var top := unit.position - Vector2(0, GameMap.TILE_SIZE / 2.0)
 	var reward := ""
-	if build == City.Build.FARM:
+	if target["unfinished"]:
+		reward = "obra destruída, sem nada para saquear"
+	elif build == City.Build.FARM:
 		var healed := mini(PILLAGE_FARM_ENERGY, unit.max_energy - unit.energy)
 		unit.energy += healed
 		reward = "+%d de energia" % healed if healed > 0 else "energia já estava cheia"
@@ -459,7 +467,10 @@ func pillage(unit: Unit) -> String:
 			worker.owner_player.units.erase(worker)
 			worker.queue_free()
 		mill.workers.clear()
-		mill.pillage()
+		if target["unfinished"] and not mill.pillaged:
+			_remove_lumber_mill(mill) # obra nova: não havia nada construído
+		else:
+			mill.pillage()
 		victim = target["owner"].display_name
 	var text := "%s (%s) pilhou a %s de %s (%s)." % [unit.type.display_name, player.display_name,
 			String(City.BUILDS[build]["name"]).to_lower(), victim, reward]
