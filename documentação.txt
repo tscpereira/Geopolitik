@@ -883,7 +883,12 @@ JANELA DA CIDADE (scripts/ui/city_window.gd e city_map_view.gd)
       (CityWindow.wrap_tooltip / TOOLTIP_WIDTH). Ao escolher:
         - Melhoria de terreno: o mapa destaca em verde as casas
           possíveis. Clique numa delas para ordenar a obra; Esc,
-          botão direito ou "Cancelar" desistem;
+          botão direito ou "Cancelar" desistem. SHIFT + clique pede
+          a obra e continua escolhendo, para pedir várias do mesmo
+          tipo de uma vez (a casa escolhida sai do destaque; um
+          clique sem Shift pede a última e termina; Esc termina e
+          mantém as já pedidas). Os cidadãos livres vão para a
+          primeira; as outras ficam em vermelho, sem mão de obra;
         - Unidade: entra na fila do prédio que a produz;
         - Prédio: entra nas obras em andamento.
       Botão da moeda: compra com ouro (ver OURO).
@@ -1934,6 +1939,11 @@ Screenshots também confirmaram o visual.
   outros casos (campo aberto, floresta, território inimigo, dentro
   da cidade dele, reconstruindo), o ataque já funcionava; o teste
   da pilhagem ganhou 6 verificações para os casos novos.
+- Janela da cidade: Shift + clique na escolha da casa pede várias
+  melhorias de terreno do mesmo tipo de uma vez. Validação: teste
+  com 9 verificações (cliques de verdade com e sem Shift, casa sai
+  do destaque, dica, mão de obra na primeira e vermelho nas
+  outras, Esc mantém as pedidas), mais screenshot.
 
 
 --------------------------------------------------------------

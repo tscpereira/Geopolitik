@@ -12,7 +12,8 @@ extends Control
 ## Game.transfer_cell).
 ## No modo de escolha, destaca as casas onde dá para construir e avisa o clique.
 
-signal cell_picked(cell: Vector2i)
+## [param keep_picking] = Shift apertado: o jogador quer pedir mais melhorias.
+signal cell_picked(cell: Vector2i, keep_picking: bool)
 signal pick_cancelled
 ## Clique numa casa vermelha (de outra cidade do jogador, no raio de ação).
 signal cell_claimed(cell: Vector2i)
@@ -70,7 +71,7 @@ func _gui_input(event: InputEvent) -> void:
 			queue_redraw()
 	elif event is InputEventMouseButton and event.pressed and is_picking():
 		if event.button_index == MOUSE_BUTTON_LEFT and _pick_cells.has(_cell_at(event.position)):
-			cell_picked.emit(_cell_at(event.position))
+			cell_picked.emit(_cell_at(event.position), event.shift_pressed)
 		elif event.button_index == MOUSE_BUTTON_RIGHT:
 			pick_cancelled.emit()
 	elif event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
@@ -184,7 +185,7 @@ func _draw() -> void:
 		draw_rect(_cell_rect(_hover), HOVER_COLOR, false, 2.0 if not _is_transferable(_hover) else 3.0)
 
 	if is_picking():
-		var hint := "Escolha o terreno"
+		var hint := "Escolha o terreno (Shift: vários)"
 		draw_string_outline(font, Vector2(6, 18), hint, HORIZONTAL_ALIGNMENT_LEFT, -1, 16, 4, Color.BLACK)
 		draw_string(font, Vector2(6, 18), hint, HORIZONTAL_ALIGNMENT_LEFT, -1, 16, HIGHLIGHT_COLOR)
 

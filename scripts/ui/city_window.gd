@@ -313,7 +313,7 @@ func _refresh() -> void:
 	_rebuild_units()
 	_hint.text = ("Cidade de outro jogador: você pode observar, mas não dar ordens. Passe o mouse sobre uma casa para ver detalhes."
 			if _read_only else
-			"Clique em um terreno destacado para construir. Esc ou botão direito cancela."
+			"Clique em um terreno destacado para construir. Shift + clique pede várias de uma vez. Esc ou botão direito cancela."
 			if _picking >= 0 else
 			"Passe o mouse sobre uma casa para ver detalhes. Os números brancos indicam os cidadãos trabalhando ali."
 			+ (" Casas em vermelho são de outra cidade sua: clique para trazê-las." if _has_transferable() else ""))
@@ -808,11 +808,24 @@ func _cancel_pick() -> void:
 	_queue_refresh()
 
 
-func _on_cell_picked(cell: Vector2i) -> void:
+## Clique numa casa destacada: pede a melhoria ali. Com Shift
+## ([param keep_picking]), continua escolhendo para pedir outras do mesmo
+## tipo, enquanto houver casa possível e as regras deixarem.
+func _on_cell_picked(cell: Vector2i, keep_picking := false) -> void:
 	var build := _picking
+	var construction := _city.order_build(build, cell)
+	var cells := _game.buildable_cells(_city, build)
+	if keep_picking and not cells.is_empty() and _city.build_error(build).is_empty():
+		_map_view.set_pick_cells(cells)
+		var queued := _city.constructions.filter(func(c: City.Construction) -> bool: return c.build == build).size()
+		_game.hud.show_message("%s pedida em (%d, %d) (%d na fila). Shift + clique para mais uma; Esc termina." % [
+			City.BUILDS[build]["name"], cell.x, cell.y, queued], Color(0.75, 1, 0.75))
+		_queue_refresh()
+		return
 	_picking = -1
 	_map_view.set_pick_cells([])
-	_warn_if_needs_workers(_city.order_build(build, cell))
+	_warn_if_needs_workers(construction)
+	_queue_refresh()
 
 
 # --- Auxiliares -------------------------------------------------------------
