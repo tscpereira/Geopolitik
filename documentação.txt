@@ -138,7 +138,6 @@ C:\ProjetoGame
 |   |   |-- cities/                Cidade por classe (povoado...metrópole),
 |   |   |                          intacta e em ruínas
 |   |   `-- improvements/          Fazenda e madeireira destruídas
-|   |                              destruídas
 |   |-- tech/                      Ilustrações das tecnologias
 |   |-- tiles/                     Tilesets do mapa
 |   |-- theme/game_theme.tres     Tema do jogo (tooltips sólidos)
