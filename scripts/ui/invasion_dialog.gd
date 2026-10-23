@@ -2,16 +2,17 @@ class_name InvasionDialog
 extends Control
 
 ## Escolha do jogador quando uma unidade militar dele entra numa cidade inimiga
-## sem guarnição (Game.check_invasion):
-##   "Ocupar [O]"                 a cidade passa a ser dele;
-##   "Saquear e destruir [S]"     ganha o ouro do saque e a cidade vira ruína.
+## sem guarnição (Game.check_invasion): só o título e dois botões,
+##   "Ocupar"              a cidade passa a ser dele (tecla O);
+##   "Saquear e destruir"  ganha o ouro do saque e a cidade vira ruína (tecla S).
+## O que cada opção faz (e o ouro do saque) fica no tooltip de cada botão.
 ## Não dá para fechar sem escolher.
 
 ## [param raze] = true: saquear e destruir; false: ocupar.
 signal chosen(raze: bool)
 
 var _title: Label
-var _text: RichTextLabel
+var _occupy_button: Button
 var _raze_button: Button
 
 
@@ -22,11 +23,11 @@ func _ready() -> void:
 	_build_layout()
 
 
-## [param text] aceita BBCode. [param loot] = ouro do saque (no botão).
-func open(title: String, text: String, loot: int) -> void:
+## [param occupy_tip] e [param raze_tip]: tooltips dos dois botões.
+func open(title: String, occupy_tip: String, raze_tip: String) -> void:
 	_title.text = title
-	_text.text = text
-	_raze_button.text = "Saquear e destruir (+%d ouro) [S]" % loot
+	_occupy_button.tooltip_text = occupy_tip
+	_raze_button.tooltip_text = raze_tip
 	show()
 
 
@@ -56,26 +57,22 @@ func _build_layout() -> void:
 	_title = Label.new()
 	_title.add_theme_font_size_override("font_size", 24)
 	_title.add_theme_color_override("font_color", CityWindow.SECTION_COLOR)
+	_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	box.add_child(_title)
-	_text = RichTextLabel.new()
-	_text.bbcode_enabled = true
-	_text.fit_content = true
-	_text.scroll_active = false
-	_text.custom_minimum_size.x = 520
-	_text.add_theme_font_size_override("normal_font_size", 18)
-	box.add_child(_text)
 	var buttons := HBoxContainer.new()
-	buttons.alignment = BoxContainer.ALIGNMENT_END
-	buttons.add_theme_constant_override("separation", 8)
+	buttons.alignment = BoxContainer.ALIGNMENT_CENTER
+	buttons.add_theme_constant_override("separation", 12)
 	box.add_child(buttons)
-	buttons.add_child(_make_button("Ocupar [O]", _finish.bind(false)))
-	_raze_button = _make_button("Saquear e destruir [S]", _finish.bind(true))
+	_occupy_button = _make_button("Ocupar", _finish.bind(false))
+	buttons.add_child(_occupy_button)
+	_raze_button = _make_button("Saquear e destruir", _finish.bind(true))
 	buttons.add_child(_raze_button)
 
 
 func _make_button(text: String, on_pressed: Callable) -> Button:
 	var button := Button.new()
 	button.text = text
+	button.custom_minimum_size.x = 180
 	button.focus_mode = Control.FOCUS_NONE
 	button.pressed.connect(on_pressed)
 	CityWindow.style_button(button)

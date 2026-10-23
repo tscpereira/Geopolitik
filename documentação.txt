@@ -801,8 +801,10 @@ INVASÃO E CONQUISTA (Game.check_invasion, occupy_city, raze_city)
   alvo de ataque normal. Quando o defensor é destruído, o atacante
   avança para dentro da cidade e a invasão acontece.
 - Ao entrar numa cidade sem guarnição, o dono da unidade escolhe
-  (janela "Invasão de <cidade>", scripts/ui/invasion_dialog.gd;
-  não dá para fechar sem escolher):
+  (janela "Invasão de <cidade>", scripts/ui/invasion_dialog.gd, só
+  com o título e os botões "Ocupar" e "Saquear e destruir"; o que
+  cada um faz e o ouro do saque ficam no tooltip do botão; teclas
+  O e S; não dá para fechar sem escolher):
     OCUPAR [O]: a cidade passa a ser dele, com o território, as
       fazendas, as madeireiras, as ruínas e os prédios. Perde 1 de
       população (uma cidade com 1 continua com 1; vazia continua
@@ -815,7 +817,8 @@ INVASÃO E CONQUISTA (Game.check_invasion, occupy_city, raze_city)
   SAI do tesouro do dono:
       saque = ouro do dono x população da cidade / população total
   Ex.: 200 de ouro e duas cidades de 10 -> 100. Cidade vazia não
-  rende nada. O botão e o texto da janela mostram o valor.
+  rende nada. O tooltip do botão "Saquear e destruir" mostra o
+  valor.
 - CIDADE DESTRUÍDA: a casa mostra a cidade em ruínas (sprite
   assets/sprites/improvements/cidade_destruida.png, provisório:
   muralha quebrada, torre caída, vigas queimadas, brasas e
@@ -1959,6 +1962,9 @@ Screenshots também confirmaram o visual.
   vermelho; equipe da primeira passa para a segunda; sem obras,
   fazendas vazias antes dos impostos; Lança usa os trabalhadores
   da Marcenaria).
+- Janela de invasão mais enxuta: só o título e os botões "Ocupar"
+  e "Saquear e destruir"; a explicação e o ouro do saque foram
+  para o tooltip de cada botão. Teste da conquista passou.
 
 
 --------------------------------------------------------------

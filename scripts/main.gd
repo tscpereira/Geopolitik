@@ -604,22 +604,22 @@ func check_invasion(unit: Unit) -> void:
 	else:
 		camera.pan_to(city.position)
 		camera.locked = true
-		hud.invasion_dialog.open("Invasão de %s" % city.city_name, _invasion_text(city), loot_amount(city))
+		hud.invasion_dialog.open("Invasão de %s" % city.city_name,
+				"A cidade passa a ser sua, com o território, as fazendas, as madeireiras e os prédios.\nEla perde 1 de população e tudo o que estava em produção.",
+				_raze_tooltip(city))
 		raze = await hud.invasion_dialog.chosen
 		camera.locked = false
 	var text := raze_city(city, unit.owner_player) if raze else occupy_city(city, unit.owner_player)
 	hud.show_message(text, Color(1, 0.75, 0.45))
 
 
-## Texto da escolha: o que acontece em cada opção.
-func _invasion_text(city: City) -> String:
+## Tooltip do botão "Saquear e destruir": o ouro do saque e de onde ele vem.
+func _raze_tooltip(city: City) -> String:
 	var owner_player := city.owner_player
-	return ("%s (%s, %s) está sem defesa.\n\n" % [city.city_name, owner_player.display_name, city.rank_text()]
-		+ "[b]Ocupar[/b]: a cidade passa a ser sua, com o território, as fazendas, as madeireiras e os prédios. Ela perde 1 de população e tudo o que estava em produção.\n\n"
-		+ "[b]Saquear e destruir[/b]: você leva [color=#%s]%d de ouro[/color] (%d de %d de população do império, sobre %d de ouro do tesouro) e a cidade vira ruínas." % [
-			Icons.GOLD_COLOR.to_html(false), loot_amount(city), city.population,
-			owner_player.cities.reduce(func(total: int, other: City) -> int: return total + other.population, 0),
-			owner_player.gold])
+	return "Você leva %d de ouro (%d de %d de população do império, sobre %d de ouro do tesouro).\nA cidade vira ruínas." % [
+		loot_amount(city), city.population,
+		owner_player.cities.reduce(func(total: int, other: City) -> int: return total + other.population, 0),
+		owner_player.gold]
 
 
 ## A cidade passa a ser de [param new_owner], com o território (ver
