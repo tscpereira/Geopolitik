@@ -3,8 +3,10 @@ extends Node2D
 
 ## Ruínas sem dono no mapa, deixadas por uma cidade saqueada e destruída
 ## (Game.raze_city):
-##   cities       {casa: nome}   a cidade em ruínas (sprite cidade_destruida.png
-##                               e "Ruínas de <nome>" embaixo);
+##   cities       {casa: {"name": nome, "rank": City.Rank}}  a cidade em ruínas,
+##                               com o desenho da classe que ela tinha
+##                               (RUIN_SPRITES: uma metrópole vira uma grande
+##                               cidade em ruínas) e "Ruínas de <nome>" embaixo;
 ##   improvements {casa: {"build", "progress"}}  fazendas e madeireiras dela,
 ##                               destruídas (mesmo desenho das ruínas pilhadas).
 ## Ninguém reconstrói uma ruína sem dono. Uma cidade fundada depois cujo
@@ -12,11 +14,29 @@ extends Node2D
 ## Trabalhador dela pode reconstruir. Fundar na casa da cidade em ruínas apaga
 ## a ruína.
 
-const TEXTURE: Texture2D = preload("res://assets/sprites/improvements/cidade_destruida.png")
+## Ruínas de cada classe (PNGs de 56x56 em assets/sprites/cities/, gerados por
+## tools/art/gen_cities.gd a partir da cidade intacta). Desenhadas no tamanho e
+## na posição da cidade (City.SPRITE_SIZE).
+const RUIN_SPRITES := {
+	City.Rank.SETTLEMENT: preload("res://assets/sprites/cities/povoado_ruinas.png"),
+	City.Rank.TOWN: preload("res://assets/sprites/cities/vila_ruinas.png"),
+	City.Rank.CITY: preload("res://assets/sprites/cities/cidade_ruinas.png"),
+	City.Rank.METROPOLIS: preload("res://assets/sprites/cities/metropole_ruinas.png"),
+}
 const NAME_COLOR := Color(0.8, 0.78, 0.74)
 
 var cities := {}
 var improvements := {}
+
+
+## Marca as ruínas da cidade [param city_name], da classe [param rank], na casa.
+func add_city(cell: Vector2i, city_name: String, rank: City.Rank) -> void:
+	cities[cell] = {"name": city_name, "rank": rank}
+	queue_redraw()
+
+
+func city_name_at(cell: Vector2i) -> String:
+	return cities[cell]["name"]
 
 
 func _draw() -> void:
@@ -27,28 +47,34 @@ func _draw() -> void:
 	var font := ThemeDB.fallback_font
 	for cell: Vector2i in cities:
 		var center := to_local(map.cell_to_world(cell))
-		draw_texture_rect(TEXTURE, Rect2(center - tile / 2.0, tile), false)
-		var text := "Ruínas de %s" % cities[cell]
+		# Mesmo lugar e tamanho do desenho da cidade (City._draw)
+		var sprite := Rect2(center + Vector2(-City.SPRITE_SIZE / 2.0, tile.y / 2.0 - City.SPRITE_SIZE + City.SPRITE_BOTTOM_OVERFLOW),
+				Vector2.ONE * City.SPRITE_SIZE)
+		draw_texture_rect(RUIN_SPRITES[cities[cell]["rank"]], sprite, false)
+		var text := "Ruínas de %s" % cities[cell]["name"]
 		var width := font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, City.NAME_FONT_SIZE).x
-		var origin := center + Vector2(-width / 2.0, tile.y / 2.0 + City.NAME_FONT_SIZE)
+		var origin := Vector2(center.x - width / 2.0, sprite.end.y + City.NAME_FONT_SIZE * 0.9)
 		draw_string_outline(font, origin, text, HORIZONTAL_ALIGNMENT_LEFT, -1, City.NAME_FONT_SIZE, City.NAME_FONT_SIZE / 3, Color.BLACK)
 		draw_string(font, origin, text, HORIZONTAL_ALIGNMENT_LEFT, -1, City.NAME_FONT_SIZE, NAME_COLOR)
 
 
-## Para o save.
+## Para o save: [x, y, nome, classe] e [x, y, melhoria, progresso].
 func to_dict() -> Dictionary:
 	return {
-		"cities": cities.keys().map(func(cell: Vector2i) -> Array: return [cell.x, cell.y, cities[cell]]),
+		"cities": cities.keys().map(func(cell: Vector2i) -> Array:
+			return [cell.x, cell.y, cities[cell]["name"], cities[cell]["rank"]]),
 		"improvements": improvements.keys().map(func(cell: Vector2i) -> Array:
 			return [cell.x, cell.y, improvements[cell]["build"], improvements[cell]["progress"]]),
 	}
 
 
+## Save antigo sem a classe: as ruínas aparecem como as de um povoado.
 func from_dict(data: Dictionary) -> void:
 	cities.clear()
 	improvements.clear()
 	for entry: Array in data.get("cities", []):
-		cities[Vector2i(int(entry[0]), int(entry[1]))] = entry[2]
+		var rank: int = int(entry[3]) if entry.size() > 3 else City.Rank.SETTLEMENT
+		cities[Vector2i(int(entry[0]), int(entry[1]))] = {"name": entry[2], "rank": rank}
 	for entry: Array in data.get("improvements", []):
 		improvements[Vector2i(int(entry[0]), int(entry[1]))] = {"build": int(entry[2]), "progress": int(entry[3])}
 	queue_redraw()

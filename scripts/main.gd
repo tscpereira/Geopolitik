@@ -662,7 +662,7 @@ func raze_city(city: City, raider: Player) -> String:
 		ruins_layer.improvements[cell] = {"build": City.Build.LUMBER_MILL, "progress": 0}
 	for cell: Vector2i in city.ruins:
 		ruins_layer.improvements[cell] = city.ruins[cell]
-	ruins_layer.cities[city.cell] = city.city_name
+	ruins_layer.add_city(city.cell, city.city_name, city.rank())
 	ruins_layer.queue_redraw()
 	# Apaga as fazendas pintadas no mapa antes de a cidade sumir
 	city.farms.clear()
@@ -1712,7 +1712,7 @@ func _update_info() -> void:
 				city.food_stock, city.food_capacity(), city.food_per_turn(),
 			])
 		elif ruins_layer.cities.has(_hover_cell):
-			lines.append("Ruínas de %s (cidade saqueada e destruída)" % ruins_layer.cities[_hover_cell])
+			lines.append("Ruínas de %s (cidade saqueada e destruída)" % ruins_layer.city_name_at(_hover_cell))
 		elif ruins_layer.improvements.has(_hover_cell):
 			lines.append("%s destruída, sem dono (uma cidade fundada perto fica com ela)" % City.BUILDS[ruins_layer.improvements[_hover_cell]["build"]]["name"])
 		elif claiming_city(_hover_cell):

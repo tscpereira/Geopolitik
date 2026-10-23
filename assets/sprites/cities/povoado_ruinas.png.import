@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://ch3upr3uux8a0"
-path="res://.godot/imported/cidade_destruida.png-c9dac59b964e6bde667cb0eca3d9dcaf.ctex"
+uid="uid://beilf6wcmlmvi"
+path="res://.godot/imported/povoado_ruinas.png-48ef4010972e765f354319b311b6267f.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://assets/sprites/improvements/cidade_destruida.png"
-dest_files=["res://.godot/imported/cidade_destruida.png-c9dac59b964e6bde667cb0eca3d9dcaf.ctex"]
+source_file="res://assets/sprites/cities/povoado_ruinas.png"
+dest_files=["res://.godot/imported/povoado_ruinas.png-48ef4010972e765f354319b311b6267f.ctex"]
 
 [params]
 

@@ -135,8 +135,9 @@ C:\ProjetoGame
 |       `-- floating_text.gd       Números de dano flutuantes
 |-- assets/
 |   |-- sprites/                   Imagens de unidades, objetos
-|   |   |-- cities/                Cidade por classe (povoado...metrópole)
-|   |   `-- improvements/          Fazenda, madeireira e cidade
+|   |   |-- cities/                Cidade por classe (povoado...metrópole),
+|   |   |                          intacta e em ruínas
+|   |   `-- improvements/          Fazenda e madeireira destruídas
 |   |                              destruídas
 |   |-- tech/                      Ilustrações das tecnologias
 |   |-- tiles/                     Tilesets do mapa
@@ -859,10 +860,17 @@ INVASÃO E CONQUISTA (Game.check_invasion, occupy_city, raze_city)
   Ex.: 200 de ouro e duas cidades de 10 -> 100. Cidade vazia não
   rende nada. O tooltip do botão "Saquear e destruir" mostra o
   valor.
-- CIDADE DESTRUÍDA: a casa mostra a cidade em ruínas (sprite
-  assets/sprites/improvements/cidade_destruida.png, provisório:
-  muralha quebrada, torre caída, vigas queimadas, brasas e
-  fumaça) com "Ruínas de <nome>" embaixo. O território vira terra
+- CIDADE DESTRUÍDA: a casa mostra a cidade em ruínas, no tamanho
+  da classe que ela tinha ao ser destruída (uma metrópole vira uma
+  grande cidade em ruínas): RuinsLayer.RUIN_SPRITES, PNGs em
+  assets/sprites/cities/<classe>_ruinas.png (povoado, vila,
+  cidade, metropole; provisórios). São a própria cidade intacta
+  destruída pelo gerador (tools/art/gen_cities.gd): telhados viram
+  vigas carbonizadas, muros e torres perdem o topo, a muralha ganha
+  brechas, cores mais escuras e acinzentadas, entulho e marcas de
+  queimado no chão, bandeiras viram trapos queimados (sem dono),
+  brasas e mais colunas de fumaça nas cidades maiores. Embaixo,
+  "Ruínas de <nome>". O território vira terra
   sem dono; as fazendas e madeireiras viram ruínas sem dono (o
   mesmo desenho da pilhagem); as obras em andamento se perdem.
   Ruínas sem dono ficam em scripts/map/ruins_layer.gd (RuinsLayer).
@@ -2107,6 +2115,13 @@ Screenshots também confirmaram o visual.
   de cidade dos dois jogadores e as 5 unidades de cada um (uma
   ferida, uma fortificada) e da janela da cidade; os 19 testes
   automáticos passaram.
+- Cidades em ruínas por classe: as ruínas guardam a classe da
+  cidade destruída e mostram a mesma cidade arrasada (povoado,
+  vila, cidade ou metrópole em ruínas), geradas a partir dos
+  desenhos intactos. O antigo cidade_destruida.png saiu. Save
+  antigo sem a classe mostra ruínas de povoado. Validação:
+  screenshot das 4 ruínas no mapa, save idêntico, testes de
+  conquista, save, pilhagem, território e ícones passaram.
 
 
 --------------------------------------------------------------
