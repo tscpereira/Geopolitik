@@ -178,8 +178,12 @@ func _draw() -> void:
 				draw_rect(rect, BLOCKED_TINT)
 
 	_draw_border()
-	City.draw_city_icon(self, _cell_rect(_city.cell).grow(-CELL_SIZE / 10.0),
-			_city.owner_player.color, _city.population, int(CELL_SIZE * 0.45))
+	# A cidade (desenho da classe) e a população no canto
+	var center_rect := _cell_rect(_city.cell)
+	City.draw_city_sprite(self, center_rect.grow(CELL_SIZE * 0.15), _city.owner_player.color, _city.rank())
+	var badge_font := int(CELL_SIZE * 0.28)
+	City.draw_population_badge(self, Vector2(center_rect.position.x + 2, center_rect.end.y - badge_font * 0.5),
+			_city.population, _city.owner_player.color, badge_font)
 
 	if _view_cells().has(_hover) and (not is_picking() or _pick_cells.has(_hover)):
 		draw_rect(_cell_rect(_hover), HOVER_COLOR, false, 2.0 if not _is_transferable(_hover) else 3.0)

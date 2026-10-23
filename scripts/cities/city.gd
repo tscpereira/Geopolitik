@@ -189,7 +189,6 @@ const NAMES: Array[String] = [
 ]
 
 ## Medidas do desenho no mapa, proporcionais ao tamanho da casa.
-const FONT_SIZE := int(GameMap.TILE_SIZE * 0.55)
 const NAME_FONT_SIZE := int(GameMap.TILE_SIZE * 0.35)
 const MARGIN := GameMap.TILE_SIZE / 16.0
 ## Transparência das fazendas que ainda estão em obra.
@@ -206,6 +205,20 @@ const IDLE_COLOR := Color(0.25, 0.55, 1.0)
 const STALLED_COLOR := Color(0.9, 0.2, 0.15)
 const IDLE_ICON_RADIUS := GameMap.TILE_SIZE * 0.22
 const IDLE_FONT_SIZE := int(GameMap.TILE_SIZE * 0.4)
+
+## Desenho da cidade em cada classe (PNGs de 56x56 em assets/sprites/cities/;
+## magenta = cor do dono, ver Unit.team_texture). No mapa ele é desenhado com
+## SPRITE_SIZE, centralizado na casa e passando SPRITE_BOTTOM_OVERFLOW pixels
+## embaixo; a barra de alimentos fica SPRITE_TOP_GAP abaixo do topo dele.
+const CITY_SPRITES := {
+	Rank.SETTLEMENT: preload("res://assets/sprites/cities/povoado.png"),
+	Rank.TOWN: preload("res://assets/sprites/cities/vila.png"),
+	Rank.CITY: preload("res://assets/sprites/cities/cidade.png"),
+	Rank.METROPOLIS: preload("res://assets/sprites/cities/metropole.png"),
+}
+const SPRITE_SIZE := GameMap.TILE_SIZE * 1.6
+const SPRITE_BOTTOM_OVERFLOW := GameMap.TILE_SIZE * 0.12
+const SPRITE_TOP_GAP := GameMap.TILE_SIZE * 0.25
 
 ## Desenho das melhorias destruídas (pilhadas), no mapa e na janela da cidade.
 ## PNGs de 40x40 em assets/sprites/improvements/ (dá para redesenhar).
@@ -1118,23 +1131,33 @@ func _draw() -> void:
 			LumberMill.draw_bar(self, ruin_rect, float(ruins[ruin_cell]["progress"]) / BUILDS[ruins[ruin_cell]["build"]]["cost"],
 					LumberMill.PROGRESS_BAR_COLOR)
 
-	draw_city_icon(self, Rect2(-tile / 2.0, tile).grow(-MARGIN), owner_player.color, population, FONT_SIZE)
-	_draw_food_bar(Rect2(-tile / 2.0, tile).grow(-MARGIN))
+	# Desenho da cidade (cresce com a classe), um pouco maior que a casa
+	var sprite := Rect2(Vector2(-SPRITE_SIZE / 2.0, tile.y / 2.0 - SPRITE_SIZE + SPRITE_BOTTOM_OVERFLOW), Vector2.ONE * SPRITE_SIZE)
+	draw_city_sprite(self, sprite, owner_player.color, rank())
+	# Barra de alimentos e avisos logo acima do desenho
+	var top := Rect2(-tile.x / 2.0 + MARGIN, sprite.position.y + SPRITE_TOP_GAP, tile.x - MARGIN * 2.0, tile.y)
+	_draw_food_bar(top)
 	if free_citizens() > 0 and not owner_player.is_ai:
-		_draw_idle_warning(Rect2(-tile / 2.0, tile).grow(-MARGIN), free_citizens(), IDLE_COLOR)
+		_draw_idle_warning(top, free_citizens(), IDLE_COLOR)
 	elif stalled_count() > 0 and not owner_player.is_ai:
 		# Obras paradas e ninguém livre: o jogador precisa tirar cidadãos de outro lugar
-		_draw_idle_warning(Rect2(-tile / 2.0, tile).grow(-MARGIN), stalled_count(), STALLED_COLOR)
+		_draw_idle_warning(top, stalled_count(), STALLED_COLOR)
 
-	# Nome embaixo da cidade, com contorno para ler em qualquer terreno
+	# Embaixo: [estrela da capital] [população na cor do dono] Nome
 	var font := ThemeDB.fallback_font
-	var width := font.get_string_size(city_name, HORIZONTAL_ALIGNMENT_LEFT, -1, NAME_FONT_SIZE).x
-	var origin := Vector2(-width / 2.0, tile.y / 2.0 + NAME_FONT_SIZE)
+	var name_width := font.get_string_size(city_name, HORIZONTAL_ALIGNMENT_LEFT, -1, NAME_FONT_SIZE).x
+	var badge_width := population_badge_width(population, NAME_FONT_SIZE)
+	var gap := NAME_FONT_SIZE * 0.3
+	var star := NAME_FONT_SIZE * 1.1 if is_capital else 0.0
+	var left := -(star + badge_width + gap + name_width) / 2.0
+	var baseline := sprite.end.y + NAME_FONT_SIZE * 0.9
+	var middle := baseline - (font.get_ascent(NAME_FONT_SIZE) - font.get_descent(NAME_FONT_SIZE)) / 2.0
+	if is_capital:
+		draw_star(self, Vector2(left + NAME_FONT_SIZE * 0.5, middle), NAME_FONT_SIZE * 0.55)
+	draw_population_badge(self, Vector2(left + star, middle), population, owner_player.color, NAME_FONT_SIZE)
+	var origin := Vector2(left + star + badge_width + gap, baseline)
 	draw_string_outline(font, origin, city_name, HORIZONTAL_ALIGNMENT_LEFT, -1, NAME_FONT_SIZE, NAME_FONT_SIZE / 3, Color.BLACK)
 	draw_string(font, origin, city_name, HORIZONTAL_ALIGNMENT_LEFT, -1, NAME_FONT_SIZE, Color.WHITE)
-	if is_capital:
-		var star_center := Vector2(origin.x - NAME_FONT_SIZE * 0.7, origin.y - NAME_FONT_SIZE * 0.35)
-		draw_star(self, star_center, NAME_FONT_SIZE * 0.55)
 
 
 ## Barrinha do estoque de alimentos logo acima da cidade. Vermelha quando a
@@ -1187,18 +1210,35 @@ func _local_center(target: Vector2i) -> Vector2:
 	return to_local(_map.cell_to_world(target))
 
 
-## Cidade no estilo Civilization 1: quadrado na cor do dono com a população no meio.
-## Também usado pela janela da cidade.
-static func draw_city_icon(canvas: CanvasItem, rect: Rect2, color: Color, pop: int, font_size: int) -> void:
-	var border := rect.size.x / 14.0
-	canvas.draw_rect(rect, color)
-	canvas.draw_rect(rect, Color.BLACK, false, border)
-	canvas.draw_rect(rect.grow(-border * 1.5), Color.WHITE, false, border / 2.0)
+## Desenho da cidade da classe [param city_rank] (CITY_SPRITES), com as
+## bandeiras na cor do dono. Também usado pela janela da cidade.
+static func draw_city_sprite(canvas: CanvasItem, rect: Rect2, color: Color, city_rank: Rank) -> void:
+	canvas.draw_texture_rect(Unit.team_texture(CITY_SPRITES[city_rank], color), rect, false)
+
+
+## Largura do selo da população (draw_population_badge).
+static func population_badge_width(pop: int, font_size: int) -> float:
+	var text_width := ThemeDB.fallback_font.get_string_size(str(pop), HORIZONTAL_ALIGNMENT_LEFT, -1, font_size).x
+	return maxf(text_width + font_size * 0.6, font_size * 1.2)
+
+
+## Selo com a população: retângulo arredondado na cor do dono, a partir de
+## [param left_middle] (ponta esquerda, meio da altura). Texto preto ou branco,
+## o que ler melhor na cor.
+static func draw_population_badge(canvas: CanvasItem, left_middle: Vector2, pop: int, color: Color, font_size: int) -> void:
 	var font := ThemeDB.fallback_font
 	var text := str(pop)
-	var text_size := font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size)
-	var baseline := rect.get_center() + Vector2(-text_size.x / 2.0, (font.get_ascent(font_size) - font.get_descent(font_size)) / 2.0)
-	canvas.draw_string(font, baseline, text, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size, Color.BLACK)
+	var size := Vector2(population_badge_width(pop, font_size), font_size * 1.15)
+	var box := StyleBoxFlat.new()
+	box.bg_color = color
+	box.set_corner_radius_all(int(size.y / 3.0))
+	box.set_border_width_all(maxi(1, font_size / 9))
+	box.border_color = Color.BLACK
+	box.draw(canvas.get_canvas_item(), Rect2(left_middle - Vector2(0, size.y / 2.0), size))
+	var text_width := font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size).x
+	var baseline := left_middle + Vector2((size.x - text_width) / 2.0, (font.get_ascent(font_size) - font.get_descent(font_size)) / 2.0)
+	canvas.draw_string(font, baseline, text, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size,
+			Color.BLACK if color.get_luminance() > 0.45 else Color.WHITE)
 
 
 ## Desenho da melhoria (fazenda ou madeireira). [param alpha] menor = em obra

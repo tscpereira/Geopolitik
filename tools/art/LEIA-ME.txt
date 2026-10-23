@@ -1,0 +1,19 @@
+Geradores dos desenhos provisórios (pixel art feita por código).
+
+Cada script desenha os PNGs e grava em assets/. Para gerar de novo,
+rode na pasta do projeto (C:\ProjetoGame):
+
+    godot_console.cmd --headless --path . --script tools/art/gen_units.gd
+    godot_console.cmd --headless --path . --script tools/art/gen_cities.gd
+    godot_console.cmd --headless --path . --script tools/art/gen_ruins.gd
+    godot_console.cmd --headless --path . --script tools/art/gen_city_ruin.gd
+
+    gen_units.gd      assets/sprites/units/*.png (as 5 unidades)
+    gen_cities.gd     assets/sprites/cities/*.png (povoado ... metrópole)
+    gen_ruins.gd      fazenda e madeireira destruídas
+    gen_city_ruin.gd  cidade destruída
+
+Magenta (#FF00FF) e os tons escuros dele viram a cor do jogador.
+Atenção: gerar de novo SOBRESCREVE os PNGs (inclusive os que forem
+editados à mão). A pasta tem .gdignore: o Godot não importa estes
+scripts no jogo.

@@ -135,6 +135,7 @@ C:\ProjetoGame
 |       `-- floating_text.gd       Números de dano flutuantes
 |-- assets/
 |   |-- sprites/                   Imagens de unidades, objetos
+|   |   |-- cities/                Cidade por classe (povoado...metrópole)
 |   |   `-- improvements/          Fazenda, madeireira e cidade
 |   |                              destruídas
 |   |-- tech/                      Ilustrações das tecnologias
@@ -142,6 +143,9 @@ C:\ProjetoGame
 |   |-- theme/game_theme.tres     Tema do jogo (tooltips sólidos)
 |   |-- audio/                     Músicas e efeitos
 |   `-- fonts/                     Fontes
+|-- tools/
+|   `-- art/                       Scripts que geram os desenhos
+|                                  provisórios (ver LEIA-ME.txt)
 `-- data/
     |-- maps/
     |   `-- mapa_teste.png         Mapa de teste 120x75 (era o
@@ -359,25 +363,41 @@ UNIDADES (scripts/units/)
     Trabalhador T        0       0       1          100
 - Cada unidade no mapa guarda o dono, a casa em que está e os
   movimentos restantes no turno.
-- Visual (estilo Civilization 1): um quadrado na cor do jogador
-  com o sprite do tipo desenhado por cima.
-- Sprites: PNG de 40x40 pixels com fundo transparente, em
-    assets/sprites/units/guerreiro.png
-    assets/sprites/units/arqueiro.png
-    assets/sprites/units/cavaleiro.png
-    assets/sprites/units/colono.png
-    assets/sprites/units/trabalhador.png
-  Os que estão lá agora são provisórios. Para mudar, edite o
+- Visual (desde 22/10/2026, estilo Civilization II): o sprite da
+  unidade inteira, com a roupa (túnica, crista, faixa, sela) na
+  cor do jogador, sobre uma sombra no chão com um anel na cor do
+  jogador nos pés (Unit._draw_base).
+- Sprites: PNG de 40x40 pixels em pixel art (contorno escuro, 2 a
+  3 tons por material: pele, bronze, ferro, couro, madeira, linho),
+  com fundo transparente, em
+    assets/sprites/units/guerreiro.png    hoplita: elmo de bronze
+                                           com crista, peitoral,
+                                           escudo redondo e lança
+    assets/sprites/units/arqueiro.png     faixa na cabeça, colete
+                                           de couro, aljava, arco
+                                           retesado com flecha
+    assets/sprites/units/cavaleiro.png    cavalo com crina e sela,
+                                           cavaleiro de elmo e lança
+    assets/sprites/units/colono.png       chapéu de palha, trouxa
+                                           nas costas e pá
+    assets/sprites/units/trabalhador.png  gorro, avental de couro e
+                                           machado
+  Foram gerados por um script (desenhos provisórios, mas bem mais
+  detalhados que as silhuetas antigas). Para mudar, edite o
   arquivo e salve; o Godot reimporta sozinho.
 - Cor de time: pixels pintados em magenta puro (#FF00FF, RGB
-  255,0,255) são trocados pela cor do jogador. Assim um único
-  desenho serve para todos os jogadores.
+  255,0,255) são trocados pela cor do jogador. Os tons mais escuros
+  do magenta (vermelho = azul, sem verde; ex.: #B000B0) viram a cor
+  do jogador escurecida na mesma proporção, para dar sombra à roupa.
+  Assim um único desenho serve para todos os jogadores
+  (Unit.team_texture; vale também para as cidades).
 - O sprite de cada tipo é definido no campo "Sprite" do .tres em
   data/units/ (dá para trocar pelo Inspector). Sem sprite, a
   unidade mostra a letra do campo "Symbol".
-- Para desenhar a unidade inteira, sem o quadrado colorido atrás,
-  use DRAW_BACKGROUND = false em scripts/units/unit.gd. Nesse caso,
-  use o magenta para mostrar de qual jogador ela é.
+- Para voltar ao quadrado colorido atrás da unidade (Civilization
+  1), use DRAW_BACKGROUND = true em scripts/units/unit.gd. Nas
+  janelas, o ícone da unidade fica sobre um quadrado escuro com a
+  borda na cor do jogador.
 - Os sprites são exibidos sem suavização (filtro "nearest"), então
   a pixel art continua nítida com zoom.
 - Partida de teste atual: cada jogador começa só com 1 Colono,
@@ -538,8 +558,21 @@ CIDADES (scripts/cities/city.gd)
 - Atributos: Nome, População, Estoque de Alimentos e Produção
   (força de trabalho). O jogador escolhe o nome ao fundar; a
   máquina usa a lista City.NAMES ("Aurora", "Porto Alto"...).
-- No mapa: quadrado na cor do dono com a população no meio
-  (estilo Civilization 1) e o nome embaixo. As fazendas são
+- No mapa: o desenho de uma cidade do mundo antigo, que cresce com
+  a classe (City.CITY_SPRITES, PNGs de 56x56 em
+  assets/sprites/cities/, provisórios):
+    povoado.png    cabanas de palha, fogueira e bandeira
+    vila.png       casas de reboco e telha, poço e paliçada
+    cidade.png     muralha de pedra com portão, duas torres com
+                   bandeiras, casas e templo
+    metropole.png  muralha alta com três torres, coliseu, templo
+                   grande e muitas casas
+  As bandeiras e toldos são magenta (cor do dono). O desenho fica
+  1,6 casa de largura (City.SPRITE_SIZE), passando um pouco da casa.
+  Embaixo: [estrela, se for capital] [selo com a população na cor
+  do dono] Nome. A barra de alimentos e os avisos ficam acima do
+  desenho. Na janela da cidade, o centro do mapa mostra o mesmo
+  desenho com o selo da população no canto. As fazendas são
   pintadas pelo shader do terreno, integradas ao chão (ver
   FAZENDAS NO MAPA); as madeireiras em obra ficam transparentes.
 - Área de trabalho da cidade = o TERRITÓRIO dela (ver TERRITÓRIO
@@ -915,8 +948,8 @@ JANELA DA CIDADE (scripts/ui/city_window.gd e city_map_view.gd)
         Quartel General  espada
         Fazenda          plantação (o desenho do mapa)
         Madeireira       pilha de toras (o desenho do mapa)
-        unidades         sprite da unidade sobre um quadrado na
-                         cor do jogador (como no mapa)
+        unidades         sprite da unidade sobre um quadrado
+                         escuro com borda na cor do jogador
       Para uma construção nova, acrescente o desenho dela em
       Icons.draw_build (unidades usam o sprite do .tres sozinhas).
     * TOOLTIPS: fundo sólido (opaco), definido no tema do jogo
@@ -1599,8 +1632,11 @@ Screenshots também confirmaram o visual.
 [x] Cidades: o jogador escolhe o nome ao fundar
 [ ] Cidades: renomear uma cidade já fundada
 [x] Cidades: só unidades militares inimigas entram (e invadem)
-[ ] Imagem própria (PNG) para a cidade e a fazenda (hoje são
-    desenhadas pelo código)
+[x] Imagem própria (PNG) para a cidade: desenho por classe (22/10)
+[ ] Imagem própria (PNG) para a fazenda (hoje desenhada pelo shader)
+[x] Sprites das unidades em pixel art detalhada (22/10, provisórios)
+[ ] Ilustrações próprias (desenhadas à mão) para unidades, cidades
+    e tecnologias
 [x] Primeiro commit no Git (21/10/2026)
 [x] Save / load da partida (F5/F9, 5 espaços, salvamento
     automático, versão no arquivo)
@@ -2059,6 +2095,18 @@ Screenshots também confirmaram o visual.
   tecnologia (imagens do usuário em assets/tech/). Teste da
   ciência passou com 35 verificações (janela antes da escolha da
   próxima, ilustração de cada tecnologia), mais screenshots.
+- GRÁFICOS: as 5 unidades foram redesenhadas em pixel art
+  detalhada (contorno, sombreamento, roupa na cor do jogador) e
+  ficam sobre uma sombra com anel na cor do jogador, sem o
+  quadrado colorido. A cor de time ganhou tons (magenta escuro =
+  cor do jogador escurecida). A cidade virou o desenho de uma
+  cidade antiga que cresce com a classe (Povoado, Vila, Cidade,
+  Metrópole), e a população foi para um selo na cor do dono ao
+  lado do nome. Desenhos gerados por script (provisórios).
+- Validação: screenshots do mapa (zoom 1 e 1,6) com as 4 classes
+  de cidade dos dois jogadores e as 5 unidades de cada um (uma
+  ferida, uma fortificada) e da janela da cidade; os 19 testes
+  automáticos passaram.
 
 
 --------------------------------------------------------------

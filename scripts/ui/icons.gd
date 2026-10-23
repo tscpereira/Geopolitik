@@ -36,7 +36,8 @@ static func build_icon(build: int, player_color: Color, size := ICON_SIZE) -> Co
 
 
 ## Desenha o ícone de [param build] em [param rect]:
-##   unidades        sprite da unidade sobre um quadrado na cor do jogador;
+##   unidades        sprite da unidade (roupa na cor do jogador) sobre um
+##                   quadrado escuro com borda na cor do jogador;
 ##   Fazenda         plantação (o mesmo desenho do mapa);
 ##   Madeireira      pilha de toras (o mesmo desenho do mapa);
 ##   Prefeitura      prédio romano (frontão e colunas);
@@ -47,8 +48,8 @@ static func draw_build(canvas: CanvasItem, build: int, rect: Rect2, player_color
 	var info: Dictionary = City.BUILDS[build]
 	if info.has("unit"):
 		var type: UnitType = info["unit"]
-		canvas.draw_rect(rect, player_color)
-		canvas.draw_rect(rect, Color.BLACK, false, maxf(1.0, rect.size.x / 14.0))
+		canvas.draw_rect(rect, Color(0.16, 0.17, 0.2))
+		canvas.draw_rect(rect, player_color, false, maxf(1.0, rect.size.x / 14.0))
 		if type.sprite:
 			canvas.draw_texture_rect(Unit.team_texture(type.sprite, player_color), rect, false)
 		return

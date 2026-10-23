@@ -13,8 +13,12 @@ const MOVE_STEP_TIME := 0.12
 ## Cor aplicada à unidade quando ela não tem mais movimentos no turno.
 const EXHAUSTED_TINT := Color(0.55, 0.55, 0.55)
 ## Desenha um quadrado na cor do jogador atrás do sprite (estilo Civilization 1).
-const DRAW_BACKGROUND := true
+## Desligado desde 22/10/2026: os sprites novos têm a roupa na cor do jogador e
+## ficam sobre uma sombra com um anel na cor dele (_draw_base).
+const DRAW_BACKGROUND := false
 ## Pixels desta cor no sprite são trocados pela cor do jogador ("cor de time").
+## Os tons mais escuros do magenta (vermelho = azul, sem verde, ex.: #B000B0)
+## viram a cor do jogador escurecida na mesma proporção: dá para sombrear.
 const TEAM_COLOR_KEY := Color(1, 0, 1)
 ## Defesa extra da unidade fortificada.
 const FORTIFY_DEFENSE_BONUS := 1
@@ -228,6 +232,8 @@ func _draw() -> void:
 	if DRAW_BACKGROUND:
 		draw_rect(rect, owner_player.color)
 		draw_rect(rect, Color.BLACK, false, MARGIN)
+	else:
+		_draw_base(rect)
 	if fortified:
 		_draw_fortification(rect)
 
@@ -250,6 +256,18 @@ func _draw() -> void:
 		var bar := Rect2(rect.position.x, rect.end.y - ENERGY_BAR_HEIGHT, rect.size.x, ENERGY_BAR_HEIGHT)
 		draw_rect(bar, Color.BLACK)
 		draw_rect(Rect2(bar.position, Vector2(bar.size.x * ratio, bar.size.y)), _energy_color(ratio))
+
+
+## Base da unidade: sombra no chão e um anel na cor do jogador nos pés, para
+## mostrar de quem é a unidade em qualquer terreno.
+func _draw_base(rect: Rect2) -> void:
+	var center := Vector2(0, rect.end.y - rect.size.y * 0.1)
+	var radii := Vector2(rect.size.x * 0.42, rect.size.y * 0.13)
+	draw_set_transform(center, 0.0, Vector2(1.0, radii.y / radii.x))
+	draw_circle(Vector2.ZERO, radii.x, Color(0, 0, 0, 0.35))
+	draw_arc(Vector2.ZERO, radii.x, 0.0, TAU, 32, Color.BLACK, 4.0)
+	draw_arc(Vector2.ZERO, radii.x, 0.0, TAU, 32, owner_player.color, 2.5)
+	draw_set_transform(Vector2.ZERO)
 
 
 ## Muralha de pedra em volta da unidade fortificada (como no Civilization 1),
@@ -286,8 +304,10 @@ func _team_texture() -> Texture2D:
 	return team_texture(type.sprite, owner_player.color)
 
 
-## [param sprite] com os pixels magenta trocados por [param color] (com cache).
-## Também usado pelos ícones das janelas (Icons.draw_build).
+## [param sprite] com os pixels magenta trocados por [param color] (com cache);
+## os tons escuros do magenta viram [param color] escurecida (ver
+## TEAM_COLOR_KEY). Também usado pelos ícones das janelas (Icons.draw_build) e
+## pelo desenho das cidades (City.draw_city_sprite).
 static func team_texture(sprite: Texture2D, color: Color) -> Texture2D:
 	var key := "%d|%s" % [sprite.get_instance_id(), color.to_html()]
 	if not _team_textures.has(key):
@@ -298,8 +318,9 @@ static func team_texture(sprite: Texture2D, color: Color) -> Texture2D:
 		for y in image.get_height():
 			for x in image.get_width():
 				var pixel := image.get_pixel(x, y)
-				if pixel.a > 0.0 and Color(pixel, 1.0).is_equal_approx(TEAM_COLOR_KEY):
-					image.set_pixel(x, y, Color(color, pixel.a))
+				if pixel.a > 0.0 and pixel.g8 == 0 and pixel.r8 == pixel.b8 and pixel.r8 > 0:
+					var shade := pixel.r # 1.0 = magenta puro; menos = mais escuro
+					image.set_pixel(x, y, Color(color.r * shade, color.g * shade, color.b * shade, pixel.a))
 		_team_textures[key] = ImageTexture.create_from_image(image)
 	return _team_textures[key]
 
