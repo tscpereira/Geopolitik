@@ -759,10 +759,11 @@ func pay_population(amount: int) -> void:
 
 
 ## Ordena uma obra: melhoria na casa [param target] ou unidade (sem casa).
-## Os cidadãos livres passam a trabalhar nela (dá para mudar depois com
+## Os cidadãos livres e os que estavam nos impostos (a reserva de mão de obra,
+## ver _take_tax_workers) passam a trabalhar nela (dá para mudar depois com
 ## set_construction_workers).
-## Unidade ou arma: entra na fila do prédio que a produz; os cidadãos livres
-## vão para os trabalhadores do prédio.
+## Unidade ou arma: entra na fila do prédio que a produz; esses cidadãos vão
+## para os trabalhadores do prédio.
 ## A madeira e as armas do item saem do estoque agora (use build_error antes).
 func order_build(build: int, target := Vector2i.ZERO) -> Construction:
 	var construction := Construction.new()
@@ -771,6 +772,7 @@ func order_build(build: int, target := Vector2i.ZERO) -> Construction:
 	var paid := pay_resources(build)
 	construction.wood_paid = paid["wood"]
 	construction.weapons_paid = paid["weapons"]
+	_take_tax_workers()
 	if construction.is_produced():
 		var building := construction.producer()
 		building_workers[building] = building_workers.get(building, 0) + free_citizens()
@@ -970,14 +972,35 @@ func _complete_at(build: int, target: Vector2i) -> void:
 			lumber_mills[target] = 0
 
 
-## Evita cidadãos ociosos: põe até [param count] cidadãos livres na primeira
-## obra da fila que ainda não terminou; se não houver obra, nas fazendas sem
-## trabalhador, depois nas madeireiras com vaga e, por fim, num prédio que
-## rende impostos parado (Marcenaria sem armas na fila). O que sobrar fica livre.
+## Os impostos são a reserva de mão de obra: tira os cidadãos dos prédios
+## parados que rendem ouro (Marcenaria sem armas na fila), que ficam livres
+## para uma obra nova. Retorna quantos saíram.
+func _take_tax_workers() -> int:
+	var taken := 0
+	for building in buildings:
+		if BUILDS[building].get("idle_gold", 0) > 0 and active_unit(building) == null:
+			taken += building_workers.get(building, 0)
+			building_workers[building] = 0
+	return taken
+
+
+## Evita cidadãos ociosos: põe até [param count] cidadãos livres, nesta ordem:
+##   1. na primeira obra (ou unidade da frente da fila) SEM ninguém trabalhando;
+##   2. na primeira obra da fila que ainda não terminou;
+##   3. nas fazendas sem trabalhador, depois nas madeireiras com vaga;
+##   4. num prédio que rende impostos parado (Marcenaria sem armas na fila).
+## O que sobrar fica livre.
 func _assign_free_citizens(count: int) -> void:
 	count = mini(count, free_citizens())
 	if count <= 0:
 		return
+	for construction in constructions:
+		if needs_workers(construction):
+			if construction.is_produced():
+				building_workers[construction.producer()] = building_workers.get(construction.producer(), 0) + count
+			else:
+				construction.workers += count
+			return
 	for construction in constructions:
 		if construction.is_produced():
 			# Unidade ou arma: os cidadãos vão para o prédio, se ela for a da frente

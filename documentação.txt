@@ -741,7 +741,10 @@ MARCENARIA E IMPOSTOS (campo "idle_gold" em City.BUILDS)
   neste turno começa a produzir no próximo.
 - Realocação automática (para evitar cidadãos ociosos): no fim do
   turno da cidade, quem ficou livre naquele turno vai trabalhar
-  na primeira obra da fila que ainda não terminou. Isso vale para
+  primeiro na obra (ou unidade da frente da fila) que está SEM
+  NINGUÉM trabalhando, depois na primeira obra da fila que ainda
+  não terminou. Assim, terminado o empreendimento 1, a equipe
+  passa para o 2 que precisa de mão de obra. Isso vale para
   os trabalhadores de uma obra concluída, de uma unidade pronta
   (quando a fila do prédio acaba) e para o cidadão novo do
   crescimento. Sem obras na fila, eles vão para fazendas sem
@@ -781,8 +784,10 @@ MARCENARIA E IMPOSTOS (campo "idle_gold" em City.BUILDS)
   quando sai da cidade). A máquina não recebe avisos.
 - Fazenda concluída começa sem trabalhador. Se não houver outra
   obra na fila, os trabalhadores liberados vão para ela.
-- Nova obra: todos os cidadãos livres passam a trabalhar nela.
-  Dá para mudar depois.
+- Nova obra (melhoria, prédio, unidade ou arma): todos os cidadãos
+  livres E os que estavam nos impostos passam a trabalhar nela. Os
+  impostos funcionam como a reserva de mão de obra da cidade
+  (City._take_tax_workers). Dá para mudar depois.
 - Cidades contam para a vitória: quem tem uma cidade continua na
   partida. Uma unidade militar inimiga que entra numa cidade sem
   guarnição a invade (ver INVASÃO E CONQUISTA).
@@ -1544,8 +1549,8 @@ Screenshots também confirmaram o visual.
     parada) quando não há obra, fazenda nem madeireira com vaga
 [x] Obra sem mão de obra em vermelho (janela, mensagem e "!"
     vermelho no mapa)
-[ ] Ao pedir uma obra sem cidadãos livres, tirar automaticamente
-    quem está nos impostos? (a decidir)
+[x] Impostos como reserva: obra nova puxa quem está nos impostos;
+    equipe de uma obra pronta vai para a próxima sem mão de obra
 
 
 --------------------------------------------------------------
@@ -1944,6 +1949,16 @@ Screenshots também confirmaram o visual.
   com 9 verificações (cliques de verdade com e sem Shift, casa sai
   do destaque, dica, mão de obra na primeira e vermelho nas
   outras, Esc mantém as pedidas), mais screenshot.
+- Impostos como reserva de mão de obra: uma obra ou unidade nova
+  recebe os cidadãos livres e também os que estavam nos impostos;
+  quando uma obra termina, a equipe vai primeiro para a próxima
+  obra sem ninguém trabalhando; só sem obras precisando é que os
+  liberados voltam para fazendas, madeireiras e impostos.
+- Validação: o teste da força de trabalho foi refeito com 25
+  verificações (pedido puxa os impostos; segunda obra parada em
+  vermelho; equipe da primeira passa para a segunda; sem obras,
+  fazendas vazias antes dos impostos; Lança usa os trabalhadores
+  da Marcenaria).
 
 
 --------------------------------------------------------------
