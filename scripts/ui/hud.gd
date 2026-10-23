@@ -37,6 +37,7 @@ const MESSAGE_TIME := 3.0
 @onready var save_dialog: SaveDialog = $SaveDialog
 @onready var invasion_dialog: InvasionDialog = $InvasionDialog
 @onready var research_dialog: ResearchDialog = $ResearchDialog
+@onready var tech_dialog: TechDialog = $TechDialog
 
 var _prompt_tween: Tween
 var _message_tween: Tween

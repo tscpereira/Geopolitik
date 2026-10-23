@@ -18,21 +18,34 @@ enum Tech { CONSTRUCTION, MYSTICISM, ALPHABET }
 ##   name      nome mostrado
 ##   cost      pontos de ciência para pesquisar
 ##   requires  tecnologias que precisam estar pesquisadas antes
-##   description  texto do tooltip
+##   description  texto do tooltip e da janela de tecnologia descoberta
+##   image     ilustração da janela de tecnologia descoberta (TechDialog);
+##             qualquer tamanho, ela é recortada para caber
 const DATA := {
 	Tech.CONSTRUCTION: {
 		"name": "Construção", "cost": 30, "requires": [],
 		"description": "Técnicas de construção com pedra e madeira.",
+		"image": "res://assets/tech/construcao.png",
 	},
 	Tech.MYSTICISM: {
 		"name": "Misticismo", "cost": 20, "requires": [],
 		"description": "Crenças e rituais que unem o povo.",
+		"image": "res://assets/tech/misticismo.png",
 	},
 	Tech.ALPHABET: {
 		"name": "Alfabeto", "cost": 40, "requires": [],
 		"description": "A escrita: base para registrar e transmitir o conhecimento.",
+		"image": "res://assets/tech/alfabeto.png",
 	},
 }
+
+
+## Ilustração da tecnologia, ou null se não houver (ou o arquivo não existir).
+static func image(tech: int) -> Texture2D:
+	var path: String = DATA[tech].get("image", "")
+	if path.is_empty() or not ResourceLoader.exists(path):
+		return null
+	return load(path)
 
 
 static func tech_name(tech: int) -> String:

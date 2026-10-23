@@ -101,7 +101,8 @@ func _unhandled_input(event: InputEvent) -> void:
 			and event.keycode in [KEY_ENTER, KEY_KP_ENTER])
 	var key: int = event.keycode if event is InputEventKey and event.pressed and not event.echo else KEY_NONE
 	if (hud.city_window.visible or hud.city_name_dialog.visible or hud.notice_dialog.visible
-			or hud.save_dialog.visible or hud.invasion_dialog.visible or hud.research_dialog.visible):
+			or hud.save_dialog.visible or hud.invasion_dialog.visible or hud.research_dialog.visible
+			or hud.tech_dialog.visible):
 		return # as janelas cuidam dos próprios cliques e teclas
 	if key == KEY_F9 and not _is_busy:
 		_open_save_dialog(false) # carregar também vale na tela de vitória
@@ -1230,6 +1231,8 @@ func _start_human_turn(player: Player, autosave := true) -> void:
 		# Pesquisa concluída no início da vez: escolher a próxima
 		var done := _research_done
 		_research_done = -1
+		hud.tech_dialog.open(done) # nome, ilustração e descrição
+		await hud.tech_dialog.closed
 		await _choose_research(player, "Pesquisa concluída: %s" % Technology.tech_name(done))
 	_is_busy = false
 	if game_over:

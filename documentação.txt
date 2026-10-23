@@ -129,6 +129,7 @@ C:\ProjetoGame
 |       |-- save_dialog.gd         Janela de salvar (F5) / carregar (F9)
 |       |-- invasion_dialog.gd     Ocupar / Saquear e destruir
 |       |-- research_dialog.gd     Escolha da pesquisa
+|       |-- tech_dialog.gd         Tecnologia descoberta (ilustração)
 |       |-- icons.gd               Ícones desenhados (moeda de ouro,
 |       |                          construções e unidades)
 |       `-- floating_text.gd       Números de dano flutuantes
@@ -136,6 +137,7 @@ C:\ProjetoGame
 |   |-- sprites/                   Imagens de unidades, objetos
 |   |   `-- improvements/          Fazenda, madeireira e cidade
 |   |                              destruídas
+|   |-- tech/                      Ilustrações das tecnologias
 |   |-- tiles/                     Tilesets do mapa
 |   |-- theme/game_theme.tres     Tema do jogo (tooltips sólidos)
 |   |-- audio/                     Músicas e efeitos
@@ -1343,6 +1345,20 @@ CIÊNCIA E PESQUISA (scripts/science/technology.gd, Player.research)
   Sem pesquisa em andamento não dá para fechar sem escolher; para
   trocar, Esc ou "Fechar" fecham. Trocar de pesquisa não perde o
   progresso: cada tecnologia guarda os pontos que já recebeu.
+- TECNOLOGIA DESCOBERTA (scripts/ui/tech_dialog.gd): quando uma
+  pesquisa termina, no início da vez aparece a janela "Nova
+  tecnologia: <nome>" com a ilustração, a descrição e "Continuar
+  [Enter]"; depois vem a escolha da próxima pesquisa.
+  Ilustrações (campo "image" em Technology.DATA; qualquer tamanho,
+  a imagem é recortada para preencher 560x315):
+      Construção  assets/tech/construcao.png  (muro de pedra)
+      Misticismo  assets/tech/misticismo.png  (gravura dos deuses)
+      Alfabeto    assets/tech/alfabeto.png    (inscrição romana)
+  Para trocar, basta substituir o arquivo. Tecnologia sem imagem
+  mostra a janela sem a ilustração. Atenção: são imagens de
+  exemplo trazidas pelo usuário; antes de distribuir o jogo,
+  confirmar a licença de cada uma (ou trocar por desenhos
+  próprios).
 - A pesquisa avança no início da vez do jogador, depois das
   cidades (Game._process_research).
 - A MÁQUINA escolhe sozinha a tecnologia disponível mais barata
@@ -2039,6 +2055,10 @@ Screenshots também confirmaram o visual.
   barata, trocar sem perder progresso, conclusão e sobra perdida,
   janela "Pesquisa concluída", save, janela da cidade), mais
   screenshots da janela, do HUD e da cidade.
+- Janela de tecnologia descoberta, com uma ilustração para cada
+  tecnologia (imagens do usuário em assets/tech/). Teste da
+  ciência passou com 35 verificações (janela antes da escolha da
+  próxima, ilustração de cada tecnologia), mais screenshots.
 
 
 --------------------------------------------------------------
