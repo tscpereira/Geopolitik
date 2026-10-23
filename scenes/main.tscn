@@ -1,4 +1,4 @@
-[gd_scene load_steps=13 format=3]
+[gd_scene load_steps=15 format=3]
 
 [ext_resource type="Script" path="res://scripts/main.gd" id="1"]
 [ext_resource type="Script" path="res://scripts/map/game_map.gd" id="2"]
@@ -10,6 +10,8 @@
 [ext_resource type="Script" path="res://scripts/ui/notice_dialog.gd" id="8"]
 [ext_resource type="Script" path="res://scripts/ui/save_dialog.gd" id="9"]
 [ext_resource type="Script" path="res://scripts/map/territory_overlay.gd" id="10"]
+[ext_resource type="Script" path="res://scripts/map/ruins_layer.gd" id="11"]
+[ext_resource type="Script" path="res://scripts/ui/invasion_dialog.gd" id="12"]
 
 [sub_resource type="StyleBoxFlat" id="PanelStyle"]
 bg_color = Color(0, 0, 0, 0.6)
@@ -34,6 +36,10 @@ script = ExtResource("2")
 [node name="TerritoryOverlay" type="Node2D" parent="." node_paths=PackedStringArray("map")]
 script = ExtResource("10")
 map = NodePath("../GameMap")
+
+[node name="Ruins" type="Node2D" parent="."]
+texture_filter = 1
+script = ExtResource("11")
 
 [node name="Cities" type="Node2D" parent="."]
 texture_filter = 1
@@ -248,6 +254,16 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 script = ExtResource("9")
+
+[node name="InvasionDialog" type="Control" parent="HUD"]
+visible = false
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("12")
 
 [node name="VictoryScreen" type="ColorRect" parent="HUD"]
 visible = false

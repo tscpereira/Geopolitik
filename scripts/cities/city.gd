@@ -587,6 +587,23 @@ func receive_cell(target: Vector2i, taken: Dictionary) -> void:
 	_notify_changed()
 
 
+## A cidade foi ocupada por [param new_owner] (Game.occupy_city): perde 1 de
+## população (uma cidade vazia continua vazia; ninguém cai abaixo de 1) e
+## tudo o que estava em produção (obras, unidades e armas da fila, sem
+## devolver madeira nem armas). Território, fazendas, madeireiras, ruínas e
+## prédios ficam. Os cidadãos são realocados do zero.
+func change_owner(new_owner: Player) -> void:
+	owner_player = new_owner
+	if population > 1:
+		population -= 1
+	constructions.clear()
+	building_workers.clear()
+	completed.clear()
+	clear_workers()
+	_assign_free_citizens(free_citizens())
+	_notify_changed()
+
+
 ## Um Trabalhador migrou para a cidade: +1 de população, e o cidadão novo vai
 ## trabalhar na primeira obra (ou fazenda, madeireira...).
 func add_citizen() -> void:

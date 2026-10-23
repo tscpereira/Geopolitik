@@ -16,8 +16,11 @@ extends RefCounted
 ##   5. avanço contra o inimigo, só com exército de army_to_attack soldados,
 ##      mantendo a formação e sem parar na zona de ameaça do inimigo;
 ##   6. novos ataques de quem chegou perto e ainda tem movimento.
-## Depois dos ataques, os soldados de campo pilham a fazenda ou madeireira
-## inimiga em que estão; no avanço, preferem parar numa delas.
+## Depois dos ataques, os soldados de campo invadem as cidades inimigas sem
+## guarnição que alcançam (ocupam ou, com max_cities cidades, saqueiam e
+## destroem: wants_to_raze) e pilham a fazenda ou madeireira inimiga em que
+## estão; no avanço, vão em direção às unidades e cidades inimigas e preferem
+## parar numa melhoria inimiga.
 
 ## Pausa antes de cada ação, para o jogador acompanhar.
 const ACTION_DELAY := 0.4
@@ -58,6 +61,9 @@ func play_turn(game: Game, player: Player) -> void:
 	await _attack_phase(game, player)
 	if game.game_over:
 		return
+	await _invade_phase(game, player)
+	if game.game_over:
+		return
 	await _pillage_phase(game, player)
 	if _army_ready(player):
 		await _advance_phase(game, player)
@@ -67,6 +73,29 @@ func play_turn(game: Game, player: Player) -> void:
 		if game.game_over:
 			return
 		await _pillage_phase(game, player)
+
+
+## Ao invadir uma cidade: ocupa, a não ser que já tenha as cidades que quer
+## (personality.max_cities); aí saqueia e destrói.
+static func wants_to_raze(player: Player, _city: City) -> bool:
+	return player.cities.size() >= player.personality.max_cities
+
+
+## Soldados de campo que alcançam neste turno uma cidade inimiga sem guarnição
+## entram nela (Game.move_unit chama a invasão).
+func _invade_phase(game: Game, player: Player) -> void:
+	for unit in player.units.duplicate():
+		if game.game_over:
+			return
+		if not is_instance_valid(unit) or unit.moves_left <= 0 or not _is_field_soldier(unit):
+			continue
+		var occupants := game.occupants()
+		var reachable := Movement.find_reachable(game.game_map, unit, occupants)
+		for cell in Movement.destinations(reachable, occupants):
+			if Movement.is_enemy_city(game.game_map, unit, cell):
+				await _focus(game, unit)
+				await game.move_unit(unit, cell)
+				break
 
 
 ## Soldados de campo em cima de uma melhoria inimiga pilham (a guarnição não sai
@@ -222,8 +251,13 @@ func _distance_to_enemies(game: Game, player: Player) -> Dictionary:
 		if other == player:
 			continue
 		for enemy in other.units:
-			distance[enemy.cell] = 0
-			queue.append(enemy.cell)
+			if not distance.has(enemy.cell):
+				distance[enemy.cell] = 0
+				queue.append(enemy.cell)
+		for city in other.cities: # as cidades inimigas também são alvo (invasão)
+			if not distance.has(city.cell):
+				distance[city.cell] = 0
+				queue.append(city.cell)
 	var head := 0
 	while head < queue.size():
 		var cell := queue[head]

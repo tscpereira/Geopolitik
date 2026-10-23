@@ -33,6 +33,7 @@ const MESSAGE_TIME := 3.0
 @onready var city_name_dialog: CityNameDialog = $CityNameDialog
 @onready var notice_dialog: NoticeDialog = $NoticeDialog
 @onready var save_dialog: SaveDialog = $SaveDialog
+@onready var invasion_dialog: InvasionDialog = $InvasionDialog
 
 var _prompt_tween: Tween
 var _message_tween: Tween

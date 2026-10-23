@@ -27,6 +27,9 @@ const SHADER_TEXTURES := {
 
 var width := 0
 var height := 0
+## Dono de cada casa com cidade: {casa: Player}. Mantido pelo Game
+## (refresh_territories); o Movement usa para as regras de invasão.
+var city_owners := {}
 
 var _terrain := PackedByteArray()
 ## Madeira que resta nas florestas já exploradas: {casa: quantidade}. Casa de

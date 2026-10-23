@@ -46,6 +46,8 @@ static func attack_targets(map: GameMap, unit: Unit, reachable: Dictionary, occu
 	for cell in reachable:
 		if cell != unit.cell and occupants.has(cell):
 			continue # casa com aliado: dá para atravessar, mas não parar nela
+		if cell != unit.cell and is_enemy_city(map, unit, cell):
+			continue # quem entra numa cidade inimiga para lá (invasão), não ataca dali
 		var distance := path_cost(map, unit, build_path(reachable, cell))
 		if distance >= unit.moves_left:
 			continue
@@ -93,11 +95,20 @@ static func path_cost(map: GameMap, unit: Unit, path: Array[Vector2i]) -> int:
 	return total
 
 
+## Cidades inimigas: só unidades militares entram (para invadir; ver
+## Game.check_invasion), e a unidade para nelas (não atravessa).
 static func can_enter(map: GameMap, unit: Unit, cell: Vector2i, occupants: Dictionary) -> bool:
 	if not map.is_in_bounds(cell) or not Terrain.is_walkable(map.get_terrain(cell)):
 		return false
+	if is_enemy_city(map, unit, cell) and unit.attack <= 0:
+		return false
 	var occupant: Unit = occupants.get(cell)
 	return occupant == null or occupant.owner_player == unit.owner_player
+
+
+static func is_enemy_city(map: GameMap, unit: Unit, cell: Vector2i) -> bool:
+	var city_owner: Player = map.city_owners.get(cell)
+	return city_owner != null and city_owner != unit.owner_player
 
 
 ## Busca pelo menor custo (Dijkstra com "baldes": buckets[c] = casas
@@ -115,6 +126,8 @@ static func _search(map: GameMap, unit: Unit, occupants: Dictionary, budget: int
 				continue # já foi alcançada mais barato
 			if cell == target:
 				return came_from
+			if cell != unit.cell and is_enemy_city(map, unit, cell):
+				continue # entrar numa cidade inimiga encerra o caminho (invasão)
 			for direction in DIRECTIONS:
 				var next := cell + direction
 				if not can_enter(map, unit, next, occupants):

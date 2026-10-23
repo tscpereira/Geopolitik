@@ -57,6 +57,7 @@ var _completion_notices: Array[Array] = []
 @onready var game_map: GameMap = $GameMap
 @onready var move_overlay: MoveOverlay = $MoveOverlay
 @onready var territory_overlay: TerritoryOverlay = $TerritoryOverlay
+@onready var ruins_layer: RuinsLayer = $Ruins
 @onready var cities_root: Node2D = $Cities
 @onready var units_root: Node2D = $Units
 @onready var camera: MapCamera = $MapCamera
@@ -95,7 +96,8 @@ func _unhandled_input(event: InputEvent) -> void:
 	var is_enter: bool = (event is InputEventKey and event.pressed and not event.echo
 			and event.keycode in [KEY_ENTER, KEY_KP_ENTER])
 	var key: int = event.keycode if event is InputEventKey and event.pressed and not event.echo else KEY_NONE
-	if hud.city_window.visible or hud.city_name_dialog.visible or hud.notice_dialog.visible or hud.save_dialog.visible:
+	if (hud.city_window.visible or hud.city_name_dialog.visible or hud.notice_dialog.visible
+			or hud.save_dialog.visible or hud.invasion_dialog.visible):
 		return # as janelas cuidam dos próprios cliques e teclas
 	if key == KEY_F9 and not _is_busy:
 		_open_save_dialog(false) # carregar também vale na tela de vitória
@@ -196,7 +198,9 @@ func territory_owner(cell: Vector2i) -> City:
 ## redesenha as fronteiras.
 func refresh_territories() -> void:
 	_territory = {}
+	game_map.city_owners = {}
 	for city in cities():
+		game_map.city_owners[city.cell] = city.owner_player
 		for cell in city.territory:
 			_territory[cell] = city
 	territory_overlay.set_territories(_territory)
@@ -214,6 +218,12 @@ func _claim_territory(city: City) -> void:
 		if (game_map.is_in_bounds(cell) and (owner_city == null or owner_city == city)
 				and (mill == null or mill.owner_player == city.owner_player)):
 			city.territory.append(cell)
+			# Ruína sem dono (de uma cidade destruída) passa a ser desta cidade
+			if ruins_layer.improvements.has(cell):
+				city.ruins[cell] = ruins_layer.improvements[cell]
+				ruins_layer.improvements.erase(cell)
+	ruins_layer.cities.erase(city.cell) # fundar em cima das ruínas de uma cidade as apaga
+	ruins_layer.queue_redraw()
 
 
 ## Motivo pelo qual a casa não pode passar para [param city] ("" = pode): ela
@@ -293,6 +303,8 @@ func city_site_error(unit: Unit) -> String:
 		return "Esta casa já é usada por %s." % claiming_city(unit.cell).city_name
 	if lumber_mill_at(unit.cell):
 		return "Esta casa já tem uma madeireira."
+	if ruins_layer.improvements.has(unit.cell):
+		return "Esta casa tem uma melhoria em ruínas."
 	if territory_owner(unit.cell):
 		return "Esta casa é território de %s." % territory_owner(unit.cell).city_name
 	return ""
@@ -550,6 +562,124 @@ func join_city(unit: Unit) -> City:
 	return city
 
 
+# --- Invasão e conquista -------------------------------------------------------
+
+## Ouro do saque de [param city]: a fatia do tesouro do dono igual à fatia da
+## população do império que mora nela. Ex.: 200 de ouro e duas cidades de 10
+## -> 100. Cidade vazia não rende nada.
+func loot_amount(city: City) -> int:
+	var owner_player := city.owner_player
+	var total := 0
+	for other in owner_player.cities:
+		total += other.population
+	if total <= 0:
+		return 0
+	return owner_player.gold * city.population / total
+
+
+## Depois de um movimento ou ataque: se uma unidade militar entrou numa cidade
+## inimiga (a guarnição, se havia, já foi derrotada), o dono escolhe entre
+## ocupar e saquear e destruir. O humano escolhe na InvasionDialog; a máquina
+## decide sozinha (AIController.wants_to_raze).
+func check_invasion(unit: Unit) -> void:
+	if game_over or not is_instance_valid(unit) or unit.attack <= 0:
+		return
+	var city := get_city_at(unit.cell)
+	if city == null or city.owner_player == unit.owner_player:
+		return
+	var raze := false
+	if unit.owner_player.is_ai:
+		raze = AIController.wants_to_raze(unit.owner_player, city)
+	else:
+		camera.pan_to(city.position)
+		camera.locked = true
+		hud.invasion_dialog.open("Invasão de %s" % city.city_name, _invasion_text(city), loot_amount(city))
+		raze = await hud.invasion_dialog.chosen
+		camera.locked = false
+	var text := raze_city(city, unit.owner_player) if raze else occupy_city(city, unit.owner_player)
+	hud.show_message(text, Color(1, 0.75, 0.45))
+
+
+## Texto da escolha: o que acontece em cada opção.
+func _invasion_text(city: City) -> String:
+	var owner_player := city.owner_player
+	return ("%s (%s, %s) está sem defesa.\n\n" % [city.city_name, owner_player.display_name, city.rank_text()]
+		+ "[b]Ocupar[/b]: a cidade passa a ser sua, com o território, as fazendas, as madeireiras e os prédios. Ela perde 1 de população e tudo o que estava em produção.\n\n"
+		+ "[b]Saquear e destruir[/b]: você leva [color=#%s]%d de ouro[/color] (%d de %d de população do império, sobre %d de ouro do tesouro) e a cidade vira ruínas." % [
+			Icons.GOLD_COLOR.to_html(false), loot_amount(city), city.population,
+			owner_player.cities.reduce(func(total: int, other: City) -> int: return total + other.population, 0),
+			owner_player.gold])
+
+
+## A cidade passa a ser de [param new_owner], com o território (ver
+## City.change_owner). Se era a capital do perdedor, a maior cidade que sobrou
+## para ele vira a capital; para o novo dono, ela só é capital se for a
+## primeira cidade dele. Retorna a mensagem.
+func occupy_city(city: City, new_owner: Player) -> String:
+	var old_owner := city.owner_player
+	old_owner.cities.erase(city)
+	var was_capital := city.is_capital
+	city.is_capital = new_owner.cities.is_empty()
+	new_owner.cities.append(city)
+	city.change_owner(new_owner)
+	if was_capital:
+		_reassign_capital(old_owner)
+	refresh_territories()
+	var text := "%s ocupou %s, de %s (população %d)." % [new_owner.display_name, city.city_name, old_owner.display_name, city.population]
+	print(text)
+	_check_victory()
+	return text
+
+
+## Saqueia e destrói a cidade: o ouro do saque (loot_amount) sai do tesouro do
+## dono e vai para [param raider]. A casa vira as ruínas da cidade, o território
+## vira terra sem dono e as fazendas e madeireiras viram ruínas sem dono
+## (RuinsLayer). Obras em andamento se perdem. Retorna a mensagem.
+func raze_city(city: City, raider: Player) -> String:
+	var old_owner := city.owner_player
+	var loot := loot_amount(city)
+	old_owner.gold -= loot
+	raider.gold += loot
+	for cell: Vector2i in city.farms:
+		ruins_layer.improvements[cell] = {"build": City.Build.FARM, "progress": 0}
+	for cell: Vector2i in city.lumber_mills:
+		ruins_layer.improvements[cell] = {"build": City.Build.LUMBER_MILL, "progress": 0}
+	for cell: Vector2i in city.ruins:
+		ruins_layer.improvements[cell] = city.ruins[cell]
+	ruins_layer.cities[city.cell] = city.city_name
+	ruins_layer.queue_redraw()
+	# Apaga as fazendas pintadas no mapa antes de a cidade sumir
+	city.farms.clear()
+	city.lumber_mills.clear()
+	city.ruins.clear()
+	city.constructions.clear()
+	city._notify_changed()
+	old_owner.cities.erase(city)
+	cities_root.remove_child(city)
+	city.queue_free()
+	if city.is_capital:
+		_reassign_capital(old_owner)
+	refresh_territories()
+	FloatingText.spawn(units_root, city.position - Vector2(0, GameMap.TILE_SIZE / 2.0), "+%d" % loot, Icons.GOLD_COLOR)
+	var text := "%s saqueou e destruiu %s, de %s: +%d de ouro." % [raider.display_name, city.city_name, old_owner.display_name, loot]
+	print(text)
+	_check_victory()
+	return text
+
+
+## O jogador perdeu a capital: a maior cidade que sobrou vira a capital (o
+## território dela não muda).
+func _reassign_capital(player: Player) -> void:
+	if player.cities.is_empty() or player.cities.any(func(city: City) -> bool: return city.is_capital):
+		return
+	var biggest: City = player.cities[0]
+	for city in player.cities:
+		if city.population > biggest.population:
+			biggest = city
+	biggest.is_capital = true
+	biggest.queue_redraw()
+
+
 # --- Ações (usadas pelo jogador humano e pela máquina) ----------------------
 
 ## Seleciona a unidade: ela pisca e o overlay mostra para onde pode ir e quem pode atacar.
@@ -580,6 +710,7 @@ func move_unit(unit: Unit, target: Vector2i) -> void:
 	move_overlay.clear()
 	var reachable := Movement.find_reachable(game_map, unit, occupants())
 	await unit.move_along(Movement.build_path(reachable, target), game_map)
+	await check_invasion(unit)
 
 
 ## Anda até a casa de ataque (se precisar) e ataca o inimigo em [param target_cell].
@@ -609,6 +740,7 @@ func attack(attacker: Unit, target_cell: Vector2i) -> void:
 	if result.defender_destroyed:
 		await _destroy_unit(defender)
 		await attacker.advance_to(target_cell, game_map)
+		await check_invasion(attacker) # derrotou a guarnição e entrou na cidade
 	elif result.attacker_destroyed:
 		await _destroy_unit(attacker)
 
@@ -1238,8 +1370,8 @@ func _destroy_unit(unit: Unit) -> void:
 
 
 ## Objetivo da partida: eliminar o adversário. Um jogador continua vivo enquanto
-## tiver unidades ou cidades; vence quem for o último vivo. (As cidades ainda
-## não podem ser atacadas.)
+## tiver unidades ou cidades; vence quem for o último vivo. Cidades se perdem
+## por invasão (ocupadas ou destruídas, ver check_invasion).
 func _check_victory() -> void:
 	var alive := players.filter(func(player: Player) -> bool: return not player.units.is_empty() or not player.cities.is_empty())
 	if alive.size() != 1:
@@ -1300,7 +1432,8 @@ func capture_state() -> Dictionary:
 		if player.is_ai:
 			data["ai_turns_waiting"] = _ais[player].turns_waiting if _ais.has(player) else 0
 		players_data.append(data)
-	return {"turn_manager": TurnManager.to_dict(), "map": game_map.to_dict(), "players": players_data}
+	return {"turn_manager": TurnManager.to_dict(), "map": game_map.to_dict(), "players": players_data,
+			"ruins": ruins_layer.to_dict()}
 
 
 ## Troca a partida atual pela de [param data] (de capture_state, já lida do
@@ -1320,6 +1453,7 @@ func restore_state(data: Dictionary) -> void:
 			child.queue_free()
 
 	game_map.from_dict(data["map"])
+	ruins_layer.from_dict(data.get("ruins", {}))
 	players = []
 	_ais = {}
 	for player_data: Dictionary in data["players"]:
@@ -1497,6 +1631,10 @@ func _update_info() -> void:
 				city.city_name, city.owner_player.display_name, city.rank_text(), city.population,
 				city.food_stock, city.food_capacity(), city.food_per_turn(),
 			])
+		elif ruins_layer.cities.has(_hover_cell):
+			lines.append("Ruínas de %s (cidade saqueada e destruída)" % ruins_layer.cities[_hover_cell])
+		elif ruins_layer.improvements.has(_hover_cell):
+			lines.append("%s destruída, sem dono (uma cidade fundada perto fica com ela)" % City.BUILDS[ruins_layer.improvements[_hover_cell]["build"]]["name"])
 		elif claiming_city(_hover_cell):
 			lines.append(_city_improvement_text(claiming_city(_hover_cell), _hover_cell))
 		elif mill:

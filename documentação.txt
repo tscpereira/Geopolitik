@@ -93,6 +93,7 @@ C:\ProjetoGame
 |   |   |-- movement.gd            Alcance e caminho das unidades
 |   |   |-- move_overlay.gd        Destaque das casas alcançáveis
 |   |   |-- territory_overlay.gd   Fronteiras dos territórios
+|   |   |-- ruins_layer.gd         Ruínas sem dono (cidades destruídas)
 |   |   `-- terrain.gdshader       Desenho do mapa com transições
 |   |                              naturais entre os terrenos
 |   |-- save/
@@ -124,12 +125,14 @@ C:\ProjetoGame
 |       |-- city_name_dialog.gd    Pergunta do nome da nova cidade
 |       |-- notice_dialog.gd       Aviso "construção concluída"
 |       |-- save_dialog.gd         Janela de salvar (F5) / carregar (F9)
+|       |-- invasion_dialog.gd     Ocupar / Saquear e destruir
 |       |-- icons.gd               Ícones desenhados (moeda de ouro,
 |       |                          construções e unidades)
 |       `-- floating_text.gd       Números de dano flutuantes
 |-- assets/
 |   |-- sprites/                   Imagens de unidades, objetos
-|   |   `-- improvements/          Fazenda e madeireira destruídas
+|   |   `-- improvements/          Fazenda, madeireira e cidade
+|   |                              destruídas
 |   |-- tiles/                     Tilesets do mapa
 |   |-- theme/game_theme.tres     Tema do jogo (tooltips sólidos)
 |   |-- audio/                     Músicas e efeitos
@@ -224,10 +227,9 @@ VITÓRIA
   vitória aparece com o nome do vencedor, na cor dele.
 - [Enter] na tela de vitória recarrega a cena e começa uma nova
   partida.
-- Como as cidades ainda não podem ser atacadas (a conquista vem
-  depois), hoje só perde quem nunca fundou uma cidade e perde
-  todas as unidades. Uma cidade vazia (0 de população, depois de
-  uma pilhagem) continua contando.
+- Cidades se perdem por invasão (ocupadas ou saqueadas e
+  destruídas; ver INVASÃO E CONQUISTA). Uma cidade vazia (0 de
+  população, depois de uma pilhagem) continua contando.
 
 MAPA (scripts/map/)
 - Grid de casas quadradas, no estilo Civilization 1.
@@ -781,9 +783,61 @@ MARCENARIA E IMPOSTOS (campo "idle_gold" em City.BUILDS)
   obra na fila, os trabalhadores liberados vão para ela.
 - Nova obra: todos os cidadãos livres passam a trabalhar nela.
   Dá para mudar depois.
-- Cidades ainda não podem ser atacadas (a conquista vem depois).
-  Elas contam para a vitória: quem tem uma cidade continua na
-  partida. Unidades inimigas podem andar sobre a cidade.
+- Cidades contam para a vitória: quem tem uma cidade continua na
+  partida. Uma unidade militar inimiga que entra numa cidade sem
+  guarnição a invade (ver INVASÃO E CONQUISTA).
+
+INVASÃO E CONQUISTA (Game.check_invasion, occupy_city, raze_city)
+- Só unidades MILITARES (Ataque > 0) entram numa cidade inimiga.
+  Colonos e Trabalhadores não entram. Entrar numa cidade inimiga
+  encerra o caminho: a unidade para nela, não atravessa (vale
+  também para a ordem "Mover").
+- Cidade com guarnição (unidade dentro, mesmo escondida): ela é
+  alvo de ataque normal. Quando o defensor é destruído, o atacante
+  avança para dentro da cidade e a invasão acontece.
+- Ao entrar numa cidade sem guarnição, o dono da unidade escolhe
+  (janela "Invasão de <cidade>", scripts/ui/invasion_dialog.gd;
+  não dá para fechar sem escolher):
+    OCUPAR [O]: a cidade passa a ser dele, com o território, as
+      fazendas, as madeireiras, as ruínas e os prédios. Perde 1 de
+      população (uma cidade com 1 continua com 1; vazia continua
+      vazia) e tudo o que estava em produção (obras, unidades e
+      armas da fila, sem devolver madeira nem armas). Os cidadãos
+      são realocados do zero (City.change_owner).
+    SAQUEAR E DESTRUIR [S]: leva o ouro do saque e a cidade some.
+- OURO DO SAQUE (Game.loot_amount): a fatia do tesouro do dono
+  igual à fatia da população do império que mora na cidade, e
+  SAI do tesouro do dono:
+      saque = ouro do dono x população da cidade / população total
+  Ex.: 200 de ouro e duas cidades de 10 -> 100. Cidade vazia não
+  rende nada. O botão e o texto da janela mostram o valor.
+- CIDADE DESTRUÍDA: a casa mostra a cidade em ruínas (sprite
+  assets/sprites/improvements/cidade_destruida.png, provisório:
+  muralha quebrada, torre caída, vigas queimadas, brasas e
+  fumaça) com "Ruínas de <nome>" embaixo. O território vira terra
+  sem dono; as fazendas e madeireiras viram ruínas sem dono (o
+  mesmo desenho da pilhagem); as obras em andamento se perdem.
+  Ruínas sem dono ficam em scripts/map/ruins_layer.gd (RuinsLayer).
+    * Ninguém reconstrói uma ruína sem dono. Uma cidade fundada
+      depois cujo território pegue a casa fica com a ruína, e aí um
+      Trabalhador dela pode reconstruir.
+    * Não dá para fundar em cima de uma melhoria em ruínas; em cima
+      das ruínas da cidade, pode (as ruínas somem).
+- CAPITAL: se o perdedor perdeu a capital (ocupada ou destruída), a
+  maior cidade que sobrou para ele vira a capital (o território
+  dela não muda). A cidade ocupada só vira capital do novo dono se
+  for a primeira cidade dele.
+- Depois de cada invasão, a vitória é conferida: perde quem ficou
+  sem cidades e sem unidades.
+- Mensagem no topo da tela: "Jogador 2 ocupou Aurora, de Jogador 1
+  (população 9)." / "Jogador 1 saqueou e destruiu Aurora, de
+  Jogador 2: +118 de ouro."
+- A MÁQUINA: depois dos ataques, os soldados de campo que alcançam
+  uma cidade inimiga sem guarnição entram nela; no avanço, as
+  cidades inimigas também são alvo. Ela OCUPA, a não ser que já
+  tenha as cidades que quer (personalidade max_cities): aí saqueia
+  e destrói (AIController.wants_to_raze).
+- O save guarda as ruínas sem dono e quem é dono de cada cidade.
 - Constantes ajustáveis no topo de city.gd: FARM_FOOD,
   CENTER_FOOD, FOOD_PER_CITIZEN, FOOD_BOX_PER_SIZE, MIN_DISTANCE e
   BUILDS (custos).
@@ -1086,6 +1140,9 @@ MOVIMENTO (scripts/map/movement.gd)
   nelas. Uma unidade treinada numa cidade ocupada nasce numa casa
   vizinha livre.
 - Mover para a casa de um inimigo é um ataque (ver COMBATE).
+- Cidade inimiga: só unidades militares entram, e quem entra para
+  ali (não atravessa). Entrar é uma invasão (ver INVASÃO E
+  CONQUISTA).
 - O alcance é calculado por busca de menor custo (Dijkstra). O
   caminho escolhido é sempre um dos mais baratos em movimentos.
   A ordem "Mover" (G) usa a mesma busca, e o número de turnos
@@ -1289,6 +1346,7 @@ CÂMERA E CONTROLES
 - J: o Trabalhador selecionado migra para a cidade (vira 1 de
   população).
 - F5: salvar a partida. F9: carregar (ver SALVAR E CARREGAR).
+- O / S: na janela de invasão, Ocupar ou Saquear e destruir.
 - Enter: confirmar o fim do turno (só depois de aparecer o
   pedido de confirmação).
 
@@ -1387,7 +1445,11 @@ Screenshots também confirmaram o visual.
 [x] Fazendas: construção por produção e alocação de cidadãos
 [x] Janela da cidade (resumo, mapa, construções, obras,
     fazendas)
-[ ] Cidades: atacar, conquistar ou destruir cidades inimigas
+[x] Cidades: invadir, ocupar ou saquear e destruir cidades
+    inimigas (ouro do saque proporcional à população)
+[ ] IA: defender melhor as cidades da invasão (hoje: guarnição e
+    compra de defesa com ouro)
+[ ] Desenho definitivo da cidade em ruínas
 [x] Cidades contam para a vitória (perde quem ficar sem
     unidades e sem cidades)
 [x] Observar a cidade do adversário (janela em modo leitura)
@@ -1443,7 +1505,7 @@ Screenshots também confirmaram o visual.
     (mina, estrada...)
 [x] Cidades: o jogador escolhe o nome ao fundar
 [ ] Cidades: renomear uma cidade já fundada
-[ ] Cidades: impedir que unidades inimigas entrem na cidade
+[x] Cidades: só unidades militares inimigas entram (e invadem)
 [ ] Imagem própria (PNG) para a cidade e a fazenda (hoje são
     desenhadas pelo código)
 [x] Primeiro commit no Git (21/10/2026)
@@ -1835,6 +1897,26 @@ Screenshots também confirmaram o visual.
   linha vermelha, contagem do mapa; unidade na fila não fica
   vermelha; alocar tira o vermelho; pedido com livres não fica
   vermelho), mais screenshots da janela e do mapa.
+- Backlog: orientação de prioridades da cidade (Alimentos,
+  Impostos ou Recursos) para guiar a realocação automática.
+- INVASÃO E CONQUISTA (decisões do usuário): unidade militar que
+  entra numa cidade inimiga sem guarnição escolhe entre Ocupar (a
+  cidade muda de dono, perde 1 de população e a fila) e Saquear e
+  destruir (ouro do saque = tesouro do dono x população da cidade
+  / população do império, tirado do dono; a cidade vira ruínas,
+  com sprite novo, e as melhorias viram ruínas sem dono). Colonos
+  e Trabalhadores não entram em cidade inimiga; ninguém atravessa
+  uma. Capital perdida passa para a maior cidade que sobrou. A
+  máquina invade cidades sem guarnição, avança contra as cidades
+  inimigas e ocupa (ou destrói, se já tem max_cities).
+- Validação: teste com 34 verificações (ouro do saque, cidade
+  vazia, movimento de Colono e Cavaleiro, ocupação pela máquina
+  com perda de população, fila, território e nova capital do
+  perdedor, saque e destruição com o ouro dos dois lados, ruínas e
+  território sem dono, cidade nova herdando a ruína, janela do
+  humano com o valor do saque, guarnição derrotada antes da
+  invasão, save, fase de invasão da máquina), mais screenshots da
+  janela e das ruínas.
 
 
 --------------------------------------------------------------
@@ -1855,12 +1937,25 @@ histórico):
        casa; fora do território só o Trabalhador constrói, e só
        madeireira)
 
-[ ] INVASÃO E CONQUISTA DE CIDADES (em breve)
-    - Atacar a cidade e a guarnição dela; conquistar (a cidade
-      muda de dono, com o território) ou destruir.
-    - A decidir: o que acontece com a população, os prédios, as
-      obras e as melhorias; se a capital conquistada passa a
-      capital para outra cidade.
+[x] INVASÃO E CONQUISTA DE CIDADES (22/10/2026; decisões: ouro
+    do saque sai do perdedor, proporcional à população; ocupar
+    custa 1 de população e a fila; destruir deixa ruínas sem dono;
+    só unidades militares invadem). Ideias para depois:
+    - muralha (prédio) que dá defesa à guarnição;
+    - resistência/insatisfação na cidade recém-ocupada;
+    - libertar uma cidade ocupada de volta para o dono original.
+
+[ ] ORIENTAÇÃO DE PRIORIDADES DA CIDADE
+    - Cada cidade escolhe um foco: ALIMENTOS, IMPOSTOS ou RECURSOS
+      (madeira e, no futuro, outros recursos estratégicos).
+    - A realocação automática dos cidadãos liberados (hoje: obra
+      da fila > fazendas > madeireiras > impostos) passa a seguir
+      o foco. Ex.: foco em Impostos manda os livres para a
+      Marcenaria antes das fazendas; foco em Recursos, para as
+      madeireiras.
+    - A decidir: onde escolher (janela da cidade, um seletor no
+      resumo); se o foco também vale ao pedir obras novas e para a
+      máquina (as personalidades poderiam usar).
 
 [ ] CRESCIMENTO DO TERRITÓRIO
     - Hoje o território fica do tamanho que nasceu.
