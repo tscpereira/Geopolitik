@@ -10,6 +10,8 @@ extends CanvasLayer
 
 ## Botão de ação da unidade clicado; [param action_id] vem de set_unit_actions.
 signal action_pressed(action_id: String)
+## Clique no painel de Ciência: abrir a escolha da pesquisa.
+signal research_pressed
 
 ## Tempo que uma mensagem fica na tela antes de sumir.
 const MESSAGE_TIME := 3.0
@@ -34,6 +36,7 @@ const MESSAGE_TIME := 3.0
 @onready var notice_dialog: NoticeDialog = $NoticeDialog
 @onready var save_dialog: SaveDialog = $SaveDialog
 @onready var invasion_dialog: InvasionDialog = $InvasionDialog
+@onready var research_dialog: ResearchDialog = $ResearchDialog
 
 var _prompt_tween: Tween
 var _message_tween: Tween
@@ -47,6 +50,11 @@ var _shown_wood_rate := 0
 ## Linha de cada arma no painel Arsenal: {Arsenal.Weapon: RichTextLabel}.
 var _weapon_labels := {}
 var _shown_arsenal := {}
+## Painel Ciência (ver _build_science_panel).
+var _science_label: RichTextLabel
+var _research_label: Label
+var _research_bar: ProgressBar
+var _shown_science := []
 
 
 func _ready() -> void:
@@ -56,6 +64,7 @@ func _ready() -> void:
 		LumberMill.draw_icon(_wood_icon, Rect2(Vector2.ZERO, _wood_icon.size)))
 	_wood_icon.tooltip_text = "Madeira: vem das madeireiras na floresta (1 por trabalhador por turno)."
 	_build_arsenal_rows()
+	_build_science_panel()
 
 
 ## Uma linha por arma no painel Arsenal: ícone + "Lanças N".
@@ -79,6 +88,90 @@ func _build_arsenal_rows() -> void:
 		label.add_theme_font_size_override("normal_font_size", 18)
 		row.add_child(label)
 		_weapon_labels[weapon] = label
+
+
+## Painel Ciência (à esquerda do Arsenal): ciência por turno e a pesquisa em
+## andamento com a barra de progresso. Clicar nele abre a escolha da pesquisa.
+func _build_science_panel() -> void:
+	var panel := PanelContainer.new()
+	panel.name = "SciencePanel"
+	panel.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
+	panel.add_theme_stylebox_override("panel", $TopRight/ArsenalPanel.get_theme_stylebox("panel"))
+	panel.mouse_filter = Control.MOUSE_FILTER_STOP
+	panel.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+	panel.tooltip_text = "Ciência: as Prefeituras geram pontos que vão para a pesquisa escolhida (não se acumulam). Clique para escolher ou trocar a pesquisa."
+	panel.gui_input.connect(func(event: InputEvent) -> void:
+		if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
+			research_pressed.emit())
+	$TopRight.add_child(panel)
+	$TopRight.move_child(panel, 0)
+	var box := VBoxContainer.new()
+	box.add_theme_constant_override("separation", 2)
+	box.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	panel.add_child(box)
+	var title := Label.new()
+	title.text = "Ciência"
+	title.add_theme_color_override("font_color", Color(0.75, 0.75, 0.75))
+	title.add_theme_font_size_override("font_size", 13)
+	box.add_child(title)
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 8)
+	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	box.add_child(row)
+	var icon := Control.new()
+	icon.custom_minimum_size = Vector2(28, 28)
+	icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	icon.draw.connect(func() -> void: Icons.draw_science(icon, Rect2(Vector2.ZERO, icon.size)))
+	row.add_child(icon)
+	_science_label = RichTextLabel.new()
+	_science_label.bbcode_enabled = true
+	_science_label.fit_content = true
+	_science_label.scroll_active = false
+	_science_label.autowrap_mode = TextServer.AUTOWRAP_OFF
+	_science_label.custom_minimum_size.x = 200
+	_science_label.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	_science_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_science_label.add_theme_font_size_override("normal_font_size", 18)
+	row.add_child(_science_label)
+	_research_label = Label.new()
+	_research_label.add_theme_font_size_override("font_size", 13)
+	_research_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	box.add_child(_research_label)
+	_research_bar = ProgressBar.new()
+	_research_bar.show_percentage = false
+	_research_bar.custom_minimum_size = Vector2(0, 8)
+	_research_bar.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var background := StyleBoxFlat.new()
+	background.bg_color = Color(0.3, 0.3, 0.33)
+	var fill := StyleBoxFlat.new()
+	fill.bg_color = Icons.SCIENCE_COLOR
+	_research_bar.add_theme_stylebox_override("background", background)
+	_research_bar.add_theme_stylebox_override("fill", fill)
+	box.add_child(_research_bar)
+
+
+## Painel Ciência: "+N por turno" e a pesquisa (nome, progresso/custo, turnos e
+## barra). Sem pesquisa, avisa em laranja que os pontos estão se perdendo.
+func set_science(player: Player) -> void:
+	var per_turn := player.science_per_turn()
+	var key := [per_turn, player.research, player.research_progress.get(player.research, 0)]
+	if key == _shown_science:
+		return
+	_shown_science = key
+	_science_label.text = "[color=#%s]%+d[/color] por turno" % [_rate_color(per_turn).to_html(false), per_turn]
+	if player.research < 0:
+		_research_label.text = "Sem pesquisa: clique para escolher"
+		_research_label.add_theme_color_override("font_color", CityWindow.WARNING_COLOR)
+		_research_bar.visible = false
+		return
+	var done: int = player.research_progress.get(player.research, 0)
+	var turns := player.research_turns()
+	_research_label.text = "%s  %d/%d%s" % [Technology.tech_name(player.research), done, Technology.cost(player.research),
+			"  (%d t)" % turns if turns > 0 else ""]
+	_research_label.add_theme_color_override("font_color", Color.WHITE)
+	_research_bar.visible = true
+	_research_bar.max_value = Technology.cost(player.research)
+	_research_bar.value = done
 
 
 ## Painel Arsenal: armas estocadas e quantas estão em produção. Pisca quando

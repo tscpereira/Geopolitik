@@ -199,6 +199,42 @@ static func draw_corn(canvas: CanvasItem, rect: Rect2) -> void:
 		canvas.draw_polyline(leaf, Color.BLACK, line)
 
 
+## Cor da ciência (HUD, janela da cidade e janela de pesquisa).
+const SCIENCE_COLOR := Color8(110, 200, 255)
+
+
+## Ciência: frasco de laboratório (erlenmeyer) com líquido azul e bolhas.
+static func draw_science(canvas: CanvasItem, rect: Rect2) -> void:
+	var s := rect.size
+	var o := rect.position
+	var line := maxf(1.0, s.x / 14.0)
+	var neck_left := o.x + s.x * 0.4
+	var neck_right := o.x + s.x * 0.6
+	var top := o.y + s.y * 0.1
+	var shoulder := o.y + s.y * 0.42
+	var bottom := o.y + s.y * 0.9
+	var glass := PackedVector2Array([
+		Vector2(neck_left, top), Vector2(neck_right, top), Vector2(neck_right, shoulder),
+		Vector2(o.x + s.x * 0.88, bottom), Vector2(o.x + s.x * 0.12, bottom), Vector2(neck_left, shoulder),
+	])
+	canvas.draw_colored_polygon(glass, Color(0.9, 0.95, 1.0, 0.85))
+	# Líquido: a parte de baixo do frasco
+	var level := o.y + s.y * 0.6
+	var t := (level - shoulder) / (bottom - shoulder)
+	var liquid := PackedVector2Array([
+		Vector2(lerpf(neck_left, o.x + s.x * 0.12, t), level), Vector2(lerpf(neck_right, o.x + s.x * 0.88, t), level),
+		Vector2(o.x + s.x * 0.88, bottom), Vector2(o.x + s.x * 0.12, bottom),
+	])
+	canvas.draw_colored_polygon(liquid, SCIENCE_COLOR)
+	canvas.draw_circle(Vector2(o.x + s.x * 0.45, o.y + s.y * 0.75), s.x * 0.06, Color.WHITE)
+	canvas.draw_circle(Vector2(o.x + s.x * 0.58, o.y + s.y * 0.68), s.x * 0.04, Color.WHITE)
+	var outline := glass.duplicate()
+	outline.append(glass[0])
+	canvas.draw_polyline(outline, Color.BLACK, line)
+	# Boca do frasco
+	canvas.draw_line(Vector2(neck_left - s.x * 0.05, top), Vector2(neck_right + s.x * 0.05, top), Color.BLACK, line * 1.5)
+
+
 ## Retângulo preenchido com contorno preto.
 static func _draw_block(canvas: CanvasItem, block: Rect2, color: Color, line: float) -> void:
 	canvas.draw_rect(block, color)

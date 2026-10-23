@@ -75,6 +75,16 @@ func play_turn(game: Game, player: Player) -> void:
 		await _pillage_phase(game, player)
 
 
+## Escolhe a próxima pesquisa: a tecnologia disponível mais barata (as
+## personalidades científica e cultural vão escolher de outro jeito).
+static func choose_research(player: Player) -> void:
+	var options := Technology.available(player.researched)
+	if options.is_empty():
+		return
+	options.sort_custom(func(a: int, b: int) -> bool: return Technology.cost(a) < Technology.cost(b))
+	player.research = options[0]
+
+
 ## Ao invadir uma cidade: ocupa, a não ser que já tenha as cidades que quer
 ## (personality.max_cities); aí saqueia e destrói.
 static func wants_to_raze(player: Player, _city: City) -> bool:

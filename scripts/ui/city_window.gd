@@ -352,6 +352,10 @@ func _summary_text() -> String:
 		lines.append("Ouro: [color=#%s]+%d[/color] por turno   (impostos da Marcenaria)" % [
 			Icons.GOLD_COLOR.to_html(false), _city.gold_per_turn(),
 		])
+	if _city.science_per_turn() > 0:
+		lines.append("Ciência: [color=#%s]+%d[/color] por turno   (Prefeitura)" % [
+			Icons.SCIENCE_COLOR.to_html(false), _city.science_per_turn(),
+		])
 	lines.append("Produção (força de trabalho): %d por turno   (%d em obras e prédios)" % [
 		_city.production, _city.construction_workers(),
 	])
@@ -557,6 +561,8 @@ func _rebuild_buildings() -> void:
 		var queue := _city.unit_queue(building)
 		if active == null and info.get("idle_gold", 0) > 0:
 			_add_idle_gold_row(building)
+		elif active == null and info.get("idle_science", 0) > 0:
+			_add_idle_science_row(building)
 		elif queue.is_empty():
 			var empty := _make_muted("          Nada em produção.")
 			empty.add_theme_font_size_override("font_size", 13)
@@ -593,6 +599,42 @@ func _add_idle_gold_row(building: int) -> void:
 	status.add_theme_color_override("font_color", Icons.GOLD_COLOR if workers > 0 else MUTED_COLOR)
 	row.add_child(status)
 	_add_worker_controls(row, workers, workers + _city.free_citizens(),
+			func(value: int) -> void: _city.set_building_workers(building, value))
+	var x_space := Control.new()
+	x_space.custom_minimum_size.x = 30 # alinha com o X das outras linhas
+	row.add_child(x_space)
+
+
+## Prédio que gera ciência parado (Prefeitura sem unidades na fila): até
+## idle_max_workers cidadãos, +idle_science de ciência cada por turno, além da
+## ciência que o prédio gera sozinho.
+func _add_idle_science_row(building: int) -> void:
+	var info: Dictionary = City.BUILDS[building]
+	var workers: int = _city.building_workers.get(building, 0)
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 6)
+	row.mouse_filter = Control.MOUSE_FILTER_STOP
+	row.tooltip_text = wrap_tooltip("Sem unidades na fila: até %d cidadãos estudam e pesquisam (+%d de ciência cada por turno). A %s já gera +%d sozinha." % [
+		City.idle_max_workers(building), info["idle_science"], String(info["name"]).to_lower(), info.get("science", 0)])
+	_buildings_box.add_child(row)
+	var indent := Control.new()
+	indent.custom_minimum_size.x = UNIT_INDENT
+	row.add_child(indent)
+	var icon := Control.new()
+	icon.custom_minimum_size = Vector2.ONE * Icons.ICON_SIZE
+	icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	icon.draw.connect(func() -> void: Icons.draw_science(icon, Rect2(Vector2.ZERO, icon.size)))
+	row.add_child(icon)
+	var label := Label.new()
+	label.text = "Pesquisa (sem unidades na fila)"
+	label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	row.add_child(label)
+	var status := Label.new()
+	status.text = "+%d ciência" % (info.get("science", 0) + workers * info["idle_science"])
+	status.custom_minimum_size.x = 120
+	status.add_theme_color_override("font_color", Icons.SCIENCE_COLOR)
+	row.add_child(status)
+	_add_worker_controls(row, workers, mini(City.idle_max_workers(building), workers + _city.free_citizens()),
 			func(value: int) -> void: _city.set_building_workers(building, value))
 	var x_space := Control.new()
 	x_space.custom_minimum_size.x = 30 # alinha com o X das outras linhas

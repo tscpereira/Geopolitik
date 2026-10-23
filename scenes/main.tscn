@@ -1,4 +1,4 @@
-[gd_scene load_steps=15 format=3]
+[gd_scene load_steps=16 format=3]
 
 [ext_resource type="Script" path="res://scripts/main.gd" id="1"]
 [ext_resource type="Script" path="res://scripts/map/game_map.gd" id="2"]
@@ -12,6 +12,7 @@
 [ext_resource type="Script" path="res://scripts/map/territory_overlay.gd" id="10"]
 [ext_resource type="Script" path="res://scripts/map/ruins_layer.gd" id="11"]
 [ext_resource type="Script" path="res://scripts/ui/invasion_dialog.gd" id="12"]
+[ext_resource type="Script" path="res://scripts/ui/research_dialog.gd" id="13"]
 
 [sub_resource type="StyleBoxFlat" id="PanelStyle"]
 bg_color = Color(0, 0, 0, 0.6)
@@ -264,6 +265,16 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 script = ExtResource("12")
+
+[node name="ResearchDialog" type="Control" parent="HUD"]
+visible = false
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("13")
 
 [node name="VictoryScreen" type="ColorRect" parent="HUD"]
 visible = false

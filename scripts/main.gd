@@ -48,6 +48,9 @@ var _goto_mode := false
 ## Madeireira remota selecionada (clique nela): a barra de ações mostra
 ## "Retirar trabalhador". Só uma coisa fica selecionada: unidade ou madeireira.
 var _selected_mill: LumberMill = null
+## Tecnologia que o humano terminou de pesquisar neste início de turno (-1 =
+## nenhuma): depois dos avisos, a janela pede a próxima pesquisa.
+var _research_done := -1
 ## Dono de cada casa de território: {casa: City} (ver refresh_territories).
 var _territory := {}
 ## Construções concluídas nas cidades do humano neste início de turno, à espera
@@ -77,6 +80,7 @@ func _ready() -> void:
 	_spawn_example_units()
 
 	hud.action_pressed.connect(_on_unit_action)
+	hud.research_pressed.connect(_on_research_pressed)
 	hud.city_window.closed.connect(_on_city_window_closed)
 	TurnManager.turn_started.connect(_on_turn_started)
 	TurnManager.start_game(players)
@@ -97,7 +101,7 @@ func _unhandled_input(event: InputEvent) -> void:
 			and event.keycode in [KEY_ENTER, KEY_KP_ENTER])
 	var key: int = event.keycode if event is InputEventKey and event.pressed and not event.echo else KEY_NONE
 	if (hud.city_window.visible or hud.city_name_dialog.visible or hud.notice_dialog.visible
-			or hud.save_dialog.visible or hud.invasion_dialog.visible):
+			or hud.save_dialog.visible or hud.invasion_dialog.visible or hud.research_dialog.visible):
 		return # as janelas cuidam dos próprios cliques e teclas
 	if key == KEY_F9 and not _is_busy:
 		_open_save_dialog(false) # carregar também vale na tela de vitória
@@ -114,7 +118,7 @@ func _unhandled_input(event: InputEvent) -> void:
 
 	if is_enter:
 		if _awaiting_end_turn:
-			TurnManager.end_turn()
+			_end_human_turn()
 	elif event is InputEventMouseButton:
 		# Clique esquerdo vale ao soltar o botão: se o mouse foi arrastado, a
 		# MapCamera moveu o mapa e consumiu o evento antes de chegar aqui.
@@ -1204,6 +1208,7 @@ func _on_turn_started(player: Player, turn_number: int) -> void:
 	_process_cities(player)
 	_process_lumber_mills(player)
 	_process_rebuilds(player)
+	_process_research(player)
 	if player.is_ai:
 		_play_ai_turn(player)
 	else:
@@ -1221,6 +1226,11 @@ func _start_human_turn(player: Player, autosave := true) -> void:
 			push_warning("Salvamento automático falhou (%s)." % error_string(error))
 	await _run_goto_orders(player)
 	await _show_completion_notices()
+	if _research_done >= 0 and not game_over:
+		# Pesquisa concluída no início da vez: escolher a próxima
+		var done := _research_done
+		_research_done = -1
+		await _choose_research(player, "Pesquisa concluída: %s" % Technology.tech_name(done))
 	_is_busy = false
 	if game_over:
 		return
@@ -1346,6 +1356,61 @@ func _process_rebuilds(player: Player) -> void:
 		hud.show_message("\n".join(messages), Color(0.75, 1, 0.75))
 
 
+## Início da vez do jogador: a ciência das Prefeituras vai para a pesquisa
+## (Player.advance_research). A máquina escolhe sozinha a próxima pesquisa;
+## o humano escolhe numa janela depois dos avisos (ver _start_human_turn).
+func _process_research(player: Player) -> void:
+	if player.is_ai and player.research < 0:
+		AIController.choose_research(player)
+	var done := player.advance_research()
+	if done < 0:
+		return
+	print("%s pesquisou %s" % [player.display_name, Technology.tech_name(done)])
+	if player.is_ai:
+		AIController.choose_research(player)
+	else:
+		_research_done = done
+		hud.show_message("Pesquisa concluída: %s!" % Technology.tech_name(done), Icons.SCIENCE_COLOR)
+
+
+## Enter com o turno terminado: se o jogador já tem cidade e não escolheu uma
+## pesquisa, a janela de pesquisa aparece antes (os pontos de ciência se
+## perderiam). Depois a vez passa.
+func _end_human_turn() -> void:
+	var player := TurnManager.current_player()
+	if player.research < 0 and not player.cities.is_empty() and not Technology.available(player.researched).is_empty():
+		_awaiting_end_turn = false
+		await _choose_research(player)
+		if game_over or TurnManager.current_player() != player:
+			return
+	TurnManager.end_turn()
+
+
+## Janela de pesquisa: o jogador escolhe a próxima tecnologia. Sem pesquisa em
+## andamento, não dá para fechar sem escolher.
+func _choose_research(player: Player, title := "Escolha uma pesquisa") -> void:
+	if Technology.available(player.researched).is_empty():
+		return
+	camera.locked = true
+	hud.research_dialog.open(player, player.research >= 0, title)
+	var tech: int = await hud.research_dialog.closed
+	camera.locked = false
+	if tech >= 0:
+		player.research = tech
+		hud.show_message("Pesquisando %s (%d pontos de ciência)." % [Technology.tech_name(tech), Technology.cost(tech)], Icons.SCIENCE_COLOR)
+
+
+## Clique no painel de Ciência do HUD: escolher ou trocar a pesquisa (só na
+## vez do humano, sem nada acontecendo).
+func _on_research_pressed() -> void:
+	var player := TurnManager.current_player()
+	if _is_busy or game_over or player.is_ai or hud.city_window.visible or hud.research_dialog.visible:
+		return
+	await _choose_research(player)
+	if _awaiting_end_turn:
+		hud.show_end_turn_prompt(true)
+
+
 ## Tira a madeireira do mapa; os trabalhadores voltam ao mapa ao redor dela.
 func _remove_lumber_mill(mill: LumberMill) -> void:
 	while not mill.workers.is_empty():
@@ -1454,6 +1519,7 @@ func restore_state(data: Dictionary) -> void:
 	select_unit(null)
 	_set_goto_mode(false)
 	_completion_notices.clear()
+	_research_done = -1
 	_awaiting_end_turn = false
 	hud.show_end_turn_prompt(false)
 	hud.hide_victory()
@@ -1717,6 +1783,7 @@ func _update_resources() -> void:
 			player = other
 	if player:
 		hud.set_resources(player.gold, player.gold_per_turn(), player.wood, player.wood_per_turn())
+		hud.set_science(player)
 		var in_production := {}
 		for weapon: Arsenal.Weapon in Arsenal.NAMES:
 			in_production[weapon] = player.weapons_in_production(weapon)

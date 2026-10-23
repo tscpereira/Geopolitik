@@ -103,6 +103,10 @@ const CATEGORY_NAMES := {
 ##   weapon      arma que vai para o arsenal ao ficar pronta (só para armas)
 ##   idle_gold   ouro por turno de cada trabalhador do prédio quando não há nada
 ##               em produção nele (impostos; ver gold_per_turn)
+##   science     ciência por turno que o prédio gera sozinho, sem trabalhadores
+##   idle_science ciência por turno de cada trabalhador do prédio quando não há
+##               nada em produção nele (ver science_per_turn)
+##   idle_max_workers  máximo de trabalhadores no prédio parado (ciência)
 ##   requires    prédio que produz a unidade ou a arma (a cidade precisa tê-lo)
 ##   native      prédio que toda cidade já tem ao nascer (não aparece na lista)
 ##   description texto explicativo (tooltip da lista de construções)
@@ -143,7 +147,8 @@ const BUILDS := {
 	Build.CITY_HALL: {
 		"name": "Prefeitura", "article": "a", "category": Category.BUILDING,
 		"cost": 0, "gold": 0, "on_tile": false, "native": true,
-		"description": "Toda cidade já nasce com ela. Permite fazer Colonos e Trabalhadores.",
+		"science": 1, "idle_science": 1, "idle_max_workers": 2,
+		"description": "Toda cidade já nasce com ela. Faz Colonos e Trabalhadores. Gera 1 de ciência; parada, até 2 cidadãos geram +1 cada.",
 	},
 	Build.HEADQUARTERS: {
 		"name": "Quartel General", "article": "o", "category": Category.BUILDING,
@@ -655,6 +660,26 @@ func gold_per_turn() -> int:
 	return total
 
 
+## Ciência por turno: cada prédio com "science" gera sozinho (a Prefeitura, 1)
+## e, parado (sem nada na fila), cada trabalhador dele gera "idle_science"
+## (Prefeitura: até 2 cidadãos, +1 cada). Cidade vazia não gera nada.
+func science_per_turn() -> int:
+	if population <= 0:
+		return 0
+	var total := 0
+	for building in buildings:
+		total += BUILDS[building].get("science", 0)
+		if active_unit(building) == null:
+			total += building_workers.get(building, 0) * BUILDS[building].get("idle_science", 0)
+	return total
+
+
+## Máximo de trabalhadores no prédio parado: "idle_max_workers" para a ciência
+## da Prefeitura; sem limite (-1) nos outros.
+static func idle_max_workers(building: int) -> int:
+	return BUILDS[building].get("idle_max_workers", -1)
+
+
 func farm_workers() -> int:
 	var total := 0
 	for workers: int in farms.values():
@@ -853,9 +878,13 @@ func set_construction_workers(construction: Construction, workers: int) -> void:
 
 
 ## Cidadãos no prédio (limitado aos livres).
+## No prédio parado com limite (Prefeitura, ciência), no máximo idle_max_workers.
 func set_building_workers(building: int, workers: int) -> void:
 	var current: int = building_workers.get(building, 0)
-	building_workers[building] = clampi(workers, 0, current + free_citizens())
+	var limit := current + free_citizens()
+	if active_unit(building) == null and idle_max_workers(building) >= 0:
+		limit = mini(limit, idle_max_workers(building))
+	building_workers[building] = clampi(workers, 0, limit)
 	_notify_changed()
 
 
@@ -891,10 +920,12 @@ func process_turn(spawn_unit: Callable) -> Array[String]:
 	# paga os impostos. Depois as prontas são resolvidas.
 	owner_player.gold += gold_per_turn()
 	var advancing := {}
+	var producing: Array[int] = [] # prédios com algo na fila no começo do turno
 	for building in buildings:
 		var active := active_unit(building)
 		if active:
 			advancing[active] = building_workers.get(building, 0)
+			producing.append(building)
 	for construction in constructions:
 		var workers: int = advancing.get(construction, 0) if construction.is_produced() else construction.workers
 		construction.progress = mini(construction.progress + workers, construction.cost())
@@ -931,9 +962,11 @@ func process_turn(spawn_unit: Callable) -> Array[String]:
 			events.append("%s pronto (população caiu para %d)" % [construction.display_name(), population])
 		else:
 			events.append("%s pronto, mas não há espaço livre ao redor da cidade" % construction.display_name())
-	# Prédio que ficou sem nada na fila libera os trabalhadores (realocados no fim)
+	# Prédio cuja fila acabou neste turno libera os trabalhadores (realocados no
+	# fim), menos o que rende impostos parado. Quem o jogador pôs na Prefeitura
+	# parada (ciência) continua lá.
 	for building: int in building_workers:
-		if active_unit(building) == null and BUILDS[building].get("idle_gold", 0) == 0:
+		if producing.has(building) and active_unit(building) == null and BUILDS[building].get("idle_gold", 0) == 0:
 			building_workers[building] = 0
 
 	for mill_cell: Vector2i in lumber_mills.keys():

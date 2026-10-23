@@ -96,6 +96,8 @@ C:\ProjetoGame
 |   |   |-- ruins_layer.gd         Ruínas sem dono (cidades destruídas)
 |   |   `-- terrain.gdshader       Desenho do mapa com transições
 |   |                              naturais entre os terrenos
+|   |-- science/
+|   |   `-- technology.gd          Árvore de conhecimentos (tecnologias)
 |   |-- save/
 |   |   `-- save_game.gd           Arquivos de save (JSON), versão e
 |   |                              conversões
@@ -126,6 +128,7 @@ C:\ProjetoGame
 |       |-- notice_dialog.gd       Aviso "construção concluída"
 |       |-- save_dialog.gd         Janela de salvar (F5) / carregar (F9)
 |       |-- invasion_dialog.gd     Ocupar / Saquear e destruir
+|       |-- research_dialog.gd     Escolha da pesquisa
 |       |-- icons.gd               Ícones desenhados (moeda de ouro,
 |       |                          construções e unidades)
 |       `-- floating_text.gd       Números de dano flutuantes
@@ -631,7 +634,9 @@ PRÉDIOS (City.buildings)
 - Prédios de hoje:
     Prefeitura       toda cidade nasce com ela ("native"); não
                      aparece na lista. Produz Colonos e
-                     Trabalhadores.
+                     Trabalhadores. Gera 1 de ciência sozinha e,
+                     parada, até 2 cidadãos geram +1 cada (ver
+                     CIÊNCIA E PESQUISA).
     Quartel General  15 de produção + 15 de madeira (ou 50 de
                      ouro + 15 de madeira). Produz as unidades
                      militares (hoje, o Guerreiro).
@@ -1296,6 +1301,54 @@ TURNOS (scripts/autoload/turn_manager.gd)
 - Funções: start_game(jogadores), end_turn(), current_player(),
   to_dict() e restore() (save).
 
+CIÊNCIA E PESQUISA (scripts/science/technology.gd, Player.research)
+- Pontos de ciência são gerados a cada turno, como o ouro, mas
+  NÃO se acumulam: vão direto para a pesquisa escolhida. Sem
+  pesquisa escolhida, os pontos do turno se perdem; a sobra de uma
+  pesquisa concluída também se perde.
+- De onde vem (City.science_per_turn, campos "science",
+  "idle_science" e "idle_max_workers" em City.BUILDS):
+    * cada Prefeitura gera 1 ponto sozinha, sem cidadãos;
+    * com a Prefeitura parada (sem Colono ou Trabalhador na fila),
+      até 2 cidadãos podem pesquisar nela: +1 ponto cada. Na janela
+      da cidade, embaixo da Prefeitura, a linha "Pesquisa (sem
+      unidades na fila)" com - / +. Com uma unidade na fila, eles
+      passam a produzir a unidade (como os impostos da Marcenaria);
+      quando a fila acaba, são realocados (ver Realocação
+      automática). Quem o jogador põe na Prefeitura parada continua
+      lá de um turno para o outro;
+    * cidade vazia não gera ciência.
+  O resumo da janela da cidade mostra "Ciência: +N por turno".
+- ÁRVORE DE CONHECIMENTOS (Technology.DATA): cada tecnologia tem
+  nome, custo em pontos de ciência e as tecnologias que ela exige
+  ("requires"). Fica disponível quando todas as exigidas estão
+  pesquisadas (como no Civilization e no Age of Empires). As
+  primeiras, sem exigências:
+      Construção  30 pontos
+      Misticismo  20 pontos
+      Alfabeto    40 pontos
+  O que cada uma libera no jogo ainda vai ser definido.
+- JANELA DE PESQUISA (scripts/ui/research_dialog.gd): as
+  tecnologias disponíveis, cada uma com o custo, os pontos já
+  feitos, a estimativa de turnos e o botão "Pesquisar"; embaixo, a
+  ciência por turno e as já pesquisadas. A descrição fica no
+  tooltip. Aparece:
+    * ao finalizar o turno (Enter) com pelo menos uma cidade e sem
+      pesquisa escolhida: a vez só passa depois da escolha (é o
+      "fim do primeiro turno com a primeira cidade");
+    * no início da vez seguinte a uma pesquisa concluída (título
+      "Pesquisa concluída: <nome>", depois dos avisos de
+      construção concluída);
+    * ao clicar no painel Ciência do HUD (para trocar).
+  Sem pesquisa em andamento não dá para fechar sem escolher; para
+  trocar, Esc ou "Fechar" fecham. Trocar de pesquisa não perde o
+  progresso: cada tecnologia guarda os pontos que já recebeu.
+- A pesquisa avança no início da vez do jogador, depois das
+  cidades (Game._process_research).
+- A MÁQUINA escolhe sozinha a tecnologia disponível mais barata
+  (AIController.choose_research). Ela ainda não põe cidadãos
+  pesquisando na Prefeitura.
+
 SALVAR E CARREGAR (scripts/save/save_game.gd)
 - F5: janela "Salvar partida", com 5 espaços. Cada linha mostra o
   que está guardado ("Turno 12, vez do Jogador 1 - 22/10/2026
@@ -1320,7 +1373,8 @@ SALVAR E CARREGAR (scripts/save/save_game.gd)
 - O que é salvo: turno e vez (TurnManager), terreno de cada casa
   (florestas que viraram cerrado ou pradaria) e a madeira que
   resta em cada floresta (GameMap), e cada jogador (Player) com
-  ouro, madeira, arsenal, personalidade da máquina e "turnos
+  ouro, madeira, arsenal, tecnologias pesquisadas, pesquisa atual
+  e o progresso de cada uma, personalidade da máquina e "turnos
   esperando" dela; as unidades (Unit: tipo, casa, movimentos,
   energia, fortificada, escondida na cidade, ordem "Mover",
   reconstruindo); as madeireiras remotas (LumberMill: progresso,
@@ -1387,7 +1441,10 @@ HUD (scripts/ui/hud.gd)
   militar numa fazenda ou madeireira pronta), "Mover [G]",
   "Fortificar [F]" e "Pular turno [Espaço]" (todas). Com uma
   madeireira remota selecionada: "Retirar trabalhador".
-- Canto superior direito: painel ARSENAL (armas; ver ARSENAL),
+- Canto superior direito: painel CIÊNCIA (frasco, "+N por
+  turno", a pesquisa atual com progresso/custo, turnos e barra;
+  clique para escolher ou trocar; ver CIÊNCIA E PESQUISA), painel
+  ARSENAL (armas; ver ARSENAL),
   "Ouro N +N por turno" (tesouro, com a moeda; ver
   OURO) e, abaixo, o painel "Recursos estratégicos" (ver
   RECURSOS ESTRATÉGICOS E MADEIRA). Os números piscam em verde ou
@@ -1965,6 +2022,23 @@ Screenshots também confirmaram o visual.
 - Janela de invasão mais enxuta: só o título e os botões "Ocupar"
   e "Saquear e destruir"; a explicação e o ouro do saque foram
   para o tooltip de cada botão. Teste da conquista passou.
+- CIÊNCIA (decisões do usuário): a Prefeitura gera 1 ponto de
+  ciência sozinha e até 2 cidadãos geram +1 cada; os pontos não se
+  acumulam, vão para a pesquisa. Árvore de conhecimentos com
+  Construção (30), Misticismo (20) e Alfabeto (40). Janela de
+  escolha ao finalizar o turno com a primeira cidade e a cada
+  pesquisa concluída; painel Ciência no HUD com a pesquisa e a
+  barra. A máquina pesquisa a mais barata.
+- Mudança de regra: a Prefeitura (e outros prédios sem impostos)
+  só libera os cidadãos no turno em que a fila acaba; quem o
+  jogador põe pesquisando na Prefeitura parada continua lá.
+- Validação: teste com 30 verificações (ciência da Prefeitura e
+  dos pesquisadores, limite de 2, unidade na fila, cidade vazia,
+  HUD, janela ao finalizar o turno com as 3 opções e custos, sem
+  fechar, turno passa depois da escolha, máquina escolhe a mais
+  barata, trocar sem perder progresso, conclusão e sobra perdida,
+  janela "Pesquisa concluída", save, janela da cidade), mais
+  screenshots da janela, do HUD e da cidade.
 
 
 --------------------------------------------------------------
@@ -2034,7 +2108,14 @@ histórico):
 [ ] Personalidades da máquina em jogo (já existem como dados):
     expansionista, econômica (crescimento), defensiva; depois
     científica e cultural
-[ ] Ciência (pesquisa, tecnologias)
+[x] Ciência: pontos das Prefeituras, árvore de conhecimentos,
+    janela de pesquisa e painel no HUD (22/10/2026)
+[ ] Ciência: o que cada tecnologia libera (prédios, unidades,
+    melhorias) e mais tecnologias na árvore
+[ ] Ciência: tela da árvore inteira (com as tecnologias futuras e
+    as ligações entre elas)
+[ ] IA: pôr cidadãos pesquisando na Prefeitura; escolher pesquisas
+    pela personalidade
 [ ] Cultura
 [ ] Diplomacia (paz, guerra, acordos entre jogadores)
 [ ] Escolher a personalidade de cada jogador máquina ao começar
