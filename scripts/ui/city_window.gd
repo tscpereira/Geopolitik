@@ -24,6 +24,9 @@ const MUTED_COLOR := Color(0.75, 0.75, 0.75)
 const WARNING_COLOR := Color(1, 0.6, 0.4)
 const POSITIVE_COLOR := Color(0.45, 1, 0.45)
 const NEGATIVE_COLOR := Color(1, 0.4, 0.35)
+## Obra parada por falta de mão de obra: fundo da barra e explicação.
+const NEEDS_WORKERS_BAR_COLOR := Color(0.55, 0.15, 0.13)
+const NEEDS_WORKERS_TIP := "Ninguém está trabalhando nesta obra, então ela não avança. Use + para alocar cidadãos livres; se não houver, tire alguns de uma fazenda, madeireira ou dos impostos (botão -)."
 const RIGHT_COLUMN_WIDTH := 620
 ## Largura do controle "- N trab. +" (para alinhar o X das linhas sem ele).
 const WORKER_CONTROLS_WIDTH := 124
@@ -354,6 +357,10 @@ func _summary_text() -> String:
 	])
 	if food < 0:
 		lines.append("[color=#%s]Atenção: a cidade está consumindo mais alimento do que produz![/color]" % NEGATIVE_COLOR.to_html(false))
+	var stalled := _city.stalled_count()
+	if stalled > 0:
+		lines.append("[color=#%s]%d %s sem mão de obra: aloque cidadãos com + (veja as linhas em vermelho).[/color]" % [
+			NEGATIVE_COLOR.to_html(false), stalled, "obra parada" if stalled == 1 else "obras paradas"])
 	if _city.population <= 0:
 		lines.append("[color=#%s]Cidade vazia: não produz nem cresce. Um Trabalhador de outra cidade pode migrar para ela (tecla J).[/color]" % NEGATIVE_COLOR.to_html(false))
 	if not _city.ruins.is_empty():
@@ -489,7 +496,15 @@ func _choose_build(build: int) -> void:
 	if City.BUILDS[build]["on_tile"]:
 		_start_pick(build)
 	else:
-		_city.order_build(build)
+		_warn_if_needs_workers(_city.order_build(build))
+
+
+## Obra recém-pedida que ficou sem ninguém trabalhando: aviso em vermelho no
+## topo da tela (a linha dela também fica vermelha).
+func _warn_if_needs_workers(construction: City.Construction) -> void:
+	if _city.needs_workers(construction):
+		_game.hud.show_message("%s sem mão de obra: aloque cidadãos (botão +) para %s avançar." % [
+			construction.display_name(), "ela" if City.BUILDS[construction.build]["article"] == "a" else "ele"], NEGATIVE_COLOR)
 
 
 ## Botão da moeda: compra na hora com ouro (ver Game.buy_build).
@@ -631,6 +646,14 @@ func _add_construction_row(box: VBoxContainer, construction: City.Construction, 
 		status.text = "na fila"
 		status.tooltip_text = "Espera a unidade da frente ficar pronta; os trabalhadores do prédio passam para ela."
 		status.add_theme_color_override("font_color", MUTED_COLOR)
+	elif _city.needs_workers(construction):
+		# Parada: ninguém trabalhando nela. Vermelho até o jogador alocar cidadãos
+		status.text = "%d/%d sem mão de obra" % [construction.progress, construction.cost()]
+		status.tooltip_text = NEEDS_WORKERS_TIP
+		status.add_theme_color_override("font_color", NEGATIVE_COLOR)
+		name_label.add_theme_color_override("font_color", NEGATIVE_COLOR)
+		bar.add_theme_stylebox_override("background", _bar_style(NEEDS_WORKERS_BAR_COLOR))
+		bar.tooltip_text = NEEDS_WORKERS_TIP
 	row.add_child(status)
 
 	if with_workers:
@@ -789,7 +812,7 @@ func _on_cell_picked(cell: Vector2i) -> void:
 	var build := _picking
 	_picking = -1
 	_map_view.set_pick_cells([])
-	_city.order_build(build, cell)
+	_warn_if_needs_workers(_city.order_build(build, cell))
 
 
 # --- Auxiliares -------------------------------------------------------------

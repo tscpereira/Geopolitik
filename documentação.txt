@@ -717,6 +717,22 @@ MARCENARIA E IMPOSTOS (campo "idle_gold" em City.BUILDS)
   perde 1 de população (nunca fica abaixo de 1). Quem perde o
   trabalho primeiro são os cidadãos das obras, depois os das
   madeireiras e por último os das fazendas.
+- OBRA SEM MÃO DE OBRA (City.needs_workers): obra, unidade ou arma
+  que não terminou, é a vez dela (unidades: a da frente da fila do
+  prédio) e ninguém trabalha nela. Ela fica parada e aparece em
+  VERMELHO:
+    * na janela da cidade: nome, barra e "0/5 sem mão de obra" em
+      vermelho (tooltip explica: use +; sem livres, tire de uma
+      fazenda, madeireira ou dos impostos), e uma linha no resumo
+      ("1 obra parada sem mão de obra");
+    * ao pedir a obra sem ninguém livre: mensagem vermelha no topo
+      ("Trabalhador sem mão de obra: aloque cidadãos (botão +)
+      para ele avançar.");
+    * no mapa: se a cidade não tem ninguém livre e tem obras
+      paradas, aparece acima dela um "!" VERMELHO com o número de
+      obras paradas (City.STALLED_COLOR). Com cidadãos livres, o
+      "!" azul de sempre (basta alocá-los).
+  Unidades esperando na fila atrás de outra não ficam vermelhas.
 - Quando: as cidades são processadas no início da vez do dono.
   A ordem é: primeiro as obras avançam, depois as madeireiras
   tiram madeira e por fim o alimento é somado. A cidade fundada
@@ -724,10 +740,15 @@ MARCENARIA E IMPOSTOS (campo "idle_gold" em City.BUILDS)
 - Realocação automática (para evitar cidadãos ociosos): no fim do
   turno da cidade, quem ficou livre naquele turno vai trabalhar
   na primeira obra da fila que ainda não terminou. Isso vale para
-  os trabalhadores de uma obra concluída e para o cidadão novo do
+  os trabalhadores de uma obra concluída, de uma unidade pronta
+  (quando a fila do prédio acaba) e para o cidadão novo do
   crescimento. Sem obras na fila, eles vão para fazendas sem
-  trabalhador (1 por fazenda) e depois para madeireiras com vaga
-  (até 2 por madeireira). Se não houver vaga, ficam livres.
+  trabalhador (1 por fazenda), depois para madeireiras com vaga
+  (até 2 por madeireira) e, por fim, para os IMPOSTOS de um prédio
+  parado que rende ouro (Marcenaria sem armas na fila, +1 de ouro
+  por cidadão). Só ficam livres se a cidade não tiver nada disso.
+  (As madeireiras vêm antes dos impostos porque têm no máximo 2
+  vagas; os impostos aceitam qualquer número.)
   O mesmo vale ao cancelar uma obra (X) e quando a floresta de
   uma madeireira acaba.
 - Quem o jogador deixar livre de propósito (botão "-") continua
@@ -737,7 +758,8 @@ MARCENARIA E IMPOSTOS (campo "idle_gold" em City.BUILDS)
   alimentos) um círculo azul com "!" e, à direita, a quantidade
   de livres (ex.: "! 2"). Some quando todos estão trabalhando.
   Só aparece nas cidades do jogador humano (City.IDLE_COLOR,
-  City._draw_idle_warning).
+  City._draw_idle_warning). Sem ninguém livre mas com obras
+  paradas, o "!" fica vermelho (ver OBRA SEM MÃO DE OBRA).
 - AVISO DE CONSTRUÇÃO CONCLUÍDA: no início da sua vez, para cada
   construção concluída numa cidade sua (melhoria pronta ou
   unidade que saiu da cidade), aparece um aviso:
@@ -1444,6 +1466,12 @@ Screenshots também confirmaram o visual.
 [x] Passar casas entre cidades do mesmo jogador (clique na casa
     vermelha da janela da cidade; a melhoria vem junto)
 [ ] IA: redistribuir casas entre as próprias cidades
+[x] Realocação automática também para os impostos (Marcenaria
+    parada) quando não há obra, fazenda nem madeireira com vaga
+[x] Obra sem mão de obra em vermelho (janela, mensagem e "!"
+    vermelho no mapa)
+[ ] Ao pedir uma obra sem cidadãos livres, tirar automaticamente
+    quem está nos impostos? (a decidir)
 
 
 --------------------------------------------------------------
@@ -1796,6 +1824,17 @@ Screenshots também confirmaram o visual.
   capital; sem vermelho no modo observação; save), mais
   screenshots antes e depois. Testes de território, pilhagem,
   save, prédios, fazendas e avisos passaram de novo.
+- Força de trabalho: quem fica livre (obra concluída, unidade
+  pronta, obra cancelada) vai para a próxima obra, fazendas,
+  madeireiras e, agora, para os impostos da Marcenaria parada.
+  Obras sem ninguém trabalhando ficam em vermelho na janela da
+  cidade, com mensagem ao pedir e um "!" vermelho no mapa.
+- Validação: teste com 18 verificações (Quartel pronto -> impostos;
+  fazenda sem trabalhador antes dos impostos; unidade pronta ->
+  impostos; pedido sem livres: obra parada, mensagem, resumo,
+  linha vermelha, contagem do mapa; unidade na fila não fica
+  vermelha; alocar tira o vermelho; pedido com livres não fica
+  vermelho), mais screenshots da janela e do mapa.
 
 
 --------------------------------------------------------------

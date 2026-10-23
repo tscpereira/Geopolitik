@@ -197,6 +197,8 @@ const FOOD_BAR_HEIGHT := GameMap.TILE_SIZE / 8.0
 
 ## Aviso de trabalhadores ociosos (acima da cidade): "!" azul + quantidade.
 const IDLE_COLOR := Color(0.25, 0.55, 1.0)
+## Aviso de obras paradas sem mão de obra (e ninguém livre): "!" vermelho.
+const STALLED_COLOR := Color(0.9, 0.2, 0.15)
 const IDLE_ICON_RADIUS := GameMap.TILE_SIZE * 0.22
 const IDLE_FONT_SIZE := int(GameMap.TILE_SIZE * 0.4)
 
@@ -703,6 +705,17 @@ func turns_to_grow() -> int:
 	return maxi(1, ceili(float(food_capacity() - food_stock) / surplus))
 
 
+## Obra parada por falta de mão de obra: não terminou, é a vez dela (unidades
+## e armas: a da frente da fila do prédio) e ninguém trabalha nela. A janela
+## da cidade a mostra em vermelho.
+func needs_workers(construction: Construction) -> bool:
+	if construction.is_done():
+		return false
+	if construction.is_produced() and active_unit(construction.producer()) != construction:
+		return false # na fila: espera a da frente
+	return workers_on(construction) <= 0
+
+
 ## Turnos até a obra terminar (0 = pronta), ou -1 se ninguém está trabalhando nela.
 func turns_to_finish(construction: Construction) -> int:
 	if construction.is_done():
@@ -942,7 +955,8 @@ func _complete_at(build: int, target: Vector2i) -> void:
 
 ## Evita cidadãos ociosos: põe até [param count] cidadãos livres na primeira
 ## obra da fila que ainda não terminou; se não houver obra, nas fazendas sem
-## trabalhador e depois nas madeireiras com vaga. O que sobrar fica livre.
+## trabalhador, depois nas madeireiras com vaga e, por fim, num prédio que
+## rende impostos parado (Marcenaria sem armas na fila). O que sobrar fica livre.
 func _assign_free_citizens(count: int) -> void:
 	count = mini(count, free_citizens())
 	if count <= 0:
@@ -964,6 +978,12 @@ func _assign_free_citizens(count: int) -> void:
 		var added := mini(count, LumberMill.MAX_WORKERS - lumber_mills[mill_cell])
 		lumber_mills[mill_cell] += added
 		count -= added
+	if count <= 0:
+		return
+	for building in buildings:
+		if BUILDS[building].get("idle_gold", 0) > 0 and active_unit(building) == null:
+			building_workers[building] = building_workers.get(building, 0) + count
+			return
 
 
 ## Depois de perder população, tira trabalhadores (primeiro das obras, depois
@@ -1028,7 +1048,10 @@ func _draw() -> void:
 	draw_city_icon(self, Rect2(-tile / 2.0, tile).grow(-MARGIN), owner_player.color, population, FONT_SIZE)
 	_draw_food_bar(Rect2(-tile / 2.0, tile).grow(-MARGIN))
 	if free_citizens() > 0 and not owner_player.is_ai:
-		_draw_idle_warning(Rect2(-tile / 2.0, tile).grow(-MARGIN), free_citizens())
+		_draw_idle_warning(Rect2(-tile / 2.0, tile).grow(-MARGIN), free_citizens(), IDLE_COLOR)
+	elif stalled_count() > 0 and not owner_player.is_ai:
+		# Obras paradas e ninguém livre: o jogador precisa tirar cidadãos de outro lugar
+		_draw_idle_warning(Rect2(-tile / 2.0, tile).grow(-MARGIN), stalled_count(), STALLED_COLOR)
 
 	# Nome embaixo da cidade, com contorno para ler em qualquer terreno
 	var font := ThemeDB.fallback_font
@@ -1052,9 +1075,15 @@ func _draw_food_bar(icon: Rect2) -> void:
 	draw_rect(Rect2(bar.position, Vector2(bar.size.x * ratio, bar.size.y)), color)
 
 
-## Trabalhadores ociosos: círculo azul com "!" acima da barra de alimentos e,
-## à direita, a quantidade de cidadãos livres. Só nas cidades do jogador humano.
-func _draw_idle_warning(icon: Rect2, idle: int) -> void:
+## Obras paradas por falta de mão de obra (ver needs_workers).
+func stalled_count() -> int:
+	return constructions.filter(needs_workers).size()
+
+
+## Aviso acima da barra de alimentos: círculo com "!" e, à direita, um número.
+## Azul (IDLE_COLOR): cidadãos livres. Vermelho (STALLED_COLOR): obras paradas
+## sem ninguém livre para elas. Só nas cidades do jogador humano.
+func _draw_idle_warning(icon: Rect2, idle: int, color: Color) -> void:
 	var font := ThemeDB.fallback_font
 	var count := str(idle)
 	var count_width := font.get_string_size(count, HORIZONTAL_ALIGNMENT_LEFT, -1, IDLE_FONT_SIZE).x
@@ -1066,13 +1095,13 @@ func _draw_idle_warning(icon: Rect2, idle: int) -> void:
 	var baseline := (font.get_ascent(IDLE_FONT_SIZE) - font.get_descent(IDLE_FONT_SIZE)) / 2.0
 
 	draw_circle(center, IDLE_ICON_RADIUS + 1.5, Color.BLACK)
-	draw_circle(center, IDLE_ICON_RADIUS, IDLE_COLOR)
+	draw_circle(center, IDLE_ICON_RADIUS, color)
 	var mark_width := font.get_string_size("!", HORIZONTAL_ALIGNMENT_LEFT, -1, IDLE_FONT_SIZE).x
 	draw_string(font, center + Vector2(-mark_width / 2.0, baseline), "!", HORIZONTAL_ALIGNMENT_LEFT, -1, IDLE_FONT_SIZE, Color.WHITE)
 
 	var origin := Vector2(center.x + IDLE_ICON_RADIUS + gap, center.y + baseline)
 	draw_string_outline(font, origin, count, HORIZONTAL_ALIGNMENT_LEFT, -1, IDLE_FONT_SIZE, IDLE_FONT_SIZE / 3, Color.BLACK)
-	draw_string(font, origin, count, HORIZONTAL_ALIGNMENT_LEFT, -1, IDLE_FONT_SIZE, IDLE_COLOR.lightened(0.3))
+	draw_string(font, origin, count, HORIZONTAL_ALIGNMENT_LEFT, -1, IDLE_FONT_SIZE, color.lightened(0.3))
 
 
 ## Texto do aviso de construção concluída: "A construção da fazenda foi concluída."
