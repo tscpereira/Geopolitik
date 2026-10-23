@@ -1998,6 +1998,12 @@ histórico):
     - A decidir: onde escolher (janela da cidade, um seletor no
       resumo); se o foco também vale ao pedir obras novas e para a
       máquina (as personalidades poderiam usar).
+    - FOCO DA RESERVA DE MÃO DE OBRA: hoje toda cidade guarda os
+      cidadãos sem tarefa nos IMPOSTOS (Marcenaria parada), e é
+      dessa reserva que as obras novas puxam gente. Depois, cada
+      cidade poderá escolher o foco da reserva: Impostos (padrão,
+      ouro), Ciência ou Cultura (quando existirem). A reserva
+      continua sendo a fonte de mão de obra das obras novas.
 
 [ ] CRESCIMENTO DO TERRITÓRIO
     - Hoje o território fica do tamanho que nasceu.
