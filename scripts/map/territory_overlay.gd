@@ -1,15 +1,14 @@
 class_name TerritoryOverlay
 extends Node2D
 
-## Desenha os territórios das cidades no mapa: um véu leve na cor do dono e a
-## fronteira (borda) na cor dele onde o território encontra o de outro jogador
-## ou terra sem dono. Entre duas cidades do mesmo jogador, só uma linha fina.
+## Desenha os territórios das cidades no mapa: a fronteira (borda) na cor do
+## dono onde o território encontra o de outro jogador ou terra sem dono. Entre
+## duas cidades do mesmo jogador, só uma linha fina. O terreno de dentro não é
+## pintado (o véu na cor do dono saiu em 24/10/2026, a pedido do usuário).
 ## Os cantos convexos da fronteira são arredondados (CORNER_RADIUS_RATIO).
 ## Fica entre o mapa e as cidades na árvore de cena; o Game chama
 ## set_territories sempre que um território muda.
 
-## Transparência do véu sobre as casas do território.
-const FILL_ALPHA := 0.1
 ## Espessura da fronteira, proporcional ao tamanho da casa.
 const BORDER_WIDTH := GameMap.TILE_SIZE / 13.0
 ## Linha entre duas cidades do mesmo jogador.
@@ -53,7 +52,6 @@ func _draw() -> void:
 		var city: City = _owners[cell]
 		var color := city.owner_player.color
 		var rect := Rect2(to_local(map.cell_to_world(cell)) - size / 2.0, size)
-		draw_rect(rect, Color(color, FILL_ALPHA))
 		var border := []
 		for side: Array in SIDES:
 			var neighbor: City = _owners.get(cell + side[0])

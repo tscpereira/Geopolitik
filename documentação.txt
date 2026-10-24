@@ -1243,7 +1243,9 @@ JANELA DA CIDADE (scripts/ui/city_window.gd e city_map_view.gd)
 TERRITÓRIO E CLASSES DE CIDADE (City.territory, City.rank,
 scripts/map/territory_overlay.gd)
 - Cada cidade tem um território: as casas dela, marcadas no mapa
-  com um véu leve e a fronteira na cor do dono. Entre duas
+  pela fronteira na cor do dono (o terreno de dentro não é
+  pintado; até 24/10/2026 havia um véu leve na cor do dono, que
+  saiu a pedido do usuário). Entre duas
   cidades do mesmo jogador aparece só uma linha fina; contra
   outro jogador ou terra sem dono, a borda grossa, com os cantos
   arredondados (TerritoryOverlay.draw_border; a janela da cidade
@@ -2581,6 +2583,9 @@ Screenshots também confirmaram o visual.
   povoado_muralha_ruinas e vila_muralha_ruinas. Agora são 14
   desenhos de cidade e 8 ruínas. Teste das 16 combinações e das 8
   ruínas refeito e passou.
+- Território sem o véu na cor do dono (pedido do usuário): o
+  terreno dentro do território não é mais pintado; só a fronteira
+  mostra o dono (TerritoryOverlay).
 
 --------------------------------------------------------------
 7. BACKLOG (ideias para depois)
