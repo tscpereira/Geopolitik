@@ -1,0 +1,201 @@
+PROMPTS PARA GERAR OS DESENHOS NO CHATGPT (estilo grego pintado)
+==================================================================
+
+Objetivo: gerar as unidades e as cidades no estilo da imagem de referência
+(ilustração pintada, Grécia antiga), prontas para eu importar no jogo SEM
+mudar a resolução atual (unidades 80x80, cidades 128x128). As imagens podem
+vir grandes (1024x1024); eu recorto e reduzo.
+
+
+COMO USAR (passo a passo)
+-------------------------
+1. Abra UMA conversa nova no ChatGPT e anexe a imagem de referência (a folha
+   "Unidades / Cidades" com os hoplitas azuis).
+2. Cole primeiro o BLOCO DE ESTILO (abaixo) e mande. Ele vale para toda a
+   conversa. Se o ChatGPT gerar uma imagem nessa hora, ignore.
+3. Depois mande os prompts 1 a 13, UM POR VEZ, na mesma conversa.
+4. Baixe cada imagem em PNG e salve com o nome indicado em cada prompt, todas
+   numa pasta só, por exemplo:  C:\ProjetoGame\tools\art\chatgpt\
+   (Se preferir, só me mande as imagens; eu renomeio.)
+5. Confira cada imagem antes de salvar (as regras abaixo são as que mais
+   importam para mim). Se uma sair errada, peça para refazer citando a regra,
+   por exemplo: "Refaça: o fundo precisa ser transparente" ou "Refaça: não use
+   azul fora das partes do time".
+
+O QUE CONFERIR EM CADA IMAGEM (por ordem de importância)
+  [ ] Fundo TRANSPARENTE (sem chão, sem céu, sem cenário, sem moldura).
+  [ ] A cor do time é um AZUL forte, e NÃO HÁ NENHUM OUTRO AZUL na imagem
+      (nada de água, céu, pedras azuladas, olhos azuis, sombras azuis).
+      Eu uso esse azul para trocar pela cor de cada jogador.
+  [ ] Um único objeto (uma unidade ou uma cidade), inteiro, sem cortar.
+  [ ] Unidades: sem sombra no chão e sem base (o jogo desenha a sombra).
+  [ ] Mesmo ângulo de câmera e mesma luz em todas.
+  [ ] Sem texto, sem número, sem assinatura.
+
+Se a ferramenta não conseguir fundo transparente: peça fundo MAGENTA puro
+liso (#FF00FF), sem degradê. Eu removo o magenta. (Mas tente transparente
+primeiro.)
+
+
+------------------------------------------------------------------------
+BLOCO DE ESTILO (cole uma vez, no começo da conversa)
+------------------------------------------------------------------------
+
+I am making game sprites for a 2D turn-based strategy game set in ancient
+Greece. Use the attached image as the style reference: detailed painted
+illustration, realistic proportions, warm earthy palette, soft lighting.
+
+These rules apply to EVERY image I ask for in this conversation:
+
+1. Output: a single PNG, 1024x1024, with a fully TRANSPARENT background.
+   No ground, no floor, no sky, no scenery, no frame, no vignette, no text,
+   no watermark, no signature.
+2. One subject only, completely inside the image, never cropped, centered,
+   with a small empty margin around it.
+3. Camera: three-quarter view from slightly above (about 30 degrees), the
+   same angle in every image. Characters face to the RIGHT.
+4. Lighting: soft daylight from the TOP-LEFT, the same in every image.
+5. TEAM COLOR: the parts that belong to the player (helmet crest, cloak,
+   shield face, tunic trim, belts, sashes, banners, flags, awnings, temple
+   pediment) are painted in ONE vivid royal blue (around #1E50FF), with only
+   lighter and darker shades of that same blue for shading. NO other blue,
+   cyan, teal or purple anywhere else in the image: no water, no blue sky,
+   no blue stones, no blue eyes, no blue shadows, no blue reflections.
+6. No cast shadow on the ground under characters, no base, no pedestal.
+7. Style: painted, detailed and readable when scaled down to a small size:
+   strong silhouette, clear shapes, good contrast, not too many tiny details.
+
+Reply "OK" and wait for my requests.
+
+
+------------------------------------------------------------------------
+UNIDADES (cada uma: personagem de corpo inteiro, de pé, virado à direita)
+------------------------------------------------------------------------
+
+PROMPT 1  ->  salvar como: guerreiro.png
+Following all the rules above: a Greek hoplite, full body, standing, facing
+right. Bronze Corinthian helmet with a tall horsehair crest in the team blue,
+polished bronze muscle cuirass, white linen chiton with team-blue trim,
+leather pteruges, bronze greaves, leather sandals. Large round aspis shield
+held on the left arm, face painted team blue with a white lambda symbol,
+bronze rim. Long wooden spear held upright in the right hand. Transparent
+background, no ground shadow.
+
+PROMPT 2  ->  salvar como: arqueiro.png
+Following all the rules above: a Greek archer, full body, standing, facing
+right, drawing a recurve bow aimed to the right. White headband, white linen
+chiton with team-blue trim and a team-blue sash across the chest, leather
+quiver with arrows on the back, bare arms and legs, leather sandals.
+Transparent background, no ground shadow.
+
+PROMPT 3  ->  salvar como: cavaleiro.png
+Following all the rules above: a Greek cavalryman riding a brown horse,
+whole horse and rider visible, facing right, horse standing or walking.
+Rider wears a bronze Corinthian helmet with a team-blue crest, bronze
+cuirass, white chiton, and a team-blue cloak flowing behind; holds a spear
+upright. Horse with a simple light saddle cloth with team-blue trim.
+Transparent background, no ground shadow.
+
+PROMPT 4  ->  salvar como: colono.png
+Following all the rules above: a Greek settler (peasant colonist), full
+body, standing, facing right. Wide-brimmed straw hat, short beard, white
+linen chiton with team-blue trim and a team-blue belt, a bundle on the back,
+holding a shovel with the blade near the ground. Leather sandals.
+Transparent background, no ground shadow.
+
+PROMPT 5  ->  salvar como: trabalhador.png
+Following all the rules above: a Greek worker (woodcutter), full body,
+standing, facing right. Short beard, team-blue headband, white one-shoulder
+tunic (exomis) with team-blue trim and a team-blue belt, an axe resting on
+the right shoulder. Leather sandals. Transparent background, no ground
+shadow.
+
+
+------------------------------------------------------------------------
+CIDADES (cada uma: a cidade inteira sobre um platô de terra e rocha,
+SEM mar, SEM barcos, SEM porto: no jogo as cidades ficam em terra firme)
+------------------------------------------------------------------------
+
+PROMPT 6  ->  salvar como: povoado.png
+Following all the rules above: a small ancient Greek village seen from the
+same three-quarter angle, sitting on a small round plateau of earth and rock
+with a bit of grass. A few whitewashed houses with terracotta tile roofs
+packed close together, a small market stall with a team-blue awning,
+amphorae, a few cypress and olive trees. NO sea, NO water, NO boats, NO
+harbor. Transparent background around the plateau.
+
+PROMPT 7  ->  salvar como: vila.png
+Following all the rules above: an ancient Greek town, bigger than a village,
+same three-quarter angle, on a round plateau of earth and rock. Many
+whitewashed houses with terracotta roofs, a small temple with white columns
+and a team-blue pediment, a stone well, cypress and olive trees, one
+team-blue banner. NO sea, NO water, NO boats, NO harbor. Transparent
+background around the plateau.
+
+PROMPT 8  ->  salvar como: cidade.png
+Following all the rules above: an ancient Greek walled city, same
+three-quarter angle, on a round plateau of earth and rock. Pale limestone
+city walls with square towers and a gate, team-blue banners hanging on the
+towers, a dense cluster of whitewashed houses with terracotta roofs inside,
+a temple with white columns and a team-blue pediment on higher ground,
+cypress trees. NO sea, NO water, NO boats, NO harbor. Transparent background
+around the plateau.
+
+PROMPT 9  ->  salvar como: metropole.png
+Following all the rules above: a great ancient Greek city (metropolis), same
+three-quarter angle, on a larger plateau of earth and rock. An acropolis
+with a large Parthenon-like temple (white columns, team-blue pediment and
+roof) on a rocky hill, strong limestone walls with several towers and
+team-blue banners, many whitewashed houses with terracotta roofs, cypress
+and olive trees. NO sea, NO water, NO boats, NO harbor. Transparent
+background around the plateau.
+
+
+------------------------------------------------------------------------
+RUÍNAS (a mesma cidade de cada prompt anterior, destruída. São opcionais:
+se não der tempo, eu gero as ruínas a partir das cidades, como hoje)
+------------------------------------------------------------------------
+
+PROMPT 10  ->  salvar como: povoado_ruinas.png
+Following all the rules above EXCEPT the team color (this image must have
+NO blue at all): the same village from prompt 6, after being sacked and
+burned. Same plateau, same angle, same size and framing. Roofs collapsed,
+blackened walls, rubble, ash, a few small embers and thin smoke, burnt
+trees. No banners, no people. Transparent background around the plateau.
+
+PROMPT 11  ->  salvar como: vila_ruinas.png
+Following all the rules above EXCEPT the team color (NO blue at all): the
+same town from prompt 7, after being sacked and burned. Same plateau, angle,
+size and framing. Collapsed roofs, broken temple columns, blackened walls,
+rubble, ash, embers, thin smoke. No banners, no people. Transparent
+background around the plateau.
+
+PROMPT 12  ->  salvar como: cidade_ruinas.png
+Following all the rules above EXCEPT the team color (NO blue at all): the
+same walled city from prompt 8, after being sacked and burned. Same plateau,
+angle, size and framing. Breached walls, broken towers, collapsed roofs,
+fallen temple columns, rubble, ash, embers, thin smoke. No banners, no
+people. Transparent background around the plateau.
+
+PROMPT 13  ->  salvar como: metropole_ruinas.png
+Following all the rules above EXCEPT the team color (NO blue at all): the
+same metropolis from prompt 9, after being sacked and burned. Same plateau,
+angle, size and framing. Ruined acropolis with fallen columns, breached
+walls, broken towers, collapsed roofs, rubble, ash, embers, thin smoke. No
+banners, no people. Transparent background around the plateau.
+
+
+------------------------------------------------------------------------
+O QUE EU FAÇO DEPOIS (para referência)
+------------------------------------------------------------------------
+Com as imagens na pasta, eu rodo um importador que, para cada imagem:
+  1. remove o fundo (transparente ou magenta) e recorta no contorno;
+  2. encaixa no tamanho atual: unidades em 80x80 (pés embaixo, centralizado),
+     cidades em 128x128;
+  3. separa o azul do time numa máscara (<nome>_time.png) e deixa essas
+     partes neutras no desenho, para o jogo pintar com a cor de cada jogador;
+  4. grava em assets/ por cima dos desenhos atuais (os nomes dos arquivos são
+     os mesmos que o jogo já usa), e as ruínas que faltarem são geradas a
+     partir das cidades.
+Nada no código do jogo precisa mudar. A madeireira, a fazenda e os terrenos
+continuam como estão.

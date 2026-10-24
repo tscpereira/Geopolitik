@@ -1739,8 +1739,12 @@ Screenshots também confirmaram o visual.
     verde-oliva (23/10/2026)
 [ ] Decidir a época visual de vez: hoje o lanceiro é hoplita
     (Antiguidade) e o resto segue a referência medieval
-[ ] Desenhos pintados à mão (ou por ferramenta de imagem) no lugar
-    dos gerados por código, se quiser mais detalhe
+[ ] Desenhos gerados por ferramenta de imagem (ChatGPT) no estilo
+    grego pintado, no lugar dos gerados por código: prompts prontos
+    em tools/art/PROMPTS-CHATGPT.txt (5 unidades, 4 cidades e 4
+    ruínas, fundo transparente, cor de time azul #1E50FF). Falta o
+    importador (recorta, encaixa em 80x80 / 128x128 e gera a máscara
+    da cor de time a partir do azul), sem mudar a resolução.
 [x] Colono e fundação de cidades (tecla B / botão de ação)
 [x] Cidades: população, alimentos, produção, crescimento e fome
 [x] Fazendas: construção por produção e alocação de cidadãos
