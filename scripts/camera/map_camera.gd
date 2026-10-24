@@ -10,10 +10,11 @@ extends Camera2D
 const PAN_SPEED := 900.0
 const ZOOM_FACTOR := 1.15
 ## Com casas de 80px o mapa pequeno tem 9600x6000; 0.15 permite vê-lo quase
-## inteiro. Começa em 0.5 (a mesma visão das casas de 40px antigas).
+## inteiro. Começa em 0.75 (desde 24/10/2026, com os desenhos do ChatGPT: no
+## 0.5 as unidades ficavam pequenas demais).
 const MIN_ZOOM := 0.15
 const MAX_ZOOM := 1.5
-const START_ZOOM := 0.5
+const START_ZOOM := 0.75
 ## Pixels que o mouse precisa andar com o botão esquerdo apertado para virar
 ## arraste do mapa (abaixo disso, conta como clique).
 const DRAG_THRESHOLD := 8.0

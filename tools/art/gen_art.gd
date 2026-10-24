@@ -7,9 +7,10 @@ extends SceneTree
 ## contorno fino e discreto e prédios em perspectiva 3/4 sobre uma "ilha" de
 ## chão com árvores. O lanceiro é um hoplita (Antiguidade); os outros seguem a
 ## referência medieval.
-##   sprites/units/<unidade>.png        + <unidade>_time.png (máscara)
-##   sprites/cities/<classe>.png         + <classe>_time.png (máscara)
-##   sprites/cities/<classe>_ruinas.png  (a mesma cidade, destruída)
+##   sprites/cities/<classe>_ruinas.png  (a cidade instalada, destruída)
+## Unidades e cidades (com as máscaras _time.png) vêm do ChatGPT desde
+## 24/10/2026 (tools/art/import_sheet.gd) e NÃO são mais geradas aqui; as
+## funções de desenho delas (hoplite, village...) ficaram só como referência.
 ##   sprites/improvements/madeireira.png, madeireira_destruida.png,
 ##       fazenda.png (vista de cima, lotes em retalhos), fazenda_obra.png
 ##       (terra lavrada), fazenda_destruida.png
@@ -100,17 +101,10 @@ func _run() -> void:
 	_vp.add_child(_canvas)
 	c = _canvas
 
-	var units := {"guerreiro": hoplite, "arqueiro": archer, "cavaleiro": horseman, "colono": settler, "trabalhador": worker}
-	_zoom = 1.1
-	_pivot = Vector2(42, 75)
-	for unit_name: String in units:
-		await save_team_art(UNITS_DIR + unit_name, S, units[unit_name])
-	_zoom = 1.0
-	var cities := {"povoado": village, "vila": town, "cidade": castle, "metropole": metropolis}
-	for city_name: String in cities:
-		await save_team_art(CITIES_DIR + city_name, CITY_SIZE, cities[city_name], CITY_DESIGN)
-		team = BURNT_CLOTH
-		var intact := await render(CITY_SIZE, cities[city_name], true, CITY_DESIGN)
+	# Unidades e cidades vêm do ChatGPT (tools/art/import_sheet.gd) desde
+	# 24/10/2026; aqui só saem as ruínas, a partir das cidades instaladas.
+	for city_name: String in ["povoado", "vila", "cidade", "metropole"]:
+		var intact := burnt_city(CITIES_DIR + city_name)
 		(await ruin(intact, city_name, CITY_SIZE, CITY_DESIGN)).save_png(CITIES_DIR + city_name + "_ruinas.png")
 	team = BURNT_CLOTH
 	var mill := await render(S, lumber_camp)
@@ -173,6 +167,24 @@ func save_team_art(path: String, size: int, job: Callable, design := 0.0) -> voi
 			mask.set_pixel(x, y, Color(amount, amount, amount))
 	dark.save_png(path + ".png")
 	mask.save_png(path + "_time.png")
+
+
+## Cidade instalada em [param path].png com a cor de time queimada (máscara
+## _time.png x BURNT_CLOTH), ampliada para o tamanho em que ruin() trabalha.
+func burnt_city(path: String) -> Image:
+	var image := Image.load_from_file(ProjectSettings.globalize_path(path + ".png"))
+	var mask := Image.load_from_file(ProjectSettings.globalize_path(path + "_time.png"))
+	image.convert(Image.FORMAT_RGBA8)
+	mask.convert(Image.FORMAT_RGBA8)
+	for y in image.get_height():
+		for x in image.get_width():
+			var amount := mask.get_pixel(x, y).r
+			if amount > 0.0:
+				var pixel := image.get_pixel(x, y)
+				image.set_pixel(x, y, Color(minf(pixel.r + BURNT_CLOTH.r * amount, 1.0),
+						minf(pixel.g + BURNT_CLOTH.g * amount, 1.0), minf(pixel.b + BURNT_CLOTH.b * amount, 1.0), pixel.a))
+	image.resize(CITY_SIZE * K, CITY_SIZE * K, Image.INTERPOLATE_CUBIC)
+	return image
 
 
 ## Textura: granulado fino e manchas maiores, só onde há desenho.

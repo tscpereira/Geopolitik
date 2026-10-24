@@ -26,8 +26,8 @@ Pasta        : C:\ProjetoGame
 - Janela: começa em 1280x720 e pode ser redimensionada ou
   maximizada (F11). Desde 23/10/2026 a imagem NÃO é esticada
   (stretch mode "disabled"): uma janela maior mostra mais casas do
-  mapa (1920x1080 mostra 48x27 casas no zoom inicial, contra 32x18
-  em 1280x720), e o HUD fica preso nos cantos.
+  mapa (1920x1080 mostra 32x18 casas no zoom inicial de 0,75,
+  contra 21x12 em 1280x720), e o HUD fica preso nos cantos.
 
 
 --------------------------------------------------------------
@@ -257,8 +257,25 @@ MAPA (scripts/map/)
   scripts/map/game_map.gd; era 40 até 22/10/2026) e uma linha de
   grade fina e suave na borda. O mapa pequeno inteiro mede
   9600x6000 pixels.
+- DESENHOS DO CHATGPT (desde 24/10/2026): as 5 unidades (80x80) e
+  as 4 classes de cidade (128x128) são as do ChatGPT, no estilo
+  grego pintado (hoplitas, casas caiadas de telha vermelha,
+  templos, muralhas de pedra). Vieram da folha
+  tools/art/chatgpt/folha.png pelo importador
+  tools/art/import_sheet.gd, que recorta, remove o fundo, reduz e
+  separa o azul do time na máscara <nome>_time.png (no jogo, a
+  crista, o escudo, as faixas, os estandartes e o frontão ficam na
+  cor do jogador). As ruínas das cidades (<classe>_ruinas.png)
+  saem dessas cidades pela função ruin() de tools/art/gen_art.gd,
+  que não gera mais unidades nem cidades. Para trocar um desenho:
+  gerar a folha de novo no ChatGPT (tools/art/PROMPTS-CHATGPT.txt),
+  rodar o importador e copiar os PNGs de tools/art/chatgpt/prontos/
+  para assets/sprites/units/ e assets/sprites/cities/; depois rodar
+  gen_art.gd (com janela) para refazer as ruínas.
 - ESTILO PINTADO (desde 23/10/2026, a partir de uma referência
-  aprovada pelo usuário): todos os desenhos são de 80x80 por casa
+  aprovada pelo usuário; hoje vale para terrenos, madeireira e
+  fazenda, os desenhos que ainda são feitos por código): todos os
+  desenhos são de 80x80 por casa
   (cidades 128x128), feitos por código com proporções reais,
   paleta terrosa (verde-oliva, terra, pedra), volume sombreado
   (braços, pernas e o cavalo como cilindros; esferas com brilho),
@@ -1601,8 +1618,9 @@ SALVAR E CARREGAR (scripts/save/save_game.gd)
 CÂMERA E CONTROLES
 - Setas ou WASD: mover a câmera.
 - Roda do mouse: zoom, na direção do cursor (de 0,15x a 1,5x; a
-  partida começa em 0,5x, a mesma visão das casas de 40 pixels
-  antigas). Constantes em scripts/camera/map_camera.gd.
+  partida começa em 0,75x desde 24/10/2026; era 0,5x, mas as
+  unidades do ChatGPT ficavam pequenas demais). Constantes em
+  scripts/camera/map_camera.gd.
 - Com a janela da cidade (ou a pergunta do nome da cidade) aberta,
   a câmera fica travada (MapCamera.locked): setas, roda do mouse e
   arraste não mexem no mapa por trás da janela.
@@ -1744,12 +1762,13 @@ Screenshots também confirmaram o visual.
     verde-oliva (23/10/2026)
 [ ] Decidir a época visual de vez: hoje o lanceiro é hoplita
     (Antiguidade) e o resto segue a referência medieval
-[ ] Desenhos gerados por ferramenta de imagem (ChatGPT) no estilo
-    grego pintado, no lugar dos gerados por código: prompts prontos
-    em tools/art/PROMPTS-CHATGPT.txt (5 unidades, 4 cidades e 4
-    ruínas, fundo transparente, cor de time azul #1E50FF). Falta o
-    importador (recorta, encaixa em 80x80 / 128x128 e gera a máscara
-    da cor de time a partir do azul), sem mudar a resolução.
+[x] Desenhos gerados por ferramenta de imagem (ChatGPT) no estilo
+    grego pintado, no lugar dos gerados por código: unidades e
+    cidades aplicadas em 24/10/2026, ruínas das cidades derivadas
+    delas por código
+[ ] Madeireira, fazenda e terrenos também no estilo do ChatGPT
+[ ] Ruínas das cidades desenhadas pelo ChatGPT (prompts 10 a 13),
+    no lugar das derivadas por código
 [x] Colono e fundação de cidades (tecla B / botão de ação)
 [x] Cidades: população, alimentos, produção, crescimento e fome
 [x] Fazendas: construção por produção e alocação de cidadãos
@@ -2408,8 +2427,7 @@ Screenshots também confirmaram o visual.
   prompt único e foi feito o importador (tools/art/import_sheet.gd):
   fundo xadrez "pintado" removido, 9 desenhos separados, máscara do
   azul do time, redução para 80x80 e 128x128, prévia no tamanho do
-  jogo. Tudo guardado em tools/art/chatgpt/; aplicar fica para
-  24/10 (ver BACKLOG).
+  jogo. Tudo guardado em tools/art/chatgpt/; aplicado em 24/10.
 - Correção feita pelos testes antigos: com a fome agitando qualquer
   cidade, um povoado de 2 que fazia a primeira fazenda entrava em
   desordem e a obra parava para sempre. Agora a fome só agita a
@@ -2426,53 +2444,27 @@ Screenshots também confirmaram o visual.
   da força de trabalho e do arsenal passam.
 
 
+24/10/2026
+- DESENHOS DO CHATGPT APLICADOS: as 5 unidades e as 4 classes de
+  cidade do jogo agora são as da folha gerada no ChatGPT (estilo
+  grego pintado), com a cor do jogador pela máscara do azul do
+  time. As 4 ruínas de cidade foram refeitas a partir das cidades
+  novas (gen_art.gd pinta a parte do time de pano queimado, amplia
+  e aplica a mesma função ruin()). gen_art.gd não sobrescreve mais
+  unidades e cidades; terrenos, madeireira e fazenda saíram
+  idênticos.
+- Zoom inicial passou de 0,5 para 0,75 (decisão do usuário): no
+  0,5 as unidades novas ficavam pequenas demais.
+- Validação: teste com screenshots do jogo (zoom 0,2/0,5/0,75/1,0,
+  costa, ruínas, janela da cidade) passou, com as cores vermelha e
+  amarela aplicadas nas unidades e cidades e a textura com mipmaps.
+
 --------------------------------------------------------------
 7. BACKLOG (ideias para depois)
 --------------------------------------------------------------
 
-[ ] PRIORIDADE DE 24/10/2026: APLICAR OS DESENHOS DO CHATGPT
-    (estilo grego pintado; tudo pronto, falta só aplicar e testar)
-    Onde está:
-      tools/art/chatgpt/referencia.png  a referência que o usuário
-                                        trouxe (folha grega azul)
-      tools/art/chatgpt/folha.png       a folha que o ChatGPT gerou
-                                        com o prompt único (5 unidades
-                                        em cima, 4 cidades embaixo)
-      tools/art/import_sheet.gd         o importador
-      tools/art/chatgpt/prontos/        o resultado do importador:
-                                        guerreiro, arqueiro, cavaleiro,
-                                        colono, trabalhador (80x80) e
-                                        povoado, vila, cidade, metropole
-                                        (128x128), cada um com a máscara
-                                        <nome>_time.png; mais a prévia
-                                        previa_tamanho_real.png
-      tools/art/PROMPTS-CHATGPT.txt     os prompts (único e 13 separados)
-    O que o importador já resolve (testado em 23/10):
-      - a folha NÃO tem transparência de verdade: o xadrez cinza e
-        branco está pintado nos pixels. O fundo sai por inundação a
-        partir das bordas (pixels claros e neutros) e os bolsões
-        fechados (dentro do arco, entre a lança e a perna, entre a pá e
-        a perna, entre as pernas do cavalo) saem por terem o padrão do
-        xadrez (o tom troca a cada ~11 px); as túnicas brancas ficam;
-      - os 9 desenhos são separados pelo contorno, na ordem certa;
-      - o azul do time vira a máscara: crista, escudo, faixas,
-        estandartes e frontão do templo ficam na cor de cada jogador
-        (conferido em vermelho e amarelo na prévia).
-    Passos para aplicar:
-      1. copiar os 18 PNGs de tools/art/chatgpt/prontos/ (menos a
-         prévia) para assets/sprites/units/ e assets/sprites/cities/,
-         por cima dos atuais (os nomes são os mesmos; o código não
-         muda); reimportar e ligar os mipmaps nos .import;
-      2. gerar as ruínas (<classe>_ruinas.png) a partir das cidades
-         novas, com a mesma função ruin() de tools/art/gen_art.gd (ou
-         pedir as 4 ruínas ao ChatGPT, prompts 10 a 13);
-      3. decidir com o usuário o zoom inicial: no 0,5 de hoje as
-         unidades ficam bem pequenas; sugestão 0,75 (START_ZOOM em
-         scripts/camera/map_camera.gd);
-      4. gen_art.gd não deve mais sobrescrever unidades e cidades
-         (ou separar o que ele gera: terrenos, madeireira, fazenda);
-      5. testar no jogo (screenshots, testes) e atualizar a seção 4.
-    Ficam como estão: madeireira, fazenda e terrenos.
+[x] PRIORIDADE DE 24/10/2026: APLICAR OS DESENHOS DO CHATGPT -
+    CONCLUÍDA (ver seção 4, "DESENHOS DO CHATGPT", e o histórico).
 
 Prioridades de 22/10/2026 - CONCLUÍDAS (ver seção 4 e o
 histórico):
