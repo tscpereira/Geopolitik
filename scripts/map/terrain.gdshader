@@ -9,8 +9,8 @@
 //     mais clara perto da praia;
 //   - floresta: borda recortada em "moitas", com sombra na pradaria ao lado;
 //   - pradaria <-> cerrado: mistura gradual;
-//   - fazendas (improvement_map): campos com borda orgânica e cerca viva,
-//     fileiras onduladas numa direção por casa; em obra, só terra arada.
+//   - fazendas (improvement_map): a imagem da fazenda vista de cima (lotes
+//     em retalhos com cerca; em obra, terra lavrada), com borda suave.
 // O miolo de cada casa (core_*) puxa os pesos para o terreno da própria casa:
 // mesmo uma casa isolada (ilha de 1 casa) aparece com o terreno dela, e o
 // desenho continua batendo com as regras.
@@ -41,30 +41,34 @@ uniform float forest_noise = 0.25;
 // pesos ficam com o terreno da própria casa.
 uniform float core_radius = 0.42;
 uniform float core_strength = 0.6;
-uniform vec4 sand_color : source_color = vec4(0.86, 0.80, 0.56, 1.0);
-uniform vec4 foam_color : source_color = vec4(0.82, 0.92, 0.97, 1.0);
-uniform vec4 shallow_color : source_color = vec4(0.30, 0.68, 0.82, 1.0);
+uniform vec4 sand_color : source_color = vec4(0.76, 0.70, 0.50, 1.0);
+uniform vec4 foam_color : source_color = vec4(0.76, 0.82, 0.82, 1.0);
+uniform vec4 shallow_color : source_color = vec4(0.36, 0.54, 0.56, 1.0);
 // Melhorias por casa (GameMap.Improvement no canal vermelho): 0 nenhuma,
 // 1 fazenda pronta, 2 fazenda em obra (só terra arada).
 uniform sampler2D improvement_map : filter_nearest;
 uniform bool draw_farms = true;
-uniform float farm_noise = 0.22;
-// Fileiras de plantação por casa.
-uniform float farm_rows = 5.0;
-uniform vec4 soil_color : source_color = vec4(0.50, 0.35, 0.19, 1.0);
-uniform vec4 hedge_color : source_color = vec4(0.27, 0.42, 0.17, 1.0);
-// Cores das plantações (cada fazenda sorteia uma): trigo, verde-claro, verde.
-uniform vec4 crop_color_a : source_color = vec4(0.84, 0.72, 0.33, 1.0);
-uniform vec4 crop_color_b : source_color = vec4(0.62, 0.74, 0.30, 1.0);
-uniform vec4 crop_color_c : source_color = vec4(0.45, 0.62, 0.24, 1.0);
+// Fazenda vista de cima (lotes em retalhos com cerca) e fazenda em obra
+// (terra lavrada): uma imagem por casa (City.FARM_TEXTURE / FARM_NEW_TEXTURE).
+uniform sampler2D farm_tex : filter_linear_mipmap;
+uniform sampler2D farm_new_tex : filter_linear_mipmap;
+// Borda suave da fazenda onde a casa vizinha não é fazenda (em casas).
+uniform float farm_edge_soft = 0.04;
 
 const int WATER = 0;
 const int GRASSLAND = 1;
 const int FOREST = 2;
 const int CERRADO = 3;
 
+// Número pseudoaleatório de 0 a 1 para um ponto da grade do ruído (hash12 de
+// Dave Hoskins). Não usa sin() de números grandes: com as coordenadas do mapa,
+// "fract(sin(x) * 43758)" ampliava diferenças mínimas de arredondamento da
+// GPU, o mesmo canto da grade dava valores diferentes em casas vizinhas e o
+// ruído saía em blocos (cortes retos na borda da floresta e da costa).
 float hash(vec2 p) {
-	return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453);
+	vec3 p3 = fract(vec3(p.xyx) * 0.1031);
+	p3 += dot(p3, p3.yzx + 33.33);
+	return fract((p3.x + p3.y) * p3.z);
 }
 
 float value_noise(vec2 p) {
@@ -100,44 +104,19 @@ int improvement_at(ivec2 cell) {
 	return int(round(texelFetch(improvement_map, cell, 0).r * 255.0));
 }
 
-// Fazenda: fileiras levemente onduladas, numa direção sorteada por casa
-// (fazendas vizinhas viram uma "colcha de retalhos"). Pronta: plantação com
-// sulcos de terra; em obra: só terra arada. Os sulcos têm borda suave.
-vec3 farm_color(vec2 p, ivec2 cell, bool planted, float shade) {
-	float seed = hash(vec2(cell) + 21.3);
-	bool vertical = seed > 0.5;
-	float u = vertical ? p.x : p.y;
-	float v = vertical ? p.y : p.x;
-	float row = fract(u * farm_rows + 0.15 * sin(v * 2.7 + seed * 6.28));
-	float fw = fwidth(u * farm_rows) + 0.04;
-	// 1 no sulco (row < 0,3), 0 na plantação, com rampas nas duas bordas
-	float furrow = (1.0 - smoothstep(0.3 - fw, 0.3 + fw, row)) * smoothstep(0.0, fw, row)
-			+ smoothstep(1.0 - fw, 1.0, row);
-	vec3 color;
-	if (planted) {
-		float pick = hash(vec2(cell) + 7.7);
-		vec3 crop = pick < 0.5 ? crop_color_a.rgb : pick < 0.8 ? crop_color_b.rgb : crop_color_c.rgb;
-		color = mix(crop, mix(soil_color.rgb, crop, 0.3), furrow);
-	} else {
-		color = mix(soil_color.rgb * 1.12, soil_color.rgb * 0.8, furrow);
-	}
-	return color * shade;
-}
-
 // (água, pradaria, floresta, cerrado) com 1 no terreno [param t].
 vec4 one_hot(int t) {
 	return vec4(t == WATER ? 1.0 : 0.0, t == GRASSLAND ? 1.0 : 0.0, t == FOREST ? 1.0 : 0.0, t == CERRADO ? 1.0 : 0.0);
 }
 
-// Textura do terreno na posição p (em casas). Cada casa espelha a textura de
-// um jeito (sorteado pela posição) para o padrão não se repetir em grade. As
-// derivadas vêm de p (contínuo), para o mipmap não marcar a borda da casa.
-vec4 tile_color(sampler2D tex, vec2 p) {
-	vec2 cell = floor(p);
-	vec2 local = fract(p);
-	if (hash(cell + 3.7) > 0.5) local.x = 1.0 - local.x;
-	if (hash(cell + 9.1) > 0.5) local.y = 1.0 - local.y;
-	return textureGrad(tex, local, dFdx(p), dFdy(p));
+// Textura do terreno na posição p (em casas). A textura é contínua (sem
+// emenda) e é lida girada e um pouco ampliada, cada terreno num ângulo: o
+// padrão não se repete alinhado com a grade e não há cortes na borda das casas
+// (espelhar casa a casa cortava as copas da floresta).
+vec4 tile_color(sampler2D tex, vec2 p, float angle) {
+	mat2 turn = mat2(vec2(cos(angle), sin(angle)), vec2(-sin(angle), cos(angle))) * 0.82;
+	vec2 uv = turn * p;
+	return textureGrad(tex, uv, dFdx(uv), dFdy(uv));
 }
 
 void fragment() {
@@ -150,22 +129,15 @@ void fragment() {
 	vec3 wx = vec3(0.5 * (0.5 - t.x) * (0.5 - t.x), 0.75 - t.x * t.x, 0.5 * (0.5 + t.x) * (0.5 + t.x));
 	vec3 wy = vec3(0.5 * (0.5 - t.y) * (0.5 - t.y), 0.75 - t.y * t.y, 0.5 * (0.5 + t.y) * (0.5 + t.y));
 	vec4 weights = vec4(0.0);
-	// Fazendas (x = qualquer fazenda, y = fazenda pronta), com os mesmos pesos
-	vec2 farm_weights = vec2(0.0);
 	for (int j = 0; j < 3; j++) {
 		for (int i = 0; i < 3; i++) {
-			ivec2 cell = own_cell + ivec2(i - 1, j - 1);
-			float weight = wx[i] * wy[j];
-			weights += weight * one_hot(terrain_at(cell));
-			int improvement = improvement_at(cell);
-			farm_weights += weight * vec2(improvement > 0 ? 1.0 : 0.0, improvement == 1 ? 1.0 : 0.0);
+			weights += wx[i] * wy[j] * one_hot(terrain_at(own_cell + ivec2(i - 1, j - 1)));
 		}
 	}
 	// Miolo da casa: puxa para o terreno dela
 	float core = (1.0 - smoothstep(core_radius * 0.5, core_radius, length(t))) * core_strength;
 	weights = mix(weights, one_hot(terrain_at(own_cell)), core);
 	int own_improvement = improvement_at(own_cell);
-	farm_weights = mix(farm_weights, vec2(own_improvement > 0 ? 1.0 : 0.0, own_improvement == 1 ? 1.0 : 0.0), core);
 	float water = weights.x;
 	float grass = weights.y;
 	float forest = weights.z;
@@ -181,28 +153,33 @@ void fragment() {
 	float forest_share = forest / land_total;
 	float cerrado_share = cerrado / max(grass + cerrado, 0.0001);
 	float c = smoothstep(0.15, 0.85, cerrado_share + n_land * 0.35);
-	vec4 open_land = mix(tile_color(grass_tex, p), tile_color(cerrado_tex, p), c);
+	vec4 open_land = mix(tile_color(grass_tex, p, 0.31), tile_color(cerrado_tex, p, -0.47), c);
 	float forest_edge = forest_share + n_land * forest_noise * 2.0;
 	float trees = soft_step(0.5, forest_edge);
 	// Sombra das árvores sobre a pradaria logo ao lado da floresta
 	open_land.rgb *= 1.0 - 0.18 * smoothstep(0.2, 0.5, forest_edge);
-	vec4 land_color = mix(open_land, tile_color(forest_tex, p), trees);
+	vec4 land_color = mix(open_land, tile_color(forest_tex, p, 0.58), trees);
 
-	// Fazendas: campo com borda orgânica e uma cerca viva em volta
+	// Fazendas: a imagem da fazenda (pronta ou em obra) na casa inteira, com
+	// borda suave só nos lados em que a casa vizinha não é fazenda (fazendas
+	// vizinhas se juntam numa colcha de lotes)
 	if (draw_farms) {
-		float n_farm = fbm(p * 2.1 + 130.0) - 0.5;
-		float farm_edge = farm_weights.x + n_farm * farm_noise * 2.0;
-		float in_farm = soft_step(0.5, farm_edge) * (1.0 - trees);
-		bool planted = farm_weights.y >= farm_weights.x * 0.5;
-		vec3 field = farm_color(p, own_cell, planted, 0.95 + 0.1 * fbm(p * 3.0 + 7.0));
-		vec3 farm = mix(hedge_color.rgb, field, soft_step(0.56, farm_edge));
-		land_color.rgb = mix(land_color.rgb, farm, in_farm);
+		vec2 f = fract(p);
+		float w = farm_edge_soft + fwidth(p.x);
+		float fade = (improvement_at(own_cell + ivec2(-1, 0)) > 0 ? 1.0 : smoothstep(0.0, w, f.x))
+				* (improvement_at(own_cell + ivec2(1, 0)) > 0 ? 1.0 : smoothstep(0.0, w, 1.0 - f.x))
+				* (improvement_at(own_cell + ivec2(0, -1)) > 0 ? 1.0 : smoothstep(0.0, w, f.y))
+				* (improvement_at(own_cell + ivec2(0, 1)) > 0 ? 1.0 : smoothstep(0.0, w, 1.0 - f.y));
+		vec3 planted = textureGrad(farm_tex, f, dFdx(p), dFdy(p)).rgb;
+		vec3 tilled = textureGrad(farm_new_tex, f, dFdx(p), dFdy(p)).rgb;
+		float in_farm = (own_improvement > 0 ? 1.0 : 0.0) * fade * (1.0 - trees);
+		land_color.rgb = mix(land_color.rgb, own_improvement == 1 ? planted : tilled, in_farm);
 	}
 	land_color.rgb *= 0.94 + 0.12 * n_color;
 
 	// Água: mais clara perto da costa
 	float land = 1.0 - water + n_coast * coast_noise * 2.0;
-	vec4 water_color = tile_color(water_tex, p);
+	vec4 water_color = tile_color(water_tex, p, -0.22);
 	water_color.rgb = mix(water_color.rgb, shallow_color.rgb, smoothstep(0.05, 0.5, land) * 0.45);
 	water_color.rgb *= 0.9 + 0.18 * n_color; // manchas mais escuras e mais claras (profundidade)
 

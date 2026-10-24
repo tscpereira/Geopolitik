@@ -33,8 +33,8 @@ const BADGE_FONT_SIZE := int(GameMap.TILE_SIZE * 0.3)
 ## Transparência da madeireira que ainda está em obra.
 const CONSTRUCTION_ALPHA := 0.45
 
-const LOG_COLOR := Color8(140, 90, 45)
-const LOG_END_COLOR := Color8(220, 180, 120)
+## Desenho da madeireira (ver draw_icon).
+const TEXTURE: Texture2D = preload("res://assets/sprites/improvements/madeireira.png")
 
 var owner_player: Player
 var cell: Vector2i
@@ -130,23 +130,11 @@ func _draw() -> void:
 		_draw_badge(tile, workers.size())
 
 
-## Pilha de toras. [param alpha] menor = ainda em obra.
+## Madeireira: telheiro de tábuas, pilhas de toras, cavalete e tocos (o PNG de
+## TEXTURE, 80x80, gerado por tools/art/gen_art.gd). [param alpha] menor =
+## ainda em obra. Também é o ícone da madeira no HUD e nas janelas.
 static func draw_icon(canvas: CanvasItem, rect: Rect2, alpha := 1.0) -> void:
-	var log_height := rect.size.y * 0.16
-	var log_width := rect.size.x * 0.34
-	var center := rect.get_center() + Vector2(0, rect.size.y * 0.12)
-	# Duas toras embaixo e uma em cima
-	var logs := [
-		center + Vector2(-log_width * 0.55, 0),
-		center + Vector2(log_width * 0.55, 0),
-		center + Vector2(0, -log_height),
-	]
-	for log_center: Vector2 in logs:
-		var body := Rect2(log_center - Vector2(log_width, log_height) / 2.0, Vector2(log_width, log_height))
-		canvas.draw_rect(body.grow(1.0), Color(Color.BLACK, alpha))
-		canvas.draw_rect(body, Color(LOG_COLOR, alpha))
-		canvas.draw_circle(Vector2(body.end.x, log_center.y), log_height / 2.0 + 1.0, Color(Color.BLACK, alpha))
-		canvas.draw_circle(Vector2(body.end.x, log_center.y), log_height / 2.0, Color(LOG_END_COLOR, alpha))
+	canvas.draw_texture_rect(TEXTURE, rect, false, Color(1, 1, 1, alpha))
 
 
 ## Barra azul no topo da casa: madeira que resta na floresta (de Terrain.WOOD_PER_FOREST).

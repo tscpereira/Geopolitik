@@ -279,9 +279,10 @@ const RUIN_TEXTURES := {
 	Build.LUMBER_MILL: preload("res://assets/sprites/improvements/madeireira_destruida.png"),
 }
 
-const FARM_COLOR := Color8(205, 170, 80)
-const FARM_FURROW_COLOR := Color8(130, 90, 35)
-const FARM_SOIL_COLOR := Color8(150, 105, 58)
+## Fazenda vista de cima (80x80, tools/art/gen_art.gd): pronta e em obra. O
+## shader do terreno usa as mesmas imagens no mapa (GameMap).
+const FARM_TEXTURE: Texture2D = preload("res://assets/sprites/improvements/fazenda.png")
+const FARM_NEW_TEXTURE: Texture2D = preload("res://assets/sprites/improvements/fazenda_obra.png")
 
 
 ## Uma obra da cidade: melhoria numa casa (com [member cell]) ou unidade.
@@ -1529,72 +1530,9 @@ static func draw_ruin(canvas: CanvasItem, build: int, rect: Rect2) -> void:
 	canvas.draw_texture_rect(RUIN_TEXTURES[build], rect, false)
 
 
-## Fazenda (janela da cidade e ícones): campo arredondado de contorno um pouco
-## ondulado, com cerca viva em volta e fileiras curvas recortadas no formato
-## do campo. [param planted] = false: em obra, só terra arada. No mapa
-## principal, as fazendas são desenhadas pelo shader do terreno.
+## Fazenda vista de cima (janela da cidade e ícones): lotes em retalhos de
+## trigo, repolho e hortaliças com cerca (FARM_TEXTURE). [param planted] =
+## false: em obra, só a terra lavrada (FARM_NEW_TEXTURE). No mapa principal,
+## o shader do terreno usa as mesmas imagens.
 static func draw_farm(canvas: CanvasItem, rect: Rect2, planted := true) -> void:
-	var field := rect.grow(-rect.size.x * 0.1)
-	var radius := field.size.x * 0.3
-	var center := field.get_center()
-	# Contorno: retângulo de cantos redondos com uma ondulação leve
-	var outline := PackedVector2Array()
-	var steps := 32
-	for i in steps + 1:
-		var angle := TAU * i / steps
-		var direction := Vector2(cos(angle), sin(angle))
-		var wobble := 1.0 + 0.04 * sin(angle * 5.0 + 1.3)
-		outline.append(center + _rounded_rect_point(field.size / 2.0, radius, direction) * wobble)
-	var hedge := Color8(70, 108, 44)
-	canvas.draw_colored_polygon(outline, hedge)
-	var inner := PackedVector2Array()
-	for point in outline:
-		inner.append(center + (point - center) * 0.86)
-	canvas.draw_colored_polygon(inner, FARM_COLOR if planted else FARM_SOIL_COLOR)
-	# Fileiras: linhas onduladas, cortadas na largura do campo em cada altura
-	var half := field.size / 2.0 * 0.86
-	var inner_radius := radius * 0.86
-	var rows := 5
-	var thickness := maxf(1.0, rect.size.y / 22.0)
-	for row in rows:
-		var dy := -half.y + half.y * 2.0 * (row + 0.5) / rows
-		var half_width := _rounded_rect_half_width(half, inner_radius, dy) - thickness
-		if half_width <= 0.0:
-			continue
-		var line := PackedVector2Array()
-		for k in 9:
-			var x := -half_width + half_width * 2.0 * k / 8.0
-			line.append(center + Vector2(x, dy + sin(x / half.x * 2.2 + row) * thickness * 0.8))
-		canvas.draw_polyline(line, FARM_FURROW_COLOR if planted else FARM_SOIL_COLOR.darkened(0.3), thickness)
-
-
-## Ponto do contorno de um retângulo de cantos redondos (meia-medida [param half],
-## raio [param radius]) na direção [param direction], a partir do centro.
-static func _rounded_rect_point(half: Vector2, radius: float, direction: Vector2) -> Vector2:
-	# Avança do centro até sair do retângulo arredondado (busca binária simples)
-	var low := 0.0
-	var high := half.length()
-	for i in 12:
-		var middle := (low + high) / 2.0
-		var point := direction * middle
-		if _inside_rounded_rect(point, half, radius):
-			low = middle
-		else:
-			high = middle
-	return direction * low
-
-
-static func _inside_rounded_rect(point: Vector2, half: Vector2, radius: float) -> bool:
-	var q := Vector2(absf(point.x), absf(point.y)) - (half - Vector2.ONE * radius)
-	return Vector2(maxf(q.x, 0.0), maxf(q.y, 0.0)).length() <= radius and maxf(q.x, q.y) <= radius
-
-
-## Meia-largura do retângulo arredondado na altura [param dy] (a partir do centro).
-static func _rounded_rect_half_width(half: Vector2, radius: float, dy: float) -> float:
-	var straight := half.y - radius
-	if absf(dy) <= straight:
-		return half.x
-	var over := absf(dy) - straight
-	if over >= radius:
-		return 0.0
-	return half.x - radius + sqrt(radius * radius - over * over)
+	canvas.draw_texture_rect(FARM_TEXTURE if planted else FARM_NEW_TEXTURE, rect, false)

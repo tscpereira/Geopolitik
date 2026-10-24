@@ -150,7 +150,7 @@ C:\ProjetoGame
 |-- tools/
 |   `-- art/
 |       `-- gen_art.gd             Gera todos os desenhos (80x80,
-|                                  suavizados; ver LEIA-ME.txt)
+|                                  estilo pintado; ver LEIA-ME.txt)
 `-- data/
     |-- maps/
     |   `-- mapa_teste.png         Mapa de teste 120x75 (era o
@@ -252,12 +252,19 @@ MAPA (scripts/map/)
   scripts/map/game_map.gd; era 40 até 22/10/2026) e uma linha de
   grade fina e suave na borda. O mapa pequeno inteiro mede
   9600x6000 pixels.
-- GRÁFICOS SUAVIZADOS (desde 23/10/2026): todos os desenhos são
-  de 80x80 por casa, feitos com formas vetoriais (curvas,
-  gradientes de luz e sombra) e reduzidos com filtro, com um
-  contorno escuro suave (ver tools/art/LEIA-ME.txt). No jogo, as
-  texturas usam filtro linear com mipmaps (nítidas de perto e
-  sem serrilhado com o zoom afastado). Nada mais é pixel art.
+- ESTILO PINTADO (desde 23/10/2026, a partir de uma referência
+  aprovada pelo usuário): todos os desenhos são de 80x80 por casa
+  (cidades 128x128), feitos por código com proporções reais,
+  paleta terrosa (verde-oliva, terra, pedra), volume sombreado
+  (braços, pernas e o cavalo como cilindros; esferas com brilho),
+  textura de materiais (cota de malha, palha, blocos de pedra,
+  telhas, madeira), granulado leve e contorno fino e discreto.
+  Prédios em perspectiva 3/4, com sombra projetada, sobre uma
+  "ilha" de chão com árvores. O lanceiro é um hoplita
+  (Antiguidade); as outras unidades e os prédios seguem a
+  referência medieval. Gerados por tools/art/gen_art.gd (ver
+  tools/art/LEIA-ME.txt). No jogo, as texturas usam filtro linear
+  com mipmaps.
 - Fontes, contornos, barra de energia e números de dano são
   proporcionais a TILE_SIZE. Para mudar o tamanho das casas,
   basta mudar essa constante e redesenhar as imagens no novo
@@ -275,11 +282,12 @@ MAPA (scripts/map/)
   O mapa de teste atual tem 763 casas de pradaria e 44 de
   floresta.
 - O visual de cada terreno vem de uma imagem PNG de 80x80 pixels:
-    assets/tiles/agua.png      manchas e ondinhas claras
-    assets/tiles/pradaria.png  tufos de capim e florzinhas
-    assets/tiles/floresta.png  copas de árvores espalhadas, com
-                               lóbulos e sombra
-    assets/tiles/cerrado.png   capim seco, pedrinhas e moitas
+    assets/tiles/agua.png      azul acinzentado, manchas e
+                               ondinhas claras
+    assets/tiles/pradaria.png  verde-oliva, manchas, tufos de
+                               capim e florzinhas
+    assets/tiles/floresta.png  copas escuras em bolos, com sombra
+    assets/tiles/cerrado.png   terra seca, capim amarelado, moitas
   São desenhos provisórios, gerados por tools/art/gen_art.gd. As
   texturas são "sem emenda": o desenho continua na casa vizinha.
   O antigo assets/tiles/terra.png não é mais usado.
@@ -305,8 +313,11 @@ MAPA (scripts/map/)
       na pradaria ao lado;
     * pradaria e cerrado se misturam aos poucos;
     * manchas grandes de cor (água mais funda/rasa, capim mais
-      claro/escuro) e cada casa espelha a textura de um jeito,
-      para o padrão não se repetir em grade.
+      claro/escuro); as texturas são lidas de forma contínua,
+      giradas (cada terreno num ângulo) e um pouco ampliadas, para
+      o padrão não se repetir alinhado com a grade e sem cortes na
+      borda das casas (até 23/10/2026 cada casa espelhava a
+      textura, o que cortava as copas da floresta nova).
   O miolo de cada casa sempre fica com o terreno dela (até uma
   ilha de 1 casa), então o desenho bate com as regras: o teste
   confere o centro de todas as casas visíveis.
@@ -324,19 +335,18 @@ MAPA (scripts/map/)
   sand_color, foam_color e shallow_color.
 - FAZENDAS NO MAPA: também são pintadas pelo shader, integradas
   ao terreno. As cidades avisam o GameMap onde estão as fazendas
-  (GameMap.set_improvement, mapa "improvement_map"):
-    * campo com borda orgânica (ruído) e uma cerca viva escura em
-      volta; fazendas vizinhas se juntam num só campo;
-    * fileiras levemente onduladas, numa direção sorteada por casa
-      (fica uma "colcha de retalhos"), e cor da plantação também
-      sorteada por fazenda (trigo, verde-claro ou verde);
-    * fazenda em obra: só terra arada (marrom, sem plantação);
+  (GameMap.set_improvement, mapa "improvement_map"). Desde
+  23/10/2026 cada casa de fazenda mostra uma imagem vista de cima:
+    * pronta: assets/sprites/improvements/fazenda.png, lotes em
+      retalhos (trigo, repolhos, terra lavrada com brotos,
+      hortaliças) separados por caminhos, com cerca de varas;
+    * em obra: fazenda_obra.png, terra lavrada com as primeiras
+      estacas da cerca;
+    * fazendas vizinhas se juntam numa colcha de lotes; onde a
+      vizinha não é fazenda, a borda é suave (farm_edge_soft);
     * obra cancelada: a casa volta a ser só terreno.
-  Ajustes no shader: farm_noise, farm_rows e as cores soil_color,
-  hedge_color e crop_color_a/b/c.
-  Na janela da cidade e nos ícones, a fazenda é um campo de cantos
-  arredondados, com cerca viva e fileiras curvas (City.draw_farm);
-  em obra, só a terra arada.
+  Na janela da cidade e nos ícones, City.draw_farm usa as mesmas
+  imagens (City.FARM_TEXTURE / FARM_NEW_TEXTURE).
 - Quando um terreno muda no jogo (floresta esgotada vira cerrado,
   cidade na floresta vira pradaria), GameMap.set_terrain atualiza
   o mapa do shader e o desenho muda na hora.
@@ -388,21 +398,27 @@ UNIDADES (scripts/units/)
   unidade inteira, com a roupa (túnica, crista, faixa, sela) na
   cor do jogador, sobre uma sombra no chão com um anel na cor do
   jogador nos pés (Unit._draw_base).
-- Sprites: PNG de 80x80 pixels, suavizados (formas com gradiente
-  de luz e sombra e contorno escuro suave; desde 23/10/2026; antes
-  pixel art de 40x40), com fundo transparente, em
-    assets/sprites/units/guerreiro.png    hoplita: elmo de bronze
-                                           com crista, peitoral,
-                                           escudo redondo e lança
-    assets/sprites/units/arqueiro.png     faixa na cabeça, colete
-                                           de couro, aljava, arco
-                                           retesado com flecha
-    assets/sprites/units/cavaleiro.png    cavalo com crina e sela,
-                                           cavaleiro de elmo e lança
-    assets/sprites/units/colono.png       chapéu de palha, trouxa
-                                           nas costas e pá
-    assets/sprites/units/trabalhador.png  gorro, avental de couro e
-                                           machado
+- Sprites: PNG de 80x80 pixels no estilo pintado (ver MAPA;
+  desde 23/10/2026), com fundo transparente, em
+    assets/sprites/units/guerreiro.png    hoplita (Antiguidade):
+                                           elmo coríntio de bronze
+                                           com crista de crina,
+                                           couraça de bronze,
+                                           quíton, pteruges, grevas,
+                                           aspis pintado e lança
+    assets/sprites/units/arqueiro.png     túnica longa, gibão de
+                                           couro, chapéu de ferro,
+                                           aljava e arco longo
+    assets/sprites/units/cavaleiro.png    cavalo com caparazão,
+                                           cavaleiro de cota de
+                                           malha, elmo de nasal,
+                                           lança com flâmula
+    assets/sprites/units/colono.png       capuz de lã, trouxa nas
+                                           costas e pá
+    assets/sprites/units/trabalhador.png  avental de couro, gorro
+                                           e machado erguido
+  A cor do jogador fica na crista e no aspis do hoplita, nas
+  túnicas, tabardos, mantas e capuzes.
   Foram gerados por tools/art/gen_art.gd (desenhos provisórios).
   Para mudar, edite o arquivo e salve; o Godot reimporta sozinho.
 - Cor de time (Unit.team_texture; vale também para as cidades):
@@ -536,8 +552,12 @@ TRABALHADOR (data/units/trabalhador.tres)
   madeireira e aperte M ("Trabalhar na madeireira [M]"). Precisa
   ter movimento sobrando, então quem chega no turno entra no
   turno seguinte. Máximo de 2.
-- No mapa, a madeireira remota é uma pilha de toras com contorno
-  na cor do dono e um círculo com o número de Trabalhadores.
+- No mapa, a madeireira remota é o desenho da madeireira
+  (assets/sprites/improvements/madeireira.png: telheiro de tábuas,
+  pilhas de toras com os anéis no corte, cavalete com serra e
+  tocos; LumberMill.TEXTURE), com contorno na cor do dono e um
+  círculo com o número de Trabalhadores. O mesmo desenho é a
+  madeireira da cidade e o ícone da madeira no HUD.
   Enquanto está em obra, ela fica transparente.
 - Clicar na sua madeireira remota a seleciona: a barra de ações
   mostra "Madeireira (x, y) - N/2 trabalhadores" e o botão
@@ -591,13 +611,19 @@ CIDADES (scripts/cities/city.gd)
   a classe (City.CITY_SPRITES, PNGs suavizados de 128x128 em
   assets/sprites/cities/, com a máscara <classe>_time.png;
   provisórios):
-    povoado.png    cabanas de palha, fogueira e bandeira
-    vila.png       casas de reboco e telha, poço e paliçada
-    cidade.png     muralha de pedra com portão, duas torres com
-                   bandeiras, casas e templo
-    metropole.png  muralha alta com três torres, coliseu, templo
-                   grande e muitas casas
-  As bandeiras, faixas e telhados das torres ficam na cor do dono
+    povoado.png    casas de enxaimel com telhado de palha,
+                   fogueira com pedras, estandarte, paliçada e
+                   árvores
+    vila.png       mais casas (palha e telha), poço, capela de
+                   pedra com torre e paliçada
+    cidade.png     castelo: muralhas de blocos, torres de telhado
+                   vermelho, torre de menagem, portão com
+                   estandartes e casas de telha
+    metropole.png  castelo maior: três torres na frente, torre de
+                   menagem alta, catedral com agulha e muitas
+                   casas
+  Cada uma fica sobre uma "ilha" de chão com árvores em volta.
+  Os estandartes, bandeiras e flâmulas ficam na cor do dono
   (máscara). O desenho fica
   1,6 casa de largura (City.SPRITE_SIZE), passando um pouco da casa.
   Embaixo: [estrela, se for capital] [selo com a população na cor
@@ -1067,8 +1093,8 @@ JANELA DA CIDADE (scripts/ui/city_window.gd e city_map_view.gd)
         Prefeitura       prédio romano (frontão e colunas)
         Quartel General  espada
         Templo           zigurate de pedra com uma chama
-        Fazenda          plantação (o desenho do mapa)
-        Madeireira       pilha de toras (o desenho do mapa)
+        Fazenda          lotes vistos de cima (o desenho do mapa)
+        Madeireira       telheiro e toras (o desenho do mapa)
         unidades         sprite da unidade sobre um quadrado
                          escuro com borda na cor do jogador
       Para uma construção nova, acrescente o desenho dela em
@@ -1439,8 +1465,9 @@ PILHAGEM (Game.pillage, tecla P)
   editar; gerados por tools/art/gen_art.gd):
     assets/sprites/improvements/fazenda_destruida.png
     assets/sprites/improvements/madeireira_destruida.png
-  Campo queimado com brasas e fumaça; toras carbonizadas em volta
-  de um monte de cinzas. Ficam em City.RUIN_TEXTURES.
+  Os lotes da fazenda queimados (fuligem, cinza, brasas e fumaça); a
+  madeireira desmoronada e carbonizada, com entulho e brasas.
+  Ficam em City.RUIN_TEXTURES.
 - Mensagem no topo da tela: "Guerreiro (Jogador 2) pilhou a
   fazenda de Aurora (+30 de energia). 1 cidadão executado."
 - A MÁQUINA: os soldados de campo pilham a melhoria inimiga em
@@ -1707,6 +1734,13 @@ Screenshots também confirmaram o visual.
     e cantos arredondados (23/10/2026)
 [ ] Arredondar também os cantos côncavos da fronteira (hoje só os
     convexos)
+[x] Estilo pintado (referência do usuário): unidades, cidades,
+    ruínas, madeireira, fazenda vista de cima e terrenos na paleta
+    verde-oliva (23/10/2026)
+[ ] Decidir a época visual de vez: hoje o lanceiro é hoplita
+    (Antiguidade) e o resto segue a referência medieval
+[ ] Desenhos pintados à mão (ou por ferramenta de imagem) no lugar
+    dos gerados por código, se quiser mais detalhe
 [x] Colono e fundação de cidades (tecla B / botão de ação)
 [x] Cidades: população, alimentos, produção, crescimento e fome
 [x] Fazendas: construção por produção e alocação de cidadãos
@@ -2332,6 +2366,32 @@ Screenshots também confirmaram o visual.
   janela em 1920x1080, 48x27 casas contra 32x18, painéis presos na
   borda direita, F11 maximiza, grava e volta), mais screenshots em
   1280x720 e 1920x1080.
+- ESTILO PINTADO (pedido do usuário: menos cartunesco; seguiu uma
+  referência que ele trouxe, com o lanceiro mantido como hoplita da
+  Antiguidade): gen_art.gd refeito. Unidades com proporções reais,
+  cota de malha, tabardos, elmos e volume sombreado; povoado, vila,
+  cidade e metrópole como aldeia e castelos medievais sobre uma
+  "ilha" de chão com árvores; ruínas no mesmo estilo; madeireira
+  desenhada (telheiro e toras) no lugar do ícone feito no código;
+  fazenda vista de cima em lotes de retalhos (opção B das três
+  mostradas), usada pelo shader do mapa, pela janela da cidade e
+  pelos ícones; terrenos repintados na paleta da referência
+  (pradaria verde-oliva, floresta escura, cerrado seco, água azul
+  acinzentada) e cores da costa ajustadas.
+- Correção no shader do terreno, achada nos testes: o ruído saía
+  em blocos (a função hash com sin() de números grandes dava
+  valores diferentes para o mesmo ponto em casas vizinhas), o que
+  deixava cortes retos na borda da floresta e da costa. Trocada
+  por um hash estável (Dave Hoskins). As texturas dos terrenos
+  passaram a ser lidas de forma contínua e girada (não espelhadas
+  casa a casa), sem cortes nas copas da floresta.
+- Validação: amostras aprovadas antes de aplicar; screenshots do
+  jogo (zoom 0,2/0,5/1,0, costa, ruínas, janela da cidade) e
+  imagens de depuração do shader (peso da floresta, ruído e borda);
+  teste do terreno (2240 casas certas), teste da felicidade, da
+  janela e os testes antigos passaram, menos os que dependem de
+  cores e contagens antigas (cerrado bege-claro, fazenda amarela,
+  item do Templo): ajustados à paleta nova, passaram.
 - Correção feita pelos testes antigos: com a fome agitando qualquer
   cidade, um povoado de 2 que fazia a primeira fazenda entrava em
   desordem e a obra parava para sempre. Agora a fome só agita a

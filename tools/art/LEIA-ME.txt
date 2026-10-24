@@ -1,12 +1,18 @@
 Gerador dos desenhos do jogo (feitos por código, provisórios).
 
-Desde 23/10/2026 os desenhos têm 80x80 pixels por casa e são suavizados:
-cada um é feito com formas vetoriais (curvas, gradientes de luz e sombra)
-num canvas 4 vezes maior e reduzido com filtro, com um contorno escuro
-suave. (Os geradores antigos de pixel art 40x40 estão no histórico do Git.)
+Desde 23/10/2026 os desenhos seguem um estilo PINTADO, a partir de uma
+referência aprovada pelo usuário: proporções reais, paleta terrosa
+(verde-oliva, terra, pedra), volume sombreado (tubos e esferas com luz de
+cima à esquerda), textura de materiais (cota de malha, palha, blocos de
+pedra, telhas, madeira), granulado leve e contorno fino. Prédios em
+perspectiva 3/4 sobre uma "ilha" de chão com árvores. Tudo é desenhado num
+canvas 6 vezes maior e reduzido com filtro. O lanceiro é um hoplita
+(Antiguidade); o resto segue a referência medieval.
+(Os geradores antigos, de pixel art 40x40 e do estilo "cartum" 80x80, estão
+no histórico do Git.)
 
 Para gerar de novo, rode na pasta do projeto (C:\ProjetoGame), COM janela
-(ele precisa renderizar; não use --headless):
+(ele precisa renderizar; não use --headless). Leva alguns minutos:
 
     godot_console.cmd --path . --script tools/art/gen_art.gd
 
@@ -14,14 +20,17 @@ Ele grava em assets/:
     sprites/units/<unidade>.png e <unidade>_time.png (as 5 unidades)
     sprites/cities/<classe>.png e <classe>_time.png (povoado ... metrópole)
     sprites/cities/<classe>_ruinas.png (a mesma cidade, destruída)
-    sprites/improvements/fazenda_destruida.png, madeireira_destruida.png
+    sprites/improvements/madeireira.png e madeireira_destruida.png
+    sprites/improvements/fazenda.png (vista de cima: lotes em retalhos),
+        fazenda_obra.png (terra lavrada) e fazenda_destruida.png
     tiles/pradaria.png, floresta.png, agua.png, cerrado.png (sem emenda)
 
-COR DO JOGADOR: o PNG principal tem a roupa/telhado do time em preto, e o
-_time.png (tons de cinza) diz quanto da cor do jogador entra em cada pixel
-(branco = a cor inteira). O jogo soma máscara x cor (Unit.team_texture).
-Para desenhar à mão, edite os dois juntos. Sprites sem _time.png continuam
-aceitando o jeito antigo: magenta (#FF00FF) vira a cor do jogador.
+COR DO JOGADOR: o PNG principal tem a parte do time (túnicas, tabardos,
+crista, escudo, estandartes) em preto, e o _time.png (tons de cinza) diz
+quanto da cor do jogador entra em cada pixel (branco = a cor inteira). O
+jogo soma máscara x cor (Unit.team_texture). Para desenhar à mão, edite os
+dois juntos. Sprites sem _time.png continuam aceitando o jeito antigo:
+magenta (#FF00FF) vira a cor do jogador.
 
 Atenção: gerar de novo SOBRESCREVE os PNGs (inclusive os editados à mão).
 A pasta tem .gdignore: o Godot não importa estes scripts no jogo.
