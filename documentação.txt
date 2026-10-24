@@ -151,11 +151,14 @@ C:\ProjetoGame
 |   `-- art/
 |       |-- gen_art.gd             Gera todos os desenhos (80x80,
 |       |                          estilo pintado; ver LEIA-ME.txt)
-|       |-- import_sheet.gd        Importa a folha do ChatGPT (ainda
-|       |                          não aplicada; ver BACKLOG)
+|       |-- import_sheet.gd        Importa a folha do ChatGPT
+|       |-- variantes_cidade.gd    Monta as variantes das cidades
+|       |                          (capital/normal, com/sem muralha)
 |       |-- PROMPTS-CHATGPT.txt    Prompts para gerar os desenhos
-|       `-- chatgpt/               Referência, folha gerada e os
-|                                  desenhos prontos para aplicar
+|       `-- chatgpt/               Referência, folha gerada, recortes
+|                                  grandes (grandes/) e os desenhos
+|                                  prontos com os nomes do jogo
+|                                  (prontos/)
 `-- data/
     |-- maps/
     |   `-- mapa_teste.png         Mapa de teste 120x75 (era o
@@ -258,20 +261,36 @@ MAPA (scripts/map/)
   grade fina e suave na borda. O mapa pequeno inteiro mede
   9600x6000 pixels.
 - DESENHOS DO CHATGPT (desde 24/10/2026): as 5 unidades (80x80) e
-  as 4 classes de cidade (128x128) são as do ChatGPT, no estilo
-  grego pintado (hoplitas, casas caiadas de telha vermelha,
-  templos, muralhas de pedra). Vieram da folha
-  tools/art/chatgpt/folha.png pelo importador
-  tools/art/import_sheet.gd, que recorta, remove o fundo, reduz e
-  separa o azul do time na máscara <nome>_time.png (no jogo, a
-  crista, o escudo, as faixas, os estandartes e o frontão ficam na
-  cor do jogador). As ruínas das cidades (<classe>_ruinas.png)
-  saem dessas cidades pela função ruin() de tools/art/gen_art.gd,
-  que não gera mais unidades nem cidades. Para trocar um desenho:
-  gerar a folha de novo no ChatGPT (tools/art/PROMPTS-CHATGPT.txt),
-  rodar o importador e copiar os PNGs de tools/art/chatgpt/prontos/
-  para assets/sprites/units/ e assets/sprites/cities/; depois rodar
-  gen_art.gd (com janela) para refazer as ruínas.
+  as cidades (128x128) são as do ChatGPT, no estilo grego pintado
+  (hoplitas, casas caiadas de telha vermelha, templos, muralhas de
+  pedra). Vieram da folha tools/art/chatgpt/folha.png pelo
+  importador tools/art/import_sheet.gd, que recorta, remove o
+  fundo, reduz e separa o azul do time na máscara <nome>_time.png
+  (no jogo, a crista, o escudo, as faixas, os estandartes e o
+  frontão ficam na cor do jogador). As cidades têm variantes
+  (capital/normal, com/sem muralha; ver "QUAL DESENHO CADA CIDADE
+  USA" na seção CIDADES), montadas por colagem dos próprios
+  desenhos do ChatGPT. As ruínas saem das cidades normais pela
+  função ruin() de tools/art/gen_art.gd, que não gera mais unidades
+  nem cidades.
+  Para refazer ou trocar os desenhos (na pasta do projeto):
+    1. gerar a folha no ChatGPT (tools/art/PROMPTS-CHATGPT.txt) e
+       salvar em tools/art/chatgpt/folha.png;
+    2. godot_console.cmd --headless --path . --script
+       tools/art/import_sheet.gd   (unidades e as 4 cidades da
+       folha, já com os nomes do jogo, em chatgpt/prontos/, e os
+       recortes grandes em chatgpt/grandes/);
+    3. godot_console.cmd --headless --path . --script
+       tools/art/variantes_cidade.gd   (as outras 7 variantes de
+       cidade, também em chatgpt/prontos/; as coordenadas dos
+       cortes valem para a folha atual: com uma folha nova, revisar);
+    4. copiar os PNGs de chatgpt/prontos/ (menos a prévia) para
+       assets/sprites/units/ e assets/sprites/cities/;
+    5. godot_console.cmd --path . --script tools/art/gen_art.gd
+       (COM janela; refaz as 6 ruínas, os terrenos, a madeireira e
+       a fazenda);
+    6. godot_console.cmd --headless --path . --import e conferir
+       mipmaps/generate=true nos .import novos.
 - ESTILO PINTADO (desde 23/10/2026, a partir de uma referência
   aprovada pelo usuário; hoje vale para terrenos, madeireira e
   fazenda, os desenhos que ainda são feitos por código): todos os
@@ -629,24 +648,12 @@ CIDADES (scripts/cities/city.gd)
 - Atributos: Nome, População, Estoque de Alimentos e Produção
   (força de trabalho). O jogador escolhe o nome ao fundar; a
   máquina usa a lista City.NAMES ("Aurora", "Porto Alto"...).
-- No mapa: o desenho de uma cidade do mundo antigo, que cresce com
-  a classe (City.CITY_SPRITES, PNGs suavizados de 128x128 em
-  assets/sprites/cities/, com a máscara <classe>_time.png;
-  provisórios):
-    povoado.png    casas de enxaimel com telhado de palha,
-                   fogueira com pedras, estandarte, paliçada e
-                   árvores
-    vila.png       mais casas (palha e telha), poço, capela de
-                   pedra com torre e paliçada
-    cidade.png     castelo: muralhas de blocos, torres de telhado
-                   vermelho, torre de menagem, portão com
-                   estandartes e casas de telha
-    metropole.png  castelo maior: três torres na frente, torre de
-                   menagem alta, catedral com agulha e muitas
-                   casas
-  Cada uma fica sobre uma "ilha" de chão com árvores em volta.
-  Os estandartes, bandeiras e flâmulas ficam na cor do dono
-  (máscara). O desenho fica
+- No mapa: o desenho de uma cidade grega, que cresce com a classe
+  e muda para a capital e para a cidade com muralha (ver QUAL
+  DESENHO CADA CIDADE USA, logo abaixo). Cada uma fica sobre uma
+  "ilha" de chão com árvores em volta. Os estandartes, o toldo do
+  mercado e o telhado do templo ficam na cor do dono (máscara).
+  O desenho fica
   1,6 casa de largura (City.SPRITE_SIZE), passando um pouco da casa.
   Embaixo: [estrela, se for capital] [selo com a população na cor
   do dono] Nome. A barra de alimentos e os avisos ficam acima do
@@ -654,6 +661,58 @@ CIDADES (scripts/cities/city.gd)
   desenho com o selo da população no canto. As fazendas são
   pintadas pelo shader do terreno, integradas ao chão (ver
   FAZENDAS NO MAPA); as madeireiras em obra ficam transparentes.
+- QUAL DESENHO CADA CIDADE USA (desde 24/10/2026; City.city_sprite
+  e City.CITY_SPRITES): PNGs de 128x128 em assets/sprites/cities/,
+  cada um com a máscara da cor do dono <nome>_time.png. O nome é
+  <classe>[_capital][_muralha].png e depende de três coisas:
+    classe   pela população: povoado (1-5), vila (6-15), cidade
+             (16-30), metropole (31+);
+    capital  só a capital (City.is_capital) tem o templo/acrópole,
+             que representa o Palácio; as outras cidades têm casas
+             no lugar dele;
+    muralha  só a cidade com muralha (City.has_walls()) mostra os
+             muros. A construção Muralha ainda não existe, então
+             has_walls() devolve sempre falso e hoje NENHUMA cidade
+             aparece com muralha: as versões _muralha ficam
+             prontas para quando ela existir (basta has_walls()
+             olhar a construção).
+  Tabela (normal | capital | normal com muralha | capital com
+  muralha):
+    Povoado    povoado.png nos 4 casos (não tem templo nem muralha)
+    Vila       vila.png | vila_capital.png | vila.png |
+               vila_capital.png  (vila não tem versão com muralha)
+    Cidade     cidade.png | cidade_capital.png | cidade_muralha.png |
+               cidade_capital_muralha.png
+    Metrópole  metropole.png | metropole_capital.png |
+               metropole_muralha.png | metropole_capital_muralha.png
+  O que tem em cada um:
+    povoado                    casas caiadas, toldo de mercado,
+                               oliveiras e muro baixo de pedra
+    vila                       casas, poço, fonte e mercado; dois
+                               grupos de casas com ciprestes no
+                               lugar do templo
+    vila_capital               a mesma vila com um templo grego
+                               atrás
+    cidade                     a frente da vila (mercado, poço,
+                               fonte) e mais casas atrás
+    cidade_capital             a mesma, com o templo no alto
+    cidade_muralha             muralha com torres, portão e
+                               estandartes; casas dentro
+    cidade_capital_muralha     a mesma, com o templo no alto
+    metropole                  a cidade ampliada, com mais uma
+                               fileira de casas atrás
+    metropole_capital          a cidade da capital ampliada, com a
+                               acrópole (templo grande no terraço)
+    metropole_muralha          muralha maior com quatro torres e
+                               casas no lugar da acrópole
+    metropole_capital_muralha  a mesma, com a acrópole
+  Quatro vieram direto da folha do ChatGPT (povoado, vila_capital,
+  cidade_capital_muralha, metropole_capital_muralha); as outras 7
+  foram montadas por colagem desses desenhos
+  (tools/art/variantes_cidade.gd).
+  A troca é na hora: se a capital muda (a antiga é conquistada), a
+  nova passa a ser desenhada com o templo. A janela da cidade usa o
+  mesmo desenho do mapa.
 - Área de trabalho da cidade = o TERRITÓRIO dela (ver TERRITÓRIO
   E CLASSES DE CIDADE): na capital, as 8 casas vizinhas mais as 12
   seguintes, sem as 4 pontas (um quadrado 5x5 sem os cantos, 20
@@ -1021,10 +1080,18 @@ INVASÃO E CONQUISTA (Game.check_invasion, occupy_city, raze_city)
   valor.
 - CIDADE DESTRUÍDA: a casa mostra a cidade em ruínas, no tamanho
   da classe que ela tinha ao ser destruída (uma metrópole vira uma
-  grande cidade em ruínas): RuinsLayer.RUIN_SPRITES, PNGs em
-  assets/sprites/cities/<classe>_ruinas.png (povoado, vila,
-  cidade, metropole; 128x128, provisórios). São a própria cidade
-  intacta destruída pelo gerador (tools/art/gen_art.gd): o alto dos
+  grande cidade em ruínas) e com ou sem muralha, como ela era:
+  RuinsLayer.RUIN_SPRITES, PNGs de 128x128 em
+  assets/sprites/cities/<classe>[_muralha]_ruinas.png:
+    povoado_ruinas, vila_ruinas, cidade_ruinas, metropole_ruinas
+                                   (sem muralha: o caso de hoje)
+    cidade_muralha_ruinas, metropole_muralha_ruinas
+                                   (com muralha: quando existir)
+  Capital e cidade normal viram a mesma ruína (o desmoronamento
+  leva justamente o alto, onde ficava o templo). O save guarda a
+  muralha de cada ruína; save antigo carrega como sem muralha.
+  São a cidade normal intacta destruída pelo gerador
+  (tools/art/gen_art.gd): o alto dos
   prédios, telhados e torres desmorona num recorte irregular (mais
   em cima que embaixo), as cores ficam acinzentadas e escuras com
   manchas de fuligem, as bandeiras viram pano queimado (sem dono),
@@ -1766,6 +1833,14 @@ Screenshots também confirmaram o visual.
     grego pintado, no lugar dos gerados por código: unidades e
     cidades aplicadas em 24/10/2026, ruínas das cidades derivadas
     delas por código
+[x] Variantes das cidades: capital (com templo/Palácio) e normal,
+    com e sem muralha, e as ruínas com e sem muralha (24/10/2026)
+[ ] Construção Muralha: City.has_walls() passa a olhar a
+    construção e as cidades e ruínas com muralha aparecem sozinhas
+[ ] Construção Palácio (hoje o templo aparece em qualquer capital)
+[ ] Versões das variantes montadas desenhadas de novo pelo ChatGPT
+    (hoje vila, cidade e metrópole sem muralha repetem a frente da
+    vila: toldo, poço e fonte)
 [ ] Madeireira, fazenda e terrenos também no estilo do ChatGPT
 [ ] Ruínas das cidades desenhadas pelo ChatGPT (prompts 10 a 13),
     no lugar das derivadas por código
@@ -2458,6 +2533,32 @@ Screenshots também confirmaram o visual.
 - Validação: teste com screenshots do jogo (zoom 0,2/0,5/0,75/1,0,
   costa, ruínas, janela da cidade) passou, com as cores vermelha e
   amarela aplicadas nas unidades e cidades e a textura com mipmaps.
+- VARIANTES DAS CIDADES (pedido do usuário: a muralha vai ser uma
+  construção, e o templo/acrópole fica só para a capital, que vai
+  ter o Palácio). Por colagem dos desenhos do ChatGPT
+  (tools/art/variantes_cidade.gd):
+    * sem muralha: a frente da vila no lugar da muralha; os lados
+      de cima da vila (casa, ciprestes, oliveiras) escoram o templo
+      para ele não parecer suspenso, e a acrópole da metrópole
+      desceu ~30 px para assentar entre as casas (ajustes pedidos
+      pelo usuário ao ver a prévia);
+    * normais: o templo/acrópole sai e no lugar entram grupos de
+      casas e ciprestes da própria vila (topo natural) e o miolo de
+      casas da cidade.
+  São 11 desenhos de cidade e 6 ruínas (as ruínas da capital e da
+  normal ficavam iguais, então ficou uma só). Esquema de nomes
+  <classe>[_capital][_muralha].png; o jogo escolhe por classe,
+  capital e muralha (City.city_sprite). Como a construção Muralha
+  ainda não existe, City.has_walls() é sempre falso: hoje cidade e
+  metrópole aparecem SEM muralha (antes apareciam com). O
+  importador agora grava os recortes grandes (chatgpt/grandes/) e
+  já usa os nomes do jogo; gen_art.gd ganhou o modo
+  "-- ruinas <pasta>" (ruínas de todos os desenhos de uma pasta).
+- Validação: teste com as 16 combinações de classe x capital x
+  muralha (arquivo e máscara certos), as 8 ruínas, o save das
+  ruínas (com a muralha; save antigo carrega sem) e screenshots do
+  mapa (normais x capitais, ruínas com e sem muralha, janela da
+  cidade). Os testes antigos de conquista, saque e save passaram.
 
 --------------------------------------------------------------
 7. BACKLOG (ideias para depois)

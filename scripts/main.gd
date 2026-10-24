@@ -665,7 +665,7 @@ func raze_city(city: City, raider: Player) -> String:
 		ruins_layer.improvements[cell] = {"build": City.Build.LUMBER_MILL, "progress": 0}
 	for cell: Vector2i in city.ruins:
 		ruins_layer.improvements[cell] = city.ruins[cell]
-	ruins_layer.add_city(city.cell, city.city_name, city.rank())
+	ruins_layer.add_city(city.cell, city.city_name, city.rank(), city.has_walls())
 	ruins_layer.queue_redraw()
 	# Apaga as fazendas pintadas no mapa antes de a cidade sumir
 	city.farms.clear()

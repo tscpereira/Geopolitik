@@ -1,9 +1,10 @@
 extends SceneTree
 
 ## Importador da folha de sprites gerada no ChatGPT (tools/art/chatgpt/folha.png,
-## prompt em tools/art/PROMPTS-CHATGPT.txt). AINDA NÃO APLICADO NO JOGO: grava
-## em tools/art/chatgpt/prontos/; para aplicar, copiar para assets/ (ver a
-## documentação, BACKLOG). Rode na pasta do projeto:
+## prompt em tools/art/PROMPTS-CHATGPT.txt). Grava em tools/art/chatgpt/prontos/
+## (com os nomes do jogo) e os recortes grandes em tools/art/chatgpt/grandes/;
+## depois rode variantes_cidade.gd e copie prontos/ para assets/ (ver a
+## documentação, seção 4, "DESENHOS DO CHATGPT"). Rode na pasta do projeto:
 ##   godot_console.cmd --headless --path . --script tools/art/import_sheet.gd
 ## Passos:
 ##   1. remove o fundo xadrez "pintado" (o ChatGPT não gera transparência de
@@ -13,11 +14,13 @@ extends SceneTree
 ##      embaixo, da esquerda para a direita);
 ##   3. separa o azul do time numa máscara (<nome>_time.png) e deixa essas
 ##      partes escuras no desenho (o jogo soma máscara x cor do jogador);
-##   4. reduz para 80x80 (unidades, pés em y = 73) e 128x128 (cidades);
+##   4. reduz para 80x80 (unidades, pés em y = 73) e 128x128 (cidades: povoado,
+##      vila_capital, cidade_capital_muralha, metropole_capital_muralha);
 ##   5. grava uma prévia no tamanho do jogo (zoom 1,0 e 0,5, vermelho e amarelo).
 
 const SRC := "res://tools/art/chatgpt/folha.png"
 const OUT := "res://tools/art/chatgpt/prontos/"
+const GRANDES := "res://tools/art/chatgpt/grandes/"
 
 
 ## Grade do xadrez "pintado": quadrados de 1536/144 px, a partir de x = y = 0,667.
@@ -32,6 +35,7 @@ func is_backdrop(p: Color) -> bool:
 
 func _initialize() -> void:
 	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(OUT))
+	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(GRANDES))
 	var image := Image.load_from_file(ProjectSettings.globalize_path(SRC))
 	image.convert(Image.FORMAT_RGBA8)
 	var w := image.get_width()
@@ -160,6 +164,9 @@ func _initialize() -> void:
 		print("  %s  %d px" % [b[1], b[2]])
 	# 3. Cada desenho: recorte no tamanho do jogo, máscara do azul do time
 	var names := ["guerreiro", "arqueiro", "cavaleiro", "colono", "trabalhador", "povoado", "vila", "cidade", "metropole"]
+	# Nome no jogo: as cidades da folha têm templo (só a capital) e as duas
+	# maiores têm muralha; as outras variantes saem de variantes_cidade.gd
+	var game_names := {"vila": "vila_capital", "cidade": "cidade_capital_muralha", "metropole": "metropole_capital_muralha"}
 	var made := {}
 	for k in big.size():
 		var r: Rect2i = big[k][1]
@@ -187,6 +194,9 @@ func _initialize() -> void:
 				var amount := blue * clampf(p.v / 0.85, 0.0, 1.0)
 				crop.set_pixel(x, y, Color(p.r * (1.0 - blue), p.g * (1.0 - blue), p.b * (1.0 - blue), 1.0))
 				mask.set_pixel(x, y, Color(amount, amount, amount, 1.0))
+		# Recorte em tamanho grande (para montar variações, ex.: cidade sem muralha)
+		crop.save_png(ProjectSettings.globalize_path(GRANDES) + names[k] + ".png")
+		mask.save_png(ProjectSettings.globalize_path(GRANDES) + names[k] + "_time.png")
 		var is_unit := k < 5
 		var size := 80 if is_unit else 128
 		var max_size := Vector2(76, 70) if is_unit else Vector2(124, 120)
@@ -206,8 +216,9 @@ func _initialize() -> void:
 		var mask_l8 := mask.duplicate()
 		mask_l8.convert(Image.FORMAT_L8)
 		sprite_mask.blit_rect(mask_l8, Rect2i(Vector2i.ZERO, target), at)
-		sprite.save_png(ProjectSettings.globalize_path(OUT) + names[k] + ".png")
-		sprite_mask.save_png(ProjectSettings.globalize_path(OUT) + names[k] + "_time.png")
+		var game_name: String = game_names.get(names[k], names[k])
+		sprite.save_png(ProjectSettings.globalize_path(OUT) + game_name + ".png")
+		sprite_mask.save_png(ProjectSettings.globalize_path(OUT) + game_name + "_time.png")
 		made[names[k]] = [sprite, sprite_mask]
 	print("recortes prontos (%d ms)" % (Time.get_ticks_msec() - start))
 	# 4. Prévia no tamanho do jogo: zoom 1,0 (80 px por casa) e zoom 0,5 (o

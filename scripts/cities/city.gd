@@ -257,16 +257,32 @@ const STALLED_COLOR := Color(0.9, 0.2, 0.15)
 const IDLE_ICON_RADIUS := GameMap.TILE_SIZE * 0.22
 const IDLE_FONT_SIZE := int(GameMap.TILE_SIZE * 0.4)
 
-## Desenho da cidade em cada classe (PNGs de 128x128 em assets/sprites/cities/,
-## com a máscara da cor do dono em <classe>_time.png, ver Unit.team_texture).
+## Desenho da cidade (PNGs de 128x128 em assets/sprites/cities/, com a máscara
+## da cor do dono em <nome>_time.png, ver Unit.team_texture), escolhido pela
+## classe e por duas condições (city_sprite):
+##   capital  com o templo/acrópole (o Palácio): "<classe>_capital.png";
+##   muralha  com a muralha: "<classe>_muralha.png" (has_walls).
+## Por classe, na ordem [normal, capital, muralha, capital com muralha]:
+##   Povoado    um desenho só (sem templo e sem muralha);
+##   Vila       vila / vila_capital (não tem versão com muralha);
+##   Cidade e   <classe>, <classe>_capital, <classe>_muralha e
+##   Metrópole  <classe>_capital_muralha.
 ## No mapa ele é desenhado com SPRITE_SIZE, centralizado na casa e passando
 ## SPRITE_BOTTOM_OVERFLOW pixels
 ## embaixo; a barra de alimentos fica SPRITE_TOP_GAP abaixo do topo dele.
 const CITY_SPRITES := {
-	Rank.SETTLEMENT: preload("res://assets/sprites/cities/povoado.png"),
-	Rank.TOWN: preload("res://assets/sprites/cities/vila.png"),
-	Rank.CITY: preload("res://assets/sprites/cities/cidade.png"),
-	Rank.METROPOLIS: preload("res://assets/sprites/cities/metropole.png"),
+	Rank.SETTLEMENT: [
+		preload("res://assets/sprites/cities/povoado.png"), preload("res://assets/sprites/cities/povoado.png"),
+		preload("res://assets/sprites/cities/povoado.png"), preload("res://assets/sprites/cities/povoado.png")],
+	Rank.TOWN: [
+		preload("res://assets/sprites/cities/vila.png"), preload("res://assets/sprites/cities/vila_capital.png"),
+		preload("res://assets/sprites/cities/vila.png"), preload("res://assets/sprites/cities/vila_capital.png")],
+	Rank.CITY: [
+		preload("res://assets/sprites/cities/cidade.png"), preload("res://assets/sprites/cities/cidade_capital.png"),
+		preload("res://assets/sprites/cities/cidade_muralha.png"), preload("res://assets/sprites/cities/cidade_capital_muralha.png")],
+	Rank.METROPOLIS: [
+		preload("res://assets/sprites/cities/metropole.png"), preload("res://assets/sprites/cities/metropole_capital.png"),
+		preload("res://assets/sprites/cities/metropole_muralha.png"), preload("res://assets/sprites/cities/metropole_capital_muralha.png")],
 }
 const SPRITE_SIZE := GameMap.TILE_SIZE * 1.6
 const SPRITE_BOTTOM_OVERFLOW := GameMap.TILE_SIZE * 0.12
@@ -351,8 +367,12 @@ class Construction:
 var city_name := ""
 var owner_player: Player
 var cell: Vector2i
-## Primeira cidade do jogador: começa com um território maior.
-var is_capital := false
+## Primeira cidade do jogador: começa com um território maior e é desenhada
+## com o templo/acrópole (CITY_SPRITES).
+var is_capital := false:
+	set(value):
+		is_capital = value
+		queue_redraw()
 ## Casas do território (inclui a casa da cidade). É também a área de trabalho.
 ## Definido ao fundar (Game.found_city); por enquanto não cresce.
 var territory: Array[Vector2i] = []
@@ -532,6 +552,12 @@ func rank() -> Rank:
 		if population >= RANK_MIN_POPULATION[candidate]:
 			result = candidate
 	return result
+
+
+## Tem muralha? Escolhe o desenho com muralha (CITY_SPRITES) e o das ruínas
+## (RuinsLayer). Por enquanto sempre não: a construção Muralha ainda não existe.
+func has_walls() -> bool:
+	return false
 
 
 ## "Povoado", "Vila (capital)"...
@@ -1390,7 +1416,7 @@ func _draw() -> void:
 
 	# Desenho da cidade (cresce com a classe), um pouco maior que a casa
 	var sprite := Rect2(Vector2(-SPRITE_SIZE / 2.0, tile.y / 2.0 - SPRITE_SIZE + SPRITE_BOTTOM_OVERFLOW), Vector2.ONE * SPRITE_SIZE)
-	draw_city_sprite(self, sprite, owner_player.color, rank())
+	draw_city_sprite(self, sprite, owner_player.color, rank(), is_capital, has_walls())
 	# Barra de alimentos e avisos logo acima do desenho
 	var top := Rect2(-tile.x / 2.0 + MARGIN, sprite.position.y + SPRITE_TOP_GAP, tile.x - MARGIN * 2.0, tile.y)
 	_draw_food_bar(top)
@@ -1473,10 +1499,16 @@ func _local_center(target: Vector2i) -> Vector2:
 	return to_local(_map.cell_to_world(target))
 
 
-## Desenho da cidade da classe [param city_rank] (CITY_SPRITES), com as
-## bandeiras na cor do dono. Também usado pela janela da cidade.
-static func draw_city_sprite(canvas: CanvasItem, rect: Rect2, color: Color, city_rank: Rank) -> void:
-	canvas.draw_texture_rect(Unit.team_texture(CITY_SPRITES[city_rank], color), rect, false)
+## Desenho da classe [param city_rank], da capital ou não, com ou sem muralha
+## (CITY_SPRITES).
+static func city_sprite(city_rank: Rank, capital: bool, walls: bool) -> Texture2D:
+	return CITY_SPRITES[city_rank][int(capital) + 2 * int(walls)]
+
+
+## Desenho da cidade (city_sprite), com as bandeiras na cor do dono. Também
+## usado pela janela da cidade.
+static func draw_city_sprite(canvas: CanvasItem, rect: Rect2, color: Color, city_rank: Rank, capital := false, walls := false) -> void:
+	canvas.draw_texture_rect(Unit.team_texture(city_sprite(city_rank, capital, walls), color), rect, false)
 
 
 ## Largura do selo da população (draw_population_badge).

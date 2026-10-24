@@ -191,7 +191,8 @@ func _draw() -> void:
 	_draw_border()
 	# A cidade (desenho da classe) e a população no canto
 	var center_rect := _cell_rect(_city.cell)
-	City.draw_city_sprite(self, center_rect.grow(CELL_SIZE * 0.15), _city.owner_player.color, _city.rank())
+	City.draw_city_sprite(self, center_rect.grow(CELL_SIZE * 0.15), _city.owner_player.color, _city.rank(),
+			_city.is_capital, _city.has_walls())
 	var badge_font := int(CELL_SIZE * 0.28)
 	City.draw_population_badge(self, Vector2(center_rect.position.x + 2, center_rect.end.y - badge_font * 0.5),
 			_city.population, _city.owner_player.color, badge_font)

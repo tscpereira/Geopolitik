@@ -7,7 +7,8 @@ extends SceneTree
 ## contorno fino e discreto e prédios em perspectiva 3/4 sobre uma "ilha" de
 ## chão com árvores. O lanceiro é um hoplita (Antiguidade); os outros seguem a
 ## referência medieval.
-##   sprites/cities/<classe>_ruinas.png  (a cidade instalada, destruída)
+##   sprites/cities/<classe>[_muralha]_ruinas.png  (a cidade normal
+##       instalada, destruída)
 ## Unidades e cidades (com as máscaras _time.png) vêm do ChatGPT desde
 ## 24/10/2026 (tools/art/import_sheet.gd) e NÃO são mais geradas aqui; as
 ## funções de desenho delas (hoplite, village...) ficaram só como referência.
@@ -101,9 +102,26 @@ func _run() -> void:
 	_vp.add_child(_canvas)
 	c = _canvas
 
-	# Unidades e cidades vêm do ChatGPT (tools/art/import_sheet.gd) desde
-	# 24/10/2026; aqui só saem as ruínas, a partir das cidades instaladas.
-	for city_name: String in ["povoado", "vila", "cidade", "metropole"]:
+	# Só ruínas das cidades de uma pasta (<nome>.png + <nome>_time.png):
+	#   godot_console.cmd --path . --script tools/art/gen_art.gd -- ruinas <pasta>
+	var args := OS.get_cmdline_user_args()
+	if args.size() >= 2 and args[0] == "ruinas":
+		for file in DirAccess.get_files_at(args[1]):
+			var city_name := file.get_basename()
+			if file.get_extension() != "png" or city_name.ends_with("_time") or city_name.ends_with("_ruinas") \
+					or not FileAccess.file_exists(args[1].path_join(city_name + "_time.png")):
+				continue
+			var intact := burnt_city(args[1].path_join(city_name))
+			(await ruin(intact, city_name, CITY_SIZE, CITY_DESIGN)).save_png(args[1].path_join(city_name + "_ruinas.png"))
+			print("ruínas: " + city_name)
+		quit()
+		return
+
+	# Unidades e cidades vêm do ChatGPT (tools/art/import_sheet.gd e
+	# variantes_cidade.gd) desde 24/10/2026; aqui só saem as ruínas, a partir
+	# das cidades normais instaladas (a da capital vira a mesma ruína: o
+	# desmoronamento leva justamente o alto, onde fica o templo).
+	for city_name: String in ["povoado", "vila", "cidade", "cidade_muralha", "metropole", "metropole_muralha"]:
 		var intact := burnt_city(CITIES_DIR + city_name)
 		(await ruin(intact, city_name, CITY_SIZE, CITY_DESIGN)).save_png(CITIES_DIR + city_name + "_ruinas.png")
 	team = BURNT_CLOTH
