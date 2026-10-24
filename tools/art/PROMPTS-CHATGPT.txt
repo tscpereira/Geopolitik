@@ -7,8 +7,66 @@ mudar a resolução atual (unidades 80x80, cidades 128x128). As imagens podem
 vir grandes (1024x1024); eu recorto e reduzo.
 
 
-COMO USAR (passo a passo)
--------------------------
+VERSÃO RÁPIDA: TUDO EM UM PROMPT SÓ (tente esta primeiro)
+--------------------------------------------------------
+Uma única imagem com as 5 unidades e as 4 cidades lado a lado (uma "folha de
+sprites"). Eu separo cada desenho pelo contorno e gero as ruínas a partir das
+cidades. Anexe a imagem de referência e cole o prompt abaixo. Salve como
+folha.png. Se os desenhos saírem encostados ou com fundo, peça para refazer
+citando a regra, ou use a versão de 13 prompts mais abaixo.
+
+PROMPT ÚNICO  ->  salvar como: folha.png
+
+Create a sprite sheet for a 2D turn-based strategy game set in ancient
+Greece. Use the attached image as the style reference: detailed painted
+illustration, realistic proportions, warm earthy palette, soft lighting.
+
+Layout: one landscape PNG, 1536x1024, fully TRANSPARENT background. Two
+rows of separate drawings, with clear empty space between every drawing
+(they must never touch or overlap). No labels, no text, no grid lines, no
+frames, no ground, no scenery.
+  Top row, 5 characters, full body, each facing RIGHT, same size and scale:
+    1. Greek hoplite: bronze Corinthian helmet with tall team-colored
+       horsehair crest, bronze muscle cuirass, white chiton with
+       team-colored trim, greaves, round aspis shield with team-colored face
+       and a white lambda, long spear held upright.
+    2. Greek archer: white headband, white chiton with team-colored trim and
+       a team-colored sash, quiver on the back, drawing a recurve bow aimed
+       right.
+    3. Greek cavalryman on a brown horse (whole horse visible): Corinthian
+       helmet with team-colored crest, cuirass, team-colored cloak, spear
+       upright, saddle cloth with team-colored trim.
+    4. Greek settler: wide straw hat, white chiton with team-colored trim
+       and belt, bundle on the back, holding a shovel.
+    5. Greek worker: team-colored headband, white one-shoulder tunic with
+       team-colored trim and belt, axe resting on the shoulder.
+  Bottom row, 4 settlements, each on its own small round plateau of earth
+  and rock, growing in size from left to right:
+    6. Small village: a few whitewashed houses with terracotta roofs, a
+       market stall with a team-colored awning, cypress and olive trees.
+    7. Town: many whitewashed houses, a small temple with white columns and
+       a team-colored pediment, a well, trees, one team-colored banner.
+    8. Walled city: pale limestone walls with square towers and a gate,
+       team-colored banners, dense houses, a temple on higher ground.
+    9. Metropolis: an acropolis with a large Parthenon-like temple
+       (team-colored pediment and roof), strong walls with several towers
+       and team-colored banners, many houses, cypress trees.
+  NO sea, NO water, NO boats, NO harbor in the settlements.
+
+Rules for every drawing:
+- Same camera for all: three-quarter view from slightly above (about 30
+  degrees). Same lighting for all: soft daylight from the TOP-LEFT.
+- TEAM COLOR: every team-colored part is ONE vivid royal blue (around
+  #1E50FF), only in lighter and darker shades of that same blue. NO other
+  blue, cyan, teal or purple anywhere: no water, no sky, no blue stones, no
+  blue eyes, no blue shadows.
+- Characters have no ground shadow, no base, no pedestal.
+- Painted and detailed, but readable when scaled down: strong silhouettes,
+  clear shapes, good contrast.
+
+
+COMO USAR A VERSÃO DE 13 PROMPTS (passo a passo)
+-------------------------------------------------
 1. Abra UMA conversa nova no ChatGPT e anexe a imagem de referência (a folha
    "Unidades / Cidades" com os hoplitas azuis).
 2. Cole primeiro o BLOCO DE ESTILO (abaixo) e mande. Ele vale para toda a
@@ -189,6 +247,8 @@ banners, no people. Transparent background around the plateau.
 O QUE EU FAÇO DEPOIS (para referência)
 ------------------------------------------------------------------------
 Com as imagens na pasta, eu rodo um importador que, para cada imagem:
+  0. (folha única) separa os 9 desenhos pelo contorno: cada grupo de pixels
+     não transparentes vira um desenho, na ordem da folha;
   1. remove o fundo (transparente ou magenta) e recorta no contorno;
   2. encaixa no tamanho atual: unidades em 80x80 (pés embaixo, centralizado),
      cidades em 128x128;
