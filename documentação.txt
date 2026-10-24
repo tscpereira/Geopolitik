@@ -731,7 +731,7 @@ CIDADES (scripts/cities/city.gd)
   da vila). As ruínas do povoado saem do povoado novo, então
   também ficaram menores. No mapa, o povoado (e a ruína dele) fica
   um pouco mais alto, mais perto do centro da casa: sobe
-  City.SPRITE_LIFT (0,15 casa), com o nome junto; a barra de
+  City.SPRITE_LIFT (0,3 casa: fica no centro da casa), com o nome junto; a barra de
   alimentos e os avisos ficam onde estavam, então o vão entre eles
   e o desenho diminui. A posição do desenho de cada classe vem de
   City.sprite_rect(classe), usada também pelas ruínas.
@@ -2616,7 +2616,8 @@ Screenshots também confirmaram o visual.
   screenshots das ruínas novas.
 - Povoado mais alto na casa (pedido do usuário, para diminuir o vão
   até a barra de alimentos): o desenho e o nome do povoado e da
-  ruína dele sobem 0,15 casa (City.SPRITE_LIFT); a barra fica no
+  ruína dele sobem 0,3 casa (City.SPRITE_LIFT; testado antes com
+  0,15), ficando no centro da casa; a barra fica no
   lugar. Nova função City.sprite_rect. Validação: screenshots do
   mapa (povoados ao lado de vila, cidade e metrópole; ruínas) e o
   teste das variantes passou.

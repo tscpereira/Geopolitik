@@ -290,7 +290,7 @@ const CITY_SPRITES := {
 const SPRITE_SIZE := GameMap.TILE_SIZE * 1.6
 const SPRITE_BOTTOM_OVERFLOW := GameMap.TILE_SIZE * 0.12
 const SPRITE_TOP_GAP := GameMap.TILE_SIZE * 0.25
-const SPRITE_LIFT := {Rank.SETTLEMENT: GameMap.TILE_SIZE * 0.15}
+const SPRITE_LIFT := {Rank.SETTLEMENT: GameMap.TILE_SIZE * 0.3}
 
 ## Desenho das melhorias destruídas (pilhadas), no mapa e na janela da cidade.
 ## PNGs de 80x80 em assets/sprites/improvements/ (dá para redesenhar).
