@@ -271,6 +271,8 @@ const IDLE_FONT_SIZE := int(GameMap.TILE_SIZE * 0.4)
 ## No mapa ele é desenhado com SPRITE_SIZE, centralizado na casa e passando
 ## SPRITE_BOTTOM_OVERFLOW pixels
 ## embaixo; a barra de alimentos fica SPRITE_TOP_GAP abaixo do topo dele.
+## O povoado (desenho menor) sobe SPRITE_LIFT, mais para o centro da casa,
+## com o nome junto; a barra de alimentos não sobe (o vão acima diminui).
 const CITY_SPRITES := {
 	Rank.SETTLEMENT: [
 		preload("res://assets/sprites/cities/povoado.png"), preload("res://assets/sprites/cities/povoado.png"),
@@ -288,6 +290,7 @@ const CITY_SPRITES := {
 const SPRITE_SIZE := GameMap.TILE_SIZE * 1.6
 const SPRITE_BOTTOM_OVERFLOW := GameMap.TILE_SIZE * 0.12
 const SPRITE_TOP_GAP := GameMap.TILE_SIZE * 0.25
+const SPRITE_LIFT := {Rank.SETTLEMENT: GameMap.TILE_SIZE * 0.15}
 
 ## Desenho das melhorias destruídas (pilhadas), no mapa e na janela da cidade.
 ## PNGs de 80x80 em assets/sprites/improvements/ (dá para redesenhar).
@@ -1416,10 +1419,11 @@ func _draw() -> void:
 					LumberMill.PROGRESS_BAR_COLOR)
 
 	# Desenho da cidade (cresce com a classe), um pouco maior que a casa
-	var sprite := Rect2(Vector2(-SPRITE_SIZE / 2.0, tile.y / 2.0 - SPRITE_SIZE + SPRITE_BOTTOM_OVERFLOW), Vector2.ONE * SPRITE_SIZE)
+	var sprite := sprite_rect(rank())
 	draw_city_sprite(self, sprite, owner_player.color, rank(), is_capital, has_walls())
-	# Barra de alimentos e avisos logo acima do desenho
-	var top := Rect2(-tile.x / 2.0 + MARGIN, sprite.position.y + SPRITE_TOP_GAP, tile.x - MARGIN * 2.0, tile.y)
+	# Barra de alimentos e avisos acima do desenho (no lugar de sempre, mesmo
+	# com o povoado mais alto)
+	var top := Rect2(-tile.x / 2.0 + MARGIN, sprite_rect(Rank.TOWN).position.y + SPRITE_TOP_GAP, tile.x - MARGIN * 2.0, tile.y)
 	_draw_food_bar(top)
 	if free_citizens() > 0 and not owner_player.is_ai:
 		_draw_idle_warning(top, free_citizens(), IDLE_COLOR)
@@ -1502,6 +1506,13 @@ func _local_center(target: Vector2i) -> Vector2:
 
 ## Desenho da classe [param city_rank], da capital ou não, com ou sem muralha
 ## (CITY_SPRITES).
+## Onde fica o desenho da cidade de classe [param city_rank], em relação ao
+## centro da casa (também usado pelas ruínas).
+static func sprite_rect(city_rank: Rank) -> Rect2:
+	var bottom: float = GameMap.TILE_SIZE / 2.0 + SPRITE_BOTTOM_OVERFLOW - SPRITE_LIFT.get(city_rank, 0.0)
+	return Rect2(Vector2(-SPRITE_SIZE / 2.0, bottom - SPRITE_SIZE), Vector2.ONE * SPRITE_SIZE)
+
+
 static func city_sprite(city_rank: Rank, capital: bool, walls: bool) -> Texture2D:
 	return CITY_SPRITES[city_rank][int(capital) + 2 * int(walls)]
 

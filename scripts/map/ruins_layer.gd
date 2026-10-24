@@ -56,8 +56,8 @@ func _draw() -> void:
 	for cell: Vector2i in cities:
 		var center := to_local(map.cell_to_world(cell))
 		# Mesmo lugar e tamanho do desenho da cidade (City._draw)
-		var sprite := Rect2(center + Vector2(-City.SPRITE_SIZE / 2.0, tile.y / 2.0 - City.SPRITE_SIZE + City.SPRITE_BOTTOM_OVERFLOW),
-				Vector2.ONE * City.SPRITE_SIZE)
+		var sprite := City.sprite_rect(cities[cell]["rank"])
+		sprite.position += center
 		draw_texture_rect(RUIN_SPRITES[cities[cell]["rank"]][int(cities[cell]["walls"])], sprite, false)
 		var text := "Ruínas de %s" % cities[cell]["name"]
 		var width := font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, City.NAME_FONT_SIZE).x
