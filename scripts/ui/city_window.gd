@@ -872,7 +872,7 @@ func _rebuild_farms() -> void:
 		icon.custom_minimum_size = Vector2.ONE * Icons.ICON_SIZE
 		icon.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 		icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		icon.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+		icon.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
 		icon.draw.connect(func() -> void: City.draw_ruin(icon, ruin["build"], Rect2(Vector2.ZERO, icon.size)))
 		row.add_child(icon)
 		var name_label := Label.new()

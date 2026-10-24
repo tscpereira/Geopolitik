@@ -9,9 +9,11 @@ extends Camera2D
 ## Velocidade em pixels de tela por segundo.
 const PAN_SPEED := 900.0
 const ZOOM_FACTOR := 1.15
-## Com casas de 40px o mapa pequeno tem 4800x3000; 0.25 permite vê-lo quase inteiro.
-const MIN_ZOOM := 0.25
-const MAX_ZOOM := 3.0
+## Com casas de 80px o mapa pequeno tem 9600x6000; 0.15 permite vê-lo quase
+## inteiro. Começa em 0.5 (a mesma visão das casas de 40px antigas).
+const MIN_ZOOM := 0.15
+const MAX_ZOOM := 1.5
+const START_ZOOM := 0.5
 ## Pixels que o mouse precisa andar com o botão esquerdo apertado para virar
 ## arraste do mapa (abaixo disso, conta como clique).
 const DRAG_THRESHOLD := 8.0
@@ -26,6 +28,10 @@ var locked := false:
 var _bounds := Rect2()
 var _left_press_position := Vector2.ZERO
 var _dragging := false
+
+
+func _ready() -> void:
+	zoom = Vector2.ONE * START_ZOOM
 
 
 ## Limita a câmera à área do mapa (em pixels).

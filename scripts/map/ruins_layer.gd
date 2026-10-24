@@ -14,8 +14,8 @@ extends Node2D
 ## Trabalhador dela pode reconstruir. Fundar na casa da cidade em ruínas apaga
 ## a ruína.
 
-## Ruínas de cada classe (PNGs de 56x56 em assets/sprites/cities/, gerados por
-## tools/art/gen_cities.gd a partir da cidade intacta). Desenhadas no tamanho e
+## Ruínas de cada classe (PNGs de 128x128 em assets/sprites/cities/, gerados por
+## tools/art/gen_art.gd a partir da cidade intacta). Desenhadas no tamanho e
 ## na posição da cidade (City.SPRITE_SIZE).
 const RUIN_SPRITES := {
 	City.Rank.SETTLEMENT: preload("res://assets/sprites/cities/povoado_ruinas.png"),

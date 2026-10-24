@@ -16,9 +16,10 @@ const EXHAUSTED_TINT := Color(0.55, 0.55, 0.55)
 ## Desligado desde 22/10/2026: os sprites novos têm a roupa na cor do jogador e
 ## ficam sobre uma sombra com um anel na cor dele (_draw_base).
 const DRAW_BACKGROUND := false
-## Pixels desta cor no sprite são trocados pela cor do jogador ("cor de time").
-## Os tons mais escuros do magenta (vermelho = azul, sem verde, ex.: #B000B0)
-## viram a cor do jogador escurecida na mesma proporção: dá para sombrear.
+## Sprites antigos, sem máscara (ver team_texture): pixels desta cor são
+## trocados pela cor do jogador ("cor de time"). Os tons mais escuros do
+## magenta (vermelho = azul, sem verde, ex.: #B000B0) viram a cor do jogador
+## escurecida na mesma proporção: dá para sombrear.
 const TEAM_COLOR_KEY := Color(1, 0, 1)
 ## Defesa extra da unidade fortificada.
 const FORTIFY_DEFENSE_BONUS := 1
@@ -264,24 +265,38 @@ func _draw_base(rect: Rect2) -> void:
 	var center := Vector2(0, rect.end.y - rect.size.y * 0.1)
 	var radii := Vector2(rect.size.x * 0.42, rect.size.y * 0.13)
 	draw_set_transform(center, 0.0, Vector2(1.0, radii.y / radii.x))
-	draw_circle(Vector2.ZERO, radii.x, Color(0, 0, 0, 0.35))
-	draw_arc(Vector2.ZERO, radii.x, 0.0, TAU, 32, Color.BLACK, 4.0)
-	draw_arc(Vector2.ZERO, radii.x, 0.0, TAU, 32, owner_player.color, 2.5)
+	draw_circle(Vector2.ZERO, radii.x, Color(0, 0, 0, 0.35), true, -1.0, true)
+	draw_arc(Vector2.ZERO, radii.x, 0.0, TAU, 48, Color.BLACK, GameMap.TILE_SIZE / 10.0, true)
+	draw_arc(Vector2.ZERO, radii.x, 0.0, TAU, 48, owner_player.color, GameMap.TILE_SIZE / 16.0, true)
 	draw_set_transform(Vector2.ZERO)
 
 
 ## Muralha de pedra em volta da unidade fortificada (como no Civilization 1),
-## com ameias no topo.
+## com cantos arredondados e ameias no topo.
 func _draw_fortification(rect: Rect2) -> void:
 	var wall := MARGIN * 2.0
 	var outer := rect.grow(MARGIN)
-	draw_rect(outer, FORTIFY_COLOR, false, wall)
 	var merlons := 4
 	var merlon_width := outer.size.x / (merlons * 2 - 1)
 	for i in merlons:
 		var x := outer.position.x + i * 2 * merlon_width
-		draw_rect(Rect2(x, outer.position.y - wall, merlon_width, wall), FORTIFY_COLOR)
-	draw_rect(outer.grow(wall / 2.0), Color.BLACK, false, 1.0)
+		_rounded_box(Rect2(x, outer.position.y - wall * 1.6, merlon_width, wall * 2.0), wall * 0.4, FORTIFY_COLOR, 0.0)
+	_rounded_box(outer.grow(wall / 2.0), wall * 1.8, Color.TRANSPARENT, wall)
+
+
+## Retângulo de cantos arredondados com contorno escuro: cheio ([param fill])
+## ou só a borda de pedra com [param border] de espessura.
+func _rounded_box(box: Rect2, radius: float, fill: Color, border: float) -> void:
+	var style := StyleBoxFlat.new()
+	style.bg_color = fill
+	style.set_corner_radius_all(int(radius))
+	style.corner_detail = 8
+	style.anti_aliasing = true
+	style.border_color = FORTIFY_COLOR
+	style.set_border_width_all(int(border))
+	style.shadow_color = Color(0, 0, 0, 0.6)
+	style.shadow_size = 2
+	style.draw(get_canvas_item(), box)
 
 
 ## Martelo num círculo no canto superior direito: o Trabalhador está
@@ -304,10 +319,16 @@ func _team_texture() -> Texture2D:
 	return team_texture(type.sprite, owner_player.color)
 
 
-## [param sprite] com os pixels magenta trocados por [param color] (com cache);
-## os tons escuros do magenta viram [param color] escurecida (ver
-## TEAM_COLOR_KEY). Também usado pelos ícones das janelas (Icons.draw_build) e
-## pelo desenho das cidades (City.draw_city_sprite).
+## [param sprite] na cor do jogador [param color] (com cache). Também usado
+## pelos ícones das janelas (Icons.draw_build) e pelo desenho das cidades
+## (City.draw_city_sprite).
+##   - Com máscara (desenhos suavizados de 80x80, desde 23/10/2026): ao lado de
+##     "x.png" existe "x_time.png", em tons de cinza. O sprite tem a roupa em
+##     preto; cada pixel recebe + máscara × cor do jogador (branco = a cor
+##     inteira). Funciona com bordas suavizadas, que o magenta não aguenta.
+##   - Sem máscara (pixel art antiga): os pixels magenta viram [param color] e
+##     os tons escuros do magenta, [param color] escurecida (TEAM_COLOR_KEY).
+## A textura sai com mipmaps (fica suave também com o zoom afastado).
 static func team_texture(sprite: Texture2D, color: Color) -> Texture2D:
 	var key := "%d|%s" % [sprite.get_instance_id(), color.to_html()]
 	if not _team_textures.has(key):
@@ -315,14 +336,41 @@ static func team_texture(sprite: Texture2D, color: Color) -> Texture2D:
 		if image.is_compressed():
 			image.decompress()
 		image.convert(Image.FORMAT_RGBA8)
+		image.clear_mipmaps()
+		var mask := _team_mask(sprite)
+		if mask:
+			for y in image.get_height():
+				for x in image.get_width():
+					var amount := mask.get_pixel(x, y).r
+					if amount > 0.0:
+						var pixel := image.get_pixel(x, y)
+						image.set_pixel(x, y, Color(minf(pixel.r + color.r * amount, 1.0),
+								minf(pixel.g + color.g * amount, 1.0), minf(pixel.b + color.b * amount, 1.0), pixel.a))
+			image.generate_mipmaps()
+			_team_textures[key] = ImageTexture.create_from_image(image)
+			return _team_textures[key]
 		for y in image.get_height():
 			for x in image.get_width():
 				var pixel := image.get_pixel(x, y)
 				if pixel.a > 0.0 and pixel.g8 == 0 and pixel.r8 == pixel.b8 and pixel.r8 > 0:
 					var shade := pixel.r # 1.0 = magenta puro; menos = mais escuro
 					image.set_pixel(x, y, Color(color.r * shade, color.g * shade, color.b * shade, pixel.a))
+		image.generate_mipmaps()
 		_team_textures[key] = ImageTexture.create_from_image(image)
 	return _team_textures[key]
+
+
+## Máscara da cor do jogador do sprite ("x_time.png" ao lado de "x.png"), ou null.
+static func _team_mask(sprite: Texture2D) -> Image:
+	var path := sprite.resource_path.get_basename() + "_time.png"
+	if sprite.resource_path.is_empty() or not ResourceLoader.exists(path):
+		return null
+	var mask := (load(path) as Texture2D).get_image()
+	if mask.is_compressed():
+		mask.decompress()
+	mask.clear_mipmaps()
+	mask.convert(Image.FORMAT_RGBA8)
+	return mask
 
 
 func _energy_color(ratio: float) -> Color:

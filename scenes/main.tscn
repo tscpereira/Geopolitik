@@ -30,7 +30,7 @@ corner_radius_bottom_left = 4
 script = ExtResource("1")
 
 [node name="GameMap" type="Node2D" parent="."]
-texture_filter = 1
+texture_filter = 4
 script = ExtResource("2")
 
 [node name="TerrainLayer" type="TileMapLayer" parent="GameMap"]
@@ -40,18 +40,18 @@ script = ExtResource("10")
 map = NodePath("../GameMap")
 
 [node name="Ruins" type="Node2D" parent="."]
-texture_filter = 1
+texture_filter = 4
 script = ExtResource("11")
 
 [node name="Cities" type="Node2D" parent="."]
-texture_filter = 1
+texture_filter = 4
 
 [node name="MoveOverlay" type="Node2D" parent="." node_paths=PackedStringArray("map")]
 script = ExtResource("4")
 map = NodePath("../GameMap")
 
 [node name="Units" type="Node2D" parent="."]
-texture_filter = 1
+texture_filter = 4
 
 [node name="MapCamera" type="Camera2D" parent="."]
 script = ExtResource("3")

@@ -40,16 +40,27 @@ var _pick_cells: Array[Vector2i] = []
 var _hover := Vector2i.MAX
 
 
+## Terreno das 5x5 casas, desenhado pelo mesmo shader do mapa (transições
+## suaves e bordas arredondadas), por baixo do resto (show_behind_parent).
+var _terrain: ColorRect
+
+
 func _ready() -> void:
 	custom_minimum_size = Vector2.ONE * CELL_SIZE * 5
-	texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
 	mouse_filter = Control.MOUSE_FILTER_STOP
+	_terrain = ColorRect.new()
+	_terrain.size = Vector2.ONE * CELL_SIZE * 5
+	_terrain.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_terrain.show_behind_parent = true
+	add_child(_terrain)
 
 
 func setup(city: City, game: Game) -> void:
 	_city = city
 	_game = game
 	_pick_cells = []
+	_terrain.material = game.game_map.make_view_material(city.cell - Vector2i(2, 2), Vector2i(5, 5))
 	queue_redraw()
 
 
@@ -131,18 +142,18 @@ func _get_tooltip(at_position: Vector2) -> String:
 
 
 func _draw() -> void:
-	draw_rect(Rect2(Vector2.ZERO, size), Color(0, 0, 0, 0.5))
 	if _city == null:
 		return
 	var map := _game.game_map
 	var font := ThemeDB.fallback_font
+	# Pontas do quadrado 5x5 (fora da área): escurecidas, como antes
+	for corner in [Vector2i(-2, -2), Vector2i(2, -2), Vector2i(-2, 2), Vector2i(2, 2)]:
+		draw_rect(_cell_rect(_city.cell + corner), Color(0.06, 0.06, 0.08, 0.85))
 	for cell in _view_cells():
 		var rect := _cell_rect(cell)
 		if not map.is_in_bounds(cell):
 			draw_rect(rect, Color.BLACK)
 			continue
-		draw_texture_rect(map.terrain_texture(map.get_terrain(cell)), rect, false)
-		draw_rect(rect, Color(0, 0, 0, 0.35), false, 1.0)
 
 		var construction := _city.construction_at(cell)
 		if _city.farms.has(cell):
@@ -228,17 +239,9 @@ func _improvement_text(other: City, cell: Vector2i) -> String:
 
 ## Fronteira do território da cidade, na cor do dono (como no mapa).
 func _draw_border() -> void:
-	var color := _city.owner_player.color
 	for cell in _city.territory:
-		var rect := _cell_rect(cell)
-		for side: Array in TerritoryOverlay.SIDES:
-			if _city.territory.has(cell + side[0]):
-				continue
-			var from: Vector2 = rect.position + side[1] * rect.size
-			var to: Vector2 = rect.position + side[2] * rect.size
-			var inward := (rect.get_center() - (from + to) / 2.0).normalized() * 2.0
-			draw_line(from + inward, to + inward, Color.BLACK, 6.0)
-			draw_line(from + inward, to + inward, color, 4.0)
+		var border := TerritoryOverlay.SIDES.map(func(side: Array) -> bool: return not _city.territory.has(cell + side[0]))
+		TerritoryOverlay.draw_border(self, _cell_rect(cell), border, _city.owner_player.color, 4.0)
 
 
 ## Casas mostradas na janela: a área de 21 casas em volta da cidade (o

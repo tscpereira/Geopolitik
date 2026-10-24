@@ -29,7 +29,7 @@ static func build_icon(build: int, player_color: Color, size := ICON_SIZE) -> Co
 	icon.custom_minimum_size = Vector2.ONE * size
 	icon.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	icon.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST # pixel art nítida
+	icon.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS # desenho suave, também pequeno
 	icon.draw.connect(func() -> void:
 		draw_build(icon, build, Rect2(Vector2.ZERO, icon.size), player_color))
 	return icon

@@ -257,9 +257,10 @@ const STALLED_COLOR := Color(0.9, 0.2, 0.15)
 const IDLE_ICON_RADIUS := GameMap.TILE_SIZE * 0.22
 const IDLE_FONT_SIZE := int(GameMap.TILE_SIZE * 0.4)
 
-## Desenho da cidade em cada classe (PNGs de 56x56 em assets/sprites/cities/;
-## magenta = cor do dono, ver Unit.team_texture). No mapa ele é desenhado com
-## SPRITE_SIZE, centralizado na casa e passando SPRITE_BOTTOM_OVERFLOW pixels
+## Desenho da cidade em cada classe (PNGs de 128x128 em assets/sprites/cities/,
+## com a máscara da cor do dono em <classe>_time.png, ver Unit.team_texture).
+## No mapa ele é desenhado com SPRITE_SIZE, centralizado na casa e passando
+## SPRITE_BOTTOM_OVERFLOW pixels
 ## embaixo; a barra de alimentos fica SPRITE_TOP_GAP abaixo do topo dele.
 const CITY_SPRITES := {
 	Rank.SETTLEMENT: preload("res://assets/sprites/cities/povoado.png"),
@@ -272,7 +273,7 @@ const SPRITE_BOTTOM_OVERFLOW := GameMap.TILE_SIZE * 0.12
 const SPRITE_TOP_GAP := GameMap.TILE_SIZE * 0.25
 
 ## Desenho das melhorias destruídas (pilhadas), no mapa e na janela da cidade.
-## PNGs de 40x40 em assets/sprites/improvements/ (dá para redesenhar).
+## PNGs de 80x80 em assets/sprites/improvements/ (dá para redesenhar).
 const RUIN_TEXTURES := {
 	Build.FARM: preload("res://assets/sprites/improvements/fazenda_destruida.png"),
 	Build.LUMBER_MILL: preload("res://assets/sprites/improvements/madeireira_destruida.png"),

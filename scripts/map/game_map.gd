@@ -8,11 +8,12 @@ extends Node2D
 ## TileMapLayer só serve para converter posições em casas.
 
 ## Tamanho de cada casa em pixels. As imagens dos terrenos devem ter este tamanho.
-const TILE_SIZE := 40
+## (80 desde 23/10/2026; antes 40, em pixel art.)
+const TILE_SIZE := 80
 ## Desenha uma linha de grade (borda escurecida) por cima de cada casa.
 const DRAW_GRID := true
 ## Escurecimento da borda de cada casa, para formar a grade.
-const GRID_LINE_DARKEN := 0.2
+const GRID_LINE_DARKEN := 0.15
 const TERRAIN_SHADER: Shader = preload("res://scripts/map/terrain.gdshader")
 
 ## Melhoria desenhada pelo shader numa casa (ver set_improvement).
@@ -53,7 +54,9 @@ func _ready() -> void:
 	tile_set.tile_size = Vector2i(TILE_SIZE, TILE_SIZE)
 	_layer.tile_set = tile_set
 	for type: Terrain.Type in Terrain.TEXTURE_PATHS:
-		_terrain_textures[type] = ImageTexture.create_from_image(_load_tile_image(type))
+		var image := _load_tile_image(type)
+		image.generate_mipmaps() # filtro suave também com o zoom afastado
+		_terrain_textures[type] = ImageTexture.create_from_image(image)
 	_view = Sprite2D.new()
 	_view.name = "TerrainView"
 	_view.centered = false
@@ -62,7 +65,6 @@ func _ready() -> void:
 	material.shader = TERRAIN_SHADER
 	for type: Terrain.Type in SHADER_TEXTURES:
 		material.set_shader_parameter(SHADER_TEXTURES[type], _terrain_textures[type])
-	material.set_shader_parameter("tile_pixels", float(TILE_SIZE))
 	material.set_shader_parameter("draw_grid", DRAW_GRID)
 	material.set_shader_parameter("grid_darken", GRID_LINE_DARKEN)
 	_view.material = material
@@ -165,6 +167,18 @@ func terrain_texture(type: Terrain.Type) -> Texture2D:
 	return _terrain_textures[type]
 
 
+## Material do shader do terreno que desenha só o pedaço do mapa que começa na
+## casa [param origin] e tem [param cells] casas (janela da cidade). Usa as
+## mesmas texturas do mapa, então acompanha as mudanças de terreno. As fazendas
+## não são pintadas ([param with_farms] = false): a janela desenha as dela.
+func make_view_material(origin: Vector2i, cells: Vector2i, with_farms := false) -> ShaderMaterial:
+	var material := (_view.material as ShaderMaterial).duplicate() as ShaderMaterial
+	material.set_shader_parameter("view_origin", Vector2(origin))
+	material.set_shader_parameter("view_cells", Vector2(cells))
+	material.set_shader_parameter("draw_farms", with_farms)
+	return material
+
+
 func get_pixel_size() -> Vector2:
 	return Vector2(width, height) * TILE_SIZE
 
@@ -184,7 +198,7 @@ func _load_tile_image(type: Terrain.Type) -> Image:
 	if image.get_size() != Vector2i(TILE_SIZE, TILE_SIZE):
 		push_warning("%s tem %s pixels; esperado %dx%d. A imagem foi redimensionada."
 				% [path, image.get_size(), TILE_SIZE, TILE_SIZE])
-		image.resize(TILE_SIZE, TILE_SIZE, Image.INTERPOLATE_NEAREST)
+		image.resize(TILE_SIZE, TILE_SIZE, Image.INTERPOLATE_BILINEAR)
 	return image
 
 
