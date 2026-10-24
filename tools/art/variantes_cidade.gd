@@ -31,6 +31,10 @@ const OUT := "res://tools/art/chatgpt/prontos/"
 const LEFT_GROUP := Rect2i(28, 30, 96, 120)
 ## Miolo de casas da cidade (sem topo natural: vai na frente de outro grupo).
 const CITY_HOUSES := Rect2i(160, 100, 130, 80)
+## O povoado da folha tem poucas casas, desenhadas ~1,6x maiores que as da
+## vila, da cidade e da metrópole: ele sai reduzido para as casas ficarem do
+## mesmo tamanho (fração do tamanho que caberia no sprite).
+const POVOADO_SHRINK := 0.6
 
 
 class Canvas:
@@ -111,7 +115,11 @@ func _initialize() -> void:
 	# POVOADO e VILA com muralha: a muralha da frente da cidade, menor, na
 	# frente deles (as casas de trás aparecem por cima dela)
 	var povoado := load_piece("povoado")
-	save(walled(povoado, Vector2i(306, 281), 0.82), "povoado_muralha")
+	var village := Canvas.new(306, 281)
+	village.color = povoado[0]
+	village.mask = povoado[1]
+	save(village, "povoado", POVOADO_SHRINK)
+	save(walled(povoado, Vector2i(306, 281), 0.82), "povoado_muralha", POVOADO_SHRINK)
 	save(walled(town.pair(), Vector2i(344, 302), 0.92), "vila_muralha")
 	save(walled(vila, Vector2i(344, 302), 0.92), "vila_capital_muralha")
 	print("ok")
@@ -221,11 +229,11 @@ func walled(base: Array, size: Vector2i, scale: float) -> Canvas:
 	return canvas
 
 
-## Reduz como o importador (cabe em 124x120, base em y = 124 de 128) e grava
-## <nome>.png e <nome>_time.png em OUT.
-func save(canvas: Canvas, file_name: String) -> void:
+## Reduz como o importador (cabe em 124x120, base em y = 124 de 128; com
+## [param shrink] < 1, menor ainda) e grava <nome>.png e <nome>_time.png em OUT.
+func save(canvas: Canvas, file_name: String, shrink := 1.0) -> void:
 	var r := canvas.color.get_size()
-	var scale := minf(124.0 / r.x, 120.0 / r.y)
+	var scale := minf(124.0 / r.x, 120.0 / r.y) * shrink
 	var target := Vector2i(roundi(r.x * scale), roundi(r.y * scale))
 	var images: Array[Image] = []
 	for img: Image in [canvas.color.duplicate(), canvas.mask.duplicate()]:

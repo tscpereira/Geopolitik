@@ -6,7 +6,7 @@ Tipo de jogo : Estratégia em turnos 2D
 Engine       : Godot 4.7.2 (versão padrão, GDScript)
 Linguagem    : GDScript
 Pasta        : C:\ProjetoGame
-Última atualização: 23/10/2026
+Última atualização: 24/10/2026
 
 
 --------------------------------------------------------------
@@ -721,6 +721,15 @@ CIDADES (scripts/cities/city.gd)
   (tools/art/variantes_cidade.gd). A muralha do povoado e da vila é
   a da frente da cidade, um pouco menor (por isso vila_muralha e
   cidade_muralha se parecem: o que muda são as casas de trás).
+  TAMANHO DO POVOADO (desde 24/10/2026): na folha do ChatGPT, as
+  casas do povoado eram ~1,6x maiores que as da vila, da cidade e
+  da metrópole. Por isso povoado e povoado_muralha saem com 60% do
+  tamanho que caberia no sprite (constante POVOADO_SHRINK em
+  variantes_cidade.gd, que agora também grava o povoado.png): as
+  casas ficam do mesmo tamanho em todas as classes, e o povoado
+  fica menor no mapa (~55 px de largura no zoom 0,75, contra ~90
+  da vila). A base continua no mesmo ponto do chão. As ruínas do
+  povoado saem do povoado novo, então também ficaram menores.
   A troca é na hora: se a capital muda (a antiga é conquistada), a
   nova passa a ser desenhada com o templo. A janela da cidade usa o
   mesmo desenho do mapa.
@@ -1852,6 +1861,10 @@ Screenshots também confirmaram o visual.
 [ ] Construção Muralha (em qualquer classe): City.has_walls()
     passa a olhar a construção e as cidades e ruínas com muralha
     aparecem sozinhas
+[x] Povoado reduzido: casas do mesmo tamanho das outras classes
+    (24/10/2026)
+[ ] Barra de alimentos e avisos colados no alto do desenho (hoje
+    ficam no topo do quadro: vão acima do povoado menor)
 [ ] Povoado com paliçada de madeira ou muro baixo (pedir ao
     ChatGPT), no lugar da muralha de pedra das cidades
 [ ] Construção Palácio (hoje o templo aparece em qualquer capital)
@@ -2586,6 +2599,18 @@ Screenshots também confirmaram o visual.
 - Território sem o véu na cor do dono (pedido do usuário): o
   terreno dentro do território não é mais pintado; só a fronteira
   mostra o dono (TerritoryOverlay).
+- POVOADO MENOR (pedido do usuário): as casas do povoado eram
+  desenhadas ~1,6x maiores que as das outras classes (29-32 px
+  contra 18-20 no sprite). Agora povoado e povoado_muralha saem com
+  60% do tamanho (POVOADO_SHRINK em variantes_cidade.gd), com as
+  casas iguais às da vila, cidade e metrópole. As ruínas
+  povoado_ruinas e povoado_muralha_ruinas foram refeitas a partir
+  deles (gen_art.gd, modo "ruinas"). Validação: o usuário aprovou
+  a comparação de antes e depois e os screenshots no jogo; o teste
+  das variantes (16 combinações, 8 ruínas, save) passou, com
+  screenshots das ruínas novas. Fica um vão entre o povoado e a
+  barra de alimentos acima dele (a barra fica presa ao topo do
+  quadro do sprite).
 
 --------------------------------------------------------------
 7. BACKLOG (ideias para depois)
