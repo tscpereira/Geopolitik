@@ -8,7 +8,7 @@ extends SceneTree
 ## chão com árvores. O lanceiro é um hoplita (Antiguidade); os outros seguem a
 ## referência medieval.
 ##   sprites/cities/<classe>[_muralha]_ruinas.png  (a cidade normal
-##       instalada, destruída)
+##       instalada, destruída; 8 ruínas: 4 classes, com e sem muralha)
 ## Unidades e cidades (com as máscaras _time.png) vêm do ChatGPT desde
 ## 24/10/2026 (tools/art/import_sheet.gd) e NÃO são mais geradas aqui; as
 ## funções de desenho delas (hoplite, village...) ficaram só como referência.
@@ -121,7 +121,7 @@ func _run() -> void:
 	# variantes_cidade.gd) desde 24/10/2026; aqui só saem as ruínas, a partir
 	# das cidades normais instaladas (a da capital vira a mesma ruína: o
 	# desmoronamento leva justamente o alto, onde fica o templo).
-	for city_name: String in ["povoado", "vila", "cidade", "cidade_muralha", "metropole", "metropole_muralha"]:
+	for city_name: String in ["povoado", "povoado_muralha", "vila", "vila_muralha", "cidade", "cidade_muralha", "metropole", "metropole_muralha"]:
 		var intact := burnt_city(CITIES_DIR + city_name)
 		(await ruin(intact, city_name, CITY_SIZE, CITY_DESIGN)).save_png(CITIES_DIR + city_name + "_ruinas.png")
 	team = BURNT_CLOTH

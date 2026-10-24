@@ -18,14 +18,13 @@ extends Node2D
 ## Ruínas de cada classe, [sem muralha, com muralha] (PNGs de 128x128 em
 ## assets/sprites/cities/, <classe>[_muralha]_ruinas.png, gerados por
 ## tools/art/gen_art.gd a partir da cidade normal intacta). A capital usa a
-## mesma ruína: o desmoronamento leva o alto, onde ficava o templo. Povoado e
-## vila não têm versão com muralha. Desenhadas no tamanho e na posição da
-## cidade (City.SPRITE_SIZE).
+## mesma ruína: o desmoronamento leva o alto, onde ficava o templo.
+## Desenhadas no tamanho e na posição da cidade (City.SPRITE_SIZE).
 const RUIN_SPRITES := {
 	City.Rank.SETTLEMENT: [
-		preload("res://assets/sprites/cities/povoado_ruinas.png"), preload("res://assets/sprites/cities/povoado_ruinas.png")],
+		preload("res://assets/sprites/cities/povoado_ruinas.png"), preload("res://assets/sprites/cities/povoado_muralha_ruinas.png")],
 	City.Rank.TOWN: [
-		preload("res://assets/sprites/cities/vila_ruinas.png"), preload("res://assets/sprites/cities/vila_ruinas.png")],
+		preload("res://assets/sprites/cities/vila_ruinas.png"), preload("res://assets/sprites/cities/vila_muralha_ruinas.png")],
 	City.Rank.CITY: [
 		preload("res://assets/sprites/cities/cidade_ruinas.png"), preload("res://assets/sprites/cities/cidade_muralha_ruinas.png")],
 	City.Rank.METROPOLIS: [

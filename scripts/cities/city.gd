@@ -263,20 +263,21 @@ const IDLE_FONT_SIZE := int(GameMap.TILE_SIZE * 0.4)
 ##   capital  com o templo/acrópole (o Palácio): "<classe>_capital.png";
 ##   muralha  com a muralha: "<classe>_muralha.png" (has_walls).
 ## Por classe, na ordem [normal, capital, muralha, capital com muralha]:
-##   Povoado    um desenho só (sem templo e sem muralha);
-##   Vila       vila / vila_capital (não tem versão com muralha);
-##   Cidade e   <classe>, <classe>_capital, <classe>_muralha e
-##   Metrópole  <classe>_capital_muralha.
+##   Povoado    povoado, povoado, povoado_muralha, povoado_muralha (o
+##              povoado não tem templo: a capital usa o mesmo desenho);
+##   Vila,      <classe>, <classe>_capital, <classe>_muralha e
+##   Cidade e   <classe>_capital_muralha.
+##   Metrópole
 ## No mapa ele é desenhado com SPRITE_SIZE, centralizado na casa e passando
 ## SPRITE_BOTTOM_OVERFLOW pixels
 ## embaixo; a barra de alimentos fica SPRITE_TOP_GAP abaixo do topo dele.
 const CITY_SPRITES := {
 	Rank.SETTLEMENT: [
 		preload("res://assets/sprites/cities/povoado.png"), preload("res://assets/sprites/cities/povoado.png"),
-		preload("res://assets/sprites/cities/povoado.png"), preload("res://assets/sprites/cities/povoado.png")],
+		preload("res://assets/sprites/cities/povoado_muralha.png"), preload("res://assets/sprites/cities/povoado_muralha.png")],
 	Rank.TOWN: [
 		preload("res://assets/sprites/cities/vila.png"), preload("res://assets/sprites/cities/vila_capital.png"),
-		preload("res://assets/sprites/cities/vila.png"), preload("res://assets/sprites/cities/vila_capital.png")],
+		preload("res://assets/sprites/cities/vila_muralha.png"), preload("res://assets/sprites/cities/vila_capital_muralha.png")],
 	Rank.CITY: [
 		preload("res://assets/sprites/cities/cidade.png"), preload("res://assets/sprites/cities/cidade_capital.png"),
 		preload("res://assets/sprites/cities/cidade_muralha.png"), preload("res://assets/sprites/cities/cidade_capital_muralha.png")],

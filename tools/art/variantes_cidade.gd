@@ -7,7 +7,8 @@ extends SceneTree
 ##   godot_console.cmd --headless --path . --script tools/art/variantes_cidade.gd
 ## Nomes: <classe>[_capital][_muralha].png (+ _time.png, a máscara da cor):
 ##   _capital  com o templo/acrópole (o Palácio): só a capital usa;
-##   _muralha  com a muralha: só com a construção Muralha (ainda não existe).
+##   _muralha  com a muralha: só com a construção Muralha (ainda não existe),
+##             que vale para qualquer classe.
 ## O importador grava as versões originais da folha (povoado, vila_capital,
 ## cidade_capital_muralha, metropole_capital_muralha); aqui saem as outras:
 ##   cidade_capital, metropole_capital   sem muralha: a frente da vila no lugar
@@ -16,7 +17,10 @@ extends SceneTree
 ##   vila, cidade, cidade_muralha,       normais: o templo/acrópole sai e no
 ##   metropole, metropole_muralha        lugar entram grupos de casas e árvores
 ##                                       (o grupo da esquerda da vila e o miolo
-##                                       de casas da cidade).
+##                                       de casas da cidade);
+##   povoado_muralha, vila_muralha,      a muralha da frente da cidade (até o
+##   vila_capital_muralha                alto das ameias, wall_top), menor, na
+##                                       frente do povoado e da vila.
 ## Coordenadas em pixels dos recortes grandes (vila 344x302, cidade 375x337,
 ## metrópole 408x399).
 
@@ -103,6 +107,13 @@ func _initialize() -> void:
 		cluster(metropolis, vila, LEFT_GROUP, 0.75, Vector2i(98 + i * 60, 26 + (i % 2) * 8), 20.0)
 	paste(metropolis, city.pair(), func(_x: int, _y: int) -> float: return 1.0, 1.09, Vector2i(0, 399 - roundi(337 * 1.09)))
 	save(metropolis, "metropole")
+
+	# POVOADO e VILA com muralha: a muralha da frente da cidade, menor, na
+	# frente deles (as casas de trás aparecem por cima dela)
+	var povoado := load_piece("povoado")
+	save(walled(povoado, Vector2i(306, 281), 0.82), "povoado_muralha")
+	save(walled(town.pair(), Vector2i(344, 302), 0.92), "vila_muralha")
+	save(walled(vila, Vector2i(344, 302), 0.92), "vila_capital_muralha")
 	print("ok")
 	quit()
 
@@ -174,6 +185,40 @@ func over_with_hole(dst: Canvas, base: Array, hole: Rect2i, fade := 8.0) -> void
 		var inside := band(x, hole.position.x, hole.position.x + fade) * (1.0 - band(x, hole.end.x - fade, hole.end.x)) \
 				* (1.0 - band(y, hole.end.y - fade, hole.end.y)) * float(y >= hole.position.y)
 		return 1.0 - inside, 1.0, Vector2i.ZERO)
+
+
+## Alto da muralha da cidade em cada coluna x do recorte grande (o topo das
+## ameias): torre da esquerda, muro, torre do estandarte, muro, torre do
+## meio, portão e torre da direita.
+func wall_top(x: float) -> float:
+	if x < 52:
+		return 112.0
+	if x < 100:
+		return lerpf(146.0, 160.0, (x - 52) / 48.0)
+	if x < 142:
+		return 164.0
+	if x < 187:
+		return 198.0
+	if x < 237:
+		return 177.0
+	if x < 320:
+		return 192.0
+	return 118.0
+
+
+## [param base] (tamanho [param size]) com a muralha da cidade na frente: tudo
+## da cidade abaixo do alto da muralha (wall_top), reduzido por
+## [param scale], centrado e com a base no chão do desenho.
+func walled(base: Array, size: Vector2i, scale: float) -> Canvas:
+	var canvas := Canvas.new(size.x, size.y)
+	paste(canvas, base, func(_x: int, _y: int) -> float: return 1.0, 1.0, Vector2i.ZERO)
+	var wall := load_piece("cidade")
+	var w := roundi(375 * scale)
+	var h := roundi(337 * scale)
+	paste(canvas, wall, func(x: int, y: int) -> float:
+		var top := wall_top(x)
+		return band(y, top - 6.0, top), scale, Vector2i((size.x - w) / 2, size.y - h))
+	return canvas
 
 
 ## Reduz como o importador (cabe em 124x120, base em y = 124 de 128) e grava
