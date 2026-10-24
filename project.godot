@@ -17,12 +17,14 @@ config/features=PackedStringArray("4.7")
 [autoload]
 
 TurnManager="*res://scripts/autoload/turn_manager.gd"
+WindowSettings="*res://scripts/autoload/window_settings.gd"
 
 [display]
 
 window/size/viewport_width=1280
 window/size/viewport_height=720
-window/stretch/mode="canvas_items"
+window/size/resizable=true
+window/stretch/mode="disabled"
 
 [gui]
 

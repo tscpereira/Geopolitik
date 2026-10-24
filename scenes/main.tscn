@@ -179,7 +179,7 @@ theme_override_styles/panel = SubResource("PanelStyle")
 theme_override_colors/font_color = Color(0.75, 0.75, 0.75, 1)
 theme_override_font_sizes/font_size = 13
 text = "Clique: selecionar / mover   |   Clique no inimigo (vermelho): atacar   |   Clique na sua cidade: abrir
-Botão direito / Esc: cancelar   |   Setas/WASD, roda do mouse: câmera   |   F5: salvar   |   F9: carregar"
+Botão direito / Esc: cancelar   |   Setas/WASD, roda do mouse: câmera   |   F5: salvar   |   F9: carregar   |   F11: maximizar"
 
 [node name="ActionPanel" type="PanelContainer" parent="HUD"]
 visible = false

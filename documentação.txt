@@ -23,8 +23,11 @@ Pasta        : C:\ProjetoGame
     * Descartamos C# para manter o projeto simples e ter mais
       tutoriais e material disponível.
 - Gênero: estratégia em turnos 2D.
-- Resolução base: 1280x720, com stretch mode "canvas_items"
-  (a imagem se adapta a outras resoluções).
+- Janela: começa em 1280x720 e pode ser redimensionada ou
+  maximizada (F11). Desde 23/10/2026 a imagem NÃO é esticada
+  (stretch mode "disabled"): uma janela maior mostra mais casas do
+  mapa (1920x1080 mostra 48x27 casas no zoom inicial, contra 32x18
+  em 1280x720), e o HUD fica preso nos cantos.
 
 
 --------------------------------------------------------------
@@ -85,7 +88,8 @@ C:\ProjetoGame
 |-- scripts/
 |   |-- main.gd                    Monta a partida de exemplo
 |   |-- autoload/
-|   |   `-- turn_manager.gd        Gerenciador de turnos (global)
+|   |   |-- turn_manager.gd        Gerenciador de turnos (global)
+|   |   `-- window_settings.gd     Janela maximizada (F11), global
 |   |-- map/
 |   |   |-- terrain.gd             Tipos de terreno e regras (Água,
 |   |   |                          Pradaria, Floresta, Cerrado)
@@ -1595,6 +1599,13 @@ CÂMERA E CONTROLES
 - J: o Trabalhador selecionado migra para a cidade (vira 1 de
   população).
 - F5: salvar a partida. F9: carregar (ver SALVAR E CARREGAR).
+- F11: alterna entre a janela maximizada e a janela normal, em
+  qualquer tela (autoload WindowSettings,
+  scripts/autoload/window_settings.gd). A escolha fica gravada em
+  user://configuracoes.cfg (no Windows,
+  %APPDATA%\Godot\app_userdata\ProjetoGame\) e vale na próxima vez
+  que o jogo abrir. Ao mudar o tamanho da janela, a câmera se
+  reajusta sozinha.
 - O / S: na janela de invasão, Ocupar ou Saquear e destruir.
 - Enter: confirmar o fim do turno (só depois de aparecer o
   pedido de confirmação).
@@ -2314,6 +2325,13 @@ Screenshots também confirmaram o visual.
   mipmaps. O teste do terreno (centro de cada casa visível com o
   terreno certo) passou em 2240 casas, com o zoom ajustado ao
   tamanho novo. Os outros testes antigos passaram como antes.
+- JANELA MAXIMIZADA (pedido do usuário): F11 alterna janela
+  maximizada / normal e grava a escolha; a imagem deixou de ser
+  esticada (stretch "disabled"), então a tela maior mostra mais
+  casas. Validação: teste com 7 verificações (área do jogo igual à
+  janela em 1920x1080, 48x27 casas contra 32x18, painéis presos na
+  borda direita, F11 maximiza, grava e volta), mais screenshots em
+  1280x720 e 1920x1080.
 - Correção feita pelos testes antigos: com a fome agitando qualquer
   cidade, um povoado de 2 que fazia a primeira fazenda entrava em
   desordem e a obra parava para sempre. Agora a fome só agita a

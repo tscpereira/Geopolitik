@@ -32,6 +32,8 @@ var _dragging := false
 
 func _ready() -> void:
 	zoom = Vector2.ONE * START_ZOOM
+	# Janela redimensionada ou maximizada (F11): mais mapa na tela, mesma posição
+	get_viewport().size_changed.connect(_clamp_position)
 
 
 ## Limita a câmera à área do mapa (em pixels).
