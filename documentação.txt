@@ -6,7 +6,7 @@ Tipo de jogo : Estratégia em turnos 2D
 Engine       : Godot 4.7.2 (versão padrão, GDScript)
 Linguagem    : GDScript
 Pasta        : C:\ProjetoGame
-Última atualização: 22/10/2026
+Última atualização: 23/10/2026
 
 
 --------------------------------------------------------------
@@ -588,6 +588,8 @@ CIDADES (scripts/cities/city.gd)
       (no máximo 1 cidadão por fazenda);
     * numa madeireira pronta: gera 1 de madeira por turno para o
       estoque do jogador (no máximo 2 cidadãos por madeireira);
+    * nas festividades: gera +2 de alegria (ver BEM-ESTAR
+      SOCIAL);
     * livre: não produz nada.
 - O que a cidade pode construir fica em City.BUILDS. Cada item
   tem nome, custo, descrição e se é feito numa casa ou é uma
@@ -609,6 +611,8 @@ CIDADES (scripts/cities/city.gd)
     General     madeira
     Marcenaria  10 de produção + 10 de      prédio da cidade
                 madeira
+    Templo      15 de produção + 5 de       prédio da cidade
+                madeira                     (exige Misticismo)
   Todos custam 50 de ouro para comprar na hora (menos as
   melhorias de terreno, que não podem ser compradas).
 
@@ -677,8 +681,12 @@ PRÉDIOS (City.buildings)
                      militares (hoje, o Guerreiro).
     Marcenaria       10 de produção + 10 de madeira (ou 50 de
                      ouro + 10 de madeira). Produz as armas (hoje,
-                     a Lança). Parada, rende impostos (ver
-                     MARCENARIA E IMPOSTOS).
+                     a Lança). Parada, rende impostos e bens
+                     duráveis (ver MARCENARIA E IMPOSTOS).
+    Templo           15 de produção + 5 de madeira (ou 50 de ouro
+                     + 5 de madeira). Exige a tecnologia
+                     Misticismo. Torna 2 infelizes em contentes
+                     (ver BEM-ESTAR SOCIAL).
 - UNIDADES E ARMAS SÃO PRODUZIDAS NOS PRÉDIOS: cada uma só pode
   ser feita se a cidade tiver o prédio dela (campo "requires" em
   City.BUILDS). Sem ele, a linha fica desabilitada com "Precisa de
@@ -728,6 +736,11 @@ MARCENARIA E IMPOSTOS (campo "idle_gold" em City.BUILDS)
   O resumo mostra "Ouro: +N por turno (impostos da Marcenaria)".
 - Com uma Lança na fila, os mesmos trabalhadores voltam a
   produzir armas e o ouro para.
+- BENS DURÁVEIS (campo "idle_goods"): a cada 2 trabalhadores nos
+  impostos, a Marcenaria parada também dá +1 de alegria à cidade
+  (ver BEM-ESTAR SOCIAL). A linha virou "Impostos e bens (sem
+  armas na fila)" e mostra "+N ouro +N alegria".
+- Cidade em desordem civil não rende impostos.
 - O ouro entra no início da vez do dono, junto com a produção das
   cidades.
 - Alimento por turno (regra do Civilization II desde 20/10/2026):
@@ -822,6 +835,10 @@ MARCENARIA E IMPOSTOS (campo "idle_gold" em City.BUILDS)
   guerreiro"): campo "article" em City.BUILDS.
   Unidade pronta que ainda espera população não gera aviso (só
   quando sai da cidade). A máquina não recebe avisos.
+- AVISO DE DESORDEM CIVIL: quando uma cidade sua entra em
+  desordem (só no primeiro turno dela), aparece um aviso do mesmo
+  tipo, com quantos infelizes e felizes ela tem e o que fazer
+  (Game.DISORDER_NOTICE).
 - Fazenda concluída começa sem trabalhador. Se não houver outra
   obra na fila, os trabalhadores liberados vão para ela.
 - Nova obra (melhoria, prédio, unidade ou arma): todos os cidadãos
@@ -831,6 +848,68 @@ MARCENARIA E IMPOSTOS (campo "idle_gold" em City.BUILDS)
 - Cidades contam para a vitória: quem tem uma cidade continua na
   partida. Uma unidade militar inimiga que entra numa cidade sem
   guarnição a invade (ver INVASÃO E CONQUISTA).
+
+BEM-ESTAR SOCIAL (felicidade; City.mood, constantes no topo de city.gd)
+- Cada cidadão da cidade fica FELIZ, CONTENTE ou INFELIZ (modelo
+  do Civilization I e II).
+- BASE: os primeiros 4 cidadãos são contentes (BASE_CONTENT); a
+  partir do 5º, cada um nasce infeliz. Tamanho do império: a cada
+  4 cidades, −1 contente de base em todas (EMPIRE_SIZE_STEP: com
+  5 cidades, 3; com 9, 2).
+- AGITAÇÃO (contentes que viram infelizes):
+    fome (saldo de alimento negativo)     −1, só em cidade maior
+                                          que os contentes de base
+                                          (num povoado, a fome sozinha
+                                          causaria desordem e pararia
+                                          a fazenda que acaba com ela)
+    cidade recém-ocupada                  −2 por 10 turnos
+    melhoria pilhada (cidadãos executados) −1 por 5 turnos
+- O QUE ACALMA (infelizes que viram contentes):
+    Templo                       2 (prédio novo, exige Misticismo)
+    Guarnição (lei marcial)      1 por unidade militar fortificada
+                                 na cidade ou numa casa vizinha,
+                                 até 2 (MARTIAL_LAW_MAX)
+- ALEGRIA (pontos que sobem um cidadão um degrau: primeiro
+  infeliz -> contente; sem infelizes, contente -> feliz):
+    Festividades       +2 por cidadão alocado (FESTIVAL_JOY)
+    Bens da Marcenaria +1 a cada 2 trabalhadores nos impostos
+                       (Marcenaria parada, campo "idle_goods")
+- Ordem do cálculo: base -> agitação -> Templo e guarnição ->
+  alegria.
+- DESORDEM CIVIL: mais infelizes que felizes. Enquanto durar, a
+  cidade NÃO avança obras (nem unidades e armas), NÃO rende ouro
+  (impostos) e NÃO gera ciência. O alimento, o crescimento e a
+  madeira continuam. É conferida no início da vez do dono, com
+  os cidadãos como o jogador deixou no turno anterior.
+- CELEBRAÇÃO: nenhum infeliz, pelo menos metade da cidade feliz e
+  3+ de população. A cidade ganha +1 de alimento por cidadão
+  feliz (CELEBRATION_FOOD_PER_HAPPY).
+- FESTIVIDADES (City.festival_workers): na janela da cidade, linha
+  "Festividades" com - / +. Quem está nas festividades não
+  produz outra coisa (é como um trabalho). Ao perder população,
+  saem das festividades logo depois das obras. A realocação
+  automática não põe ninguém nelas: é escolha do jogador.
+- Na JANELA DA CIDADE, seção "Bem-estar social" (logo abaixo do
+  estoque): um rosto por cidadão (dourado sorrindo, bege, vermelho
+  de boca para baixo), a contagem, a situação (em vermelho
+  "DESORDEM CIVIL", em dourado "CELEBRAÇÃO" ou "Em ordem"), uma
+  linha por fator (base, agitação, Templo, guarnição,
+  festividades, bens) e a linha das festividades. O resumo mostra
+  o alimento da celebração.
+- No MAPA: rosto vermelho entre a estrela e a população quando a
+  cidade está em desordem; rosto dourado na celebração. O painel
+  de informações (mouse sobre a cidade) mostra felizes, contentes
+  e infelizes. Mensagem no início da vez ("Aurora: está em
+  DESORDEM CIVIL...") e aviso modal no primeiro turno de
+  desordem.
+- A MÁQUINA: ao distribuir os cidadãos, põe gente nas festividades
+  até a cidade sair da desordem; pede o Templo (com Misticismo)
+  quando a cidade chega a 4 de população, com prioridade alta se
+  já houver infelizes. A guarnição que ela já mantém conta como
+  lei marcial. Ela pesquisa primeiro a tecnologia mais barata,
+  que é o Misticismo.
+- Save: festividades, turnos de agitação (ocupação e pilhagem) e
+  turnos seguidos em desordem. Saves antigos abrem com zero.
 
 INVASÃO E CONQUISTA (Game.check_invasion, occupy_city, raze_city)
 - Só unidades MILITARES (Ataque > 0) entram numa cidade inimiga.
@@ -850,7 +929,8 @@ INVASÃO E CONQUISTA (Game.check_invasion, occupy_city, raze_city)
       população (uma cidade com 1 continua com 1; vazia continua
       vazia) e tudo o que estava em produção (obras, unidades e
       armas da fila, sem devolver madeira nem armas). Os cidadãos
-      são realocados do zero (City.change_owner).
+      são realocados do zero (City.change_owner). O povo fica
+      agitado por 10 turnos (−2 contentes; ver BEM-ESTAR SOCIAL).
     SAQUEAR E DESTRUIR [S]: leva o ouro do saque e a cidade some.
 - OURO DO SAQUE (Game.loot_amount): a fatia do tesouro do dono
   igual à fatia da população do império que mora na cidade, e
@@ -953,6 +1033,7 @@ JANELA DA CIDADE (scripts/ui/city_window.gd e city_map_view.gd)
       scripts/ui/icons.gd (Icons.build_icon / draw_build):
         Prefeitura       prédio romano (frontão e colunas)
         Quartel General  espada
+        Templo           zigurate de pedra com uma chama
         Fazenda          plantação (o desenho do mapa)
         Madeireira       pilha de toras (o desenho do mapa)
         unidades         sprite da unidade sobre um quadrado
@@ -1075,9 +1156,11 @@ IA: ECONOMIA, EXPANSÃO E DEFESA (scripts/ai/ai_economy.gd)
     de 4+; a madeira fica guardada para eles), Lanças (até
     spears_per_city por cidade) e Guerreiros para o exército (até
     army_to_attack fora das cidades).
+  * Templo (com Misticismo) a partir de 4 de população.
   * Cidadãos redistribuídos do zero (City.clear_workers): fazendas
     até o alimento bastar (no máximo 2/3 da cidade, se não há
-    fome), impostos reservados (tax_workers), 1 em cada madeireira
+    fome), festividades até sair da desordem civil, impostos
+    reservados (tax_workers), 1 em cada madeireira
     se falta madeira, obras por prioridade (comida > defesa >
     madeira > prédios > expansão > armas > exército; todos na mais
     importante, para ela terminar logo), madeireiras cheias e o
@@ -1369,7 +1452,9 @@ CIÊNCIA E PESQUISA (scripts/science/technology.gd, Player.research)
       Construção  30 pontos
       Misticismo  20 pontos
       Alfabeto    40 pontos
-  O que cada uma libera no jogo ainda vai ser definido.
+  O que libera: Misticismo -> Templo (campo "tech" em City.BUILDS;
+  sem a tecnologia, a linha mostra "Precisa da tecnologia
+  Misticismo."). Construção e Alfabeto ainda não liberam nada.
 - JANELA DE PESQUISA (scripts/ui/research_dialog.gd): as
   tecnologias disponíveis, cada uma com o custo, os pontos já
   feitos, a estimativa de turnos e o botão "Pesquisar"; embaixo, a
@@ -1670,6 +1755,16 @@ Screenshots também confirmaram o visual.
     vermelho no mapa)
 [x] Impostos como reserva: obra nova puxa quem está nos impostos;
     equipe de uma obra pronta vai para a próxima sem mão de obra
+[x] Bem-estar social (felicidade por cidadão): base de 4
+    contentes, agitação (fome, ocupação, pilhagem, tamanho do
+    império), Templo, guarnição, festividades, bens da Marcenaria,
+    desordem civil e celebração
+[x] Primeira tecnologia com efeito: Misticismo libera o Templo
+[ ] Bem-estar: perda de população depois de muitos turnos de
+    desordem (emigração)
+[ ] Bem-estar: mais prédios (ex.: coliseu, mercado) e maravilhas
+[ ] IA: tirar cidadãos das fazendas para as festividades quando
+    não há ninguém livre
 
 
 --------------------------------------------------------------
@@ -2122,6 +2217,47 @@ Screenshots também confirmaram o visual.
   screenshot das 4 ruínas no mapa, save idêntico, testes de
   conquista, save, pilhagem, território e ícones passaram.
 
+23/10/2026
+- BEM-ESTAR SOCIAL (decisões do usuário: modelo por cidadão, com
+  Templo, guarnição, festividades, bens duráveis da Marcenaria e
+  celebração): cada cidadão fica feliz, contente ou infeliz. Base
+  de 4 contentes (−1 a cada 4 cidades do império); fome, ocupação
+  recente e pilhagem agitam a cidade. Templo (novo prédio, exige
+  Misticismo) e lei marcial acalmam; festividades (+2 por
+  cidadão) e bens da Marcenaria parada (+1 a cada 2) dão alegria.
+  Mais infelizes que felizes = desordem civil (sem obras, ouro nem
+  ciência); nenhum infeliz e metade feliz = celebração (+1 de
+  alimento por feliz).
+- Janela da cidade com a seção "Bem-estar social" (rostos,
+  situação, fatores e festividades); rosto vermelho/dourado no
+  mapa; aviso no primeiro turno de desordem; humor no painel de
+  informações. Novo ícone do Templo.
+- A máquina usa as festividades para sair da desordem e constrói
+  o Templo.
+- Validação: teste com 59 verificações (base e tamanho do
+  império; desordem sem obras, ouro nem ciência; festividades e
+  limite aos livres; celebração e alimento extra; Templo com e
+  sem Misticismo; lei marcial até 2; bens da Marcenaria; fome
+  (povoado com fome não entra em desordem; cidade grande perde 1
+  contente), ocupação e pilhagem com contadores; aviso de desordem
+  uma vez só; janela em desordem e em celebração; Templo na lista;
+  rosto no mapa; save e save antigo; máquina com festividades e
+  Templo), mais screenshots da janela, da lista e do mapa.
+- Correção feita pelos testes antigos: com a fome agitando qualquer
+  cidade, um povoado de 2 que fazia a primeira fazenda entrava em
+  desordem e a obra parava para sempre. Agora a fome só agita a
+  cidade maior que os contentes de base.
+- Partida de 100 rodadas máquina x máquina (Econômica x
+  Equilibrada) sem erros: as duas pesquisaram o Misticismo, usaram
+  as festividades nas cidades de 5-6 e nunca ficaram em desordem.
+  Nenhuma terminou o Templo (sem madeira sobrando, o mesmo ritmo
+  lento de antes; ver BACKLOG).
+- Testes antigos: 15 dos 19 passaram sem mudança. Os outros mudaram por
+  causa das regras novas: a lista Construir tem o Templo (um item
+  a mais), a Marcenaria mostra "+N alegria", e cidades de 5-6 sem
+  alegria entram em desordem. Com um Templo na cidade, os testes
+  da força de trabalho e do arsenal passam.
+
 
 --------------------------------------------------------------
 7. BACKLOG (ideias para depois)
@@ -2193,7 +2329,13 @@ histórico):
 [x] Ciência: pontos das Prefeituras, árvore de conhecimentos,
     janela de pesquisa e painel no HUD (22/10/2026)
 [ ] Ciência: o que cada tecnologia libera (prédios, unidades,
-    melhorias) e mais tecnologias na árvore
+    melhorias) e mais tecnologias na árvore (o Misticismo já
+    libera o Templo)
+[x] Bem-estar social (23/10/2026). Ideias para depois:
+    - a orientação de prioridades da cidade poderia ter o foco
+      "Bem-estar" (os livres vão para as festividades);
+    - guerra longa deixando o povo infeliz (cansaço da guerra);
+    - prédios de lazer e maravilhas que alegram todo o império.
 [ ] Ciência: tela da árvore inteira (com as tecnologias futuras e
     as ligações entre elas)
 [ ] IA: pôr cidadãos pesquisando na Prefeitura; escolher pesquisas

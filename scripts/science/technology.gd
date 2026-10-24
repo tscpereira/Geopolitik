@@ -29,7 +29,7 @@ const DATA := {
 	},
 	Tech.MYSTICISM: {
 		"name": "Misticismo", "cost": 20, "requires": [],
-		"description": "Crenças e rituais que unem o povo.",
+		"description": "Crenças e rituais que unem o povo. Libera o Templo, que acalma os cidadãos infelizes.",
 		"image": "res://assets/tech/misticismo.png",
 	},
 	Tech.ALPHABET: {

@@ -19,12 +19,15 @@ extends RefCounted
 ##        madeira  madeireira na floresta da cidade ou, sem floresta, um
 ##                 Trabalhador para fazer madeireira remota;
 ##        expansão Colono (população >= settler_population);
+##        bem-estar Templo (com Misticismo) quando a população chega aos
+##                 contentes de base (City.base_content);
 ##        prédios  Marcenaria e depois Quartel General (na capital e em
 ##                 cidades grandes), guardando a madeira para eles;
 ##        armas    Lanças até spears_per_city por cidade;
 ##        exército Guerreiros até army_to_attack fora das cidades;
 ##   3. cidadãos, do zero: fazendas até o alimento bastar (no máximo 2/3 da
-##      cidade, se não há fome), os impostos reservados (tax_workers), 1 em
+##      cidade, se não há fome), festividades até sair da desordem civil, os
+##      impostos reservados (tax_workers), 1 em
 ##      cada madeireira (se falta madeira), as obras em ordem de prioridade
 ##      (_job_priority: comida > defesa > madeira > expansão > prédios > armas
 ##      > exército; todos na mais importante, o resto na seguinte),
@@ -92,6 +95,10 @@ func _plan(city: City) -> void:
 			and _player.cities.size() + _count_units(_is_settler) + _count_queued(City.Build.SETTLER) < _p.max_cities:
 		_try_order(city, City.Build.SETTLER)
 
+	# Bem-estar: Templo quando a cidade já tem (ou está para ter) infelizes
+	if city.population >= city.base_content():
+		_try_order(city, City.Build.TEMPLE)
+
 	# Prédios (guardam a madeira para eles)
 	var reserve := 0
 	if city == _player.cities[0] or city.population >= 4:
@@ -136,6 +143,9 @@ func _distribute_workers(city: City) -> void:
 		if city.free_citizens() <= 0 or fed or enough_farmers:
 			break
 		city.set_farm_worked(farm_cell, true)
+	# Bem-estar: festividades até sair da desordem civil (senão nada avança)
+	while city.is_in_disorder() and city.free_citizens() > 0:
+		city.set_festival_workers(city.festival_workers + 1)
 	# Impostos: a personalidade pode reservar cidadãos na Marcenaria parada (só
 	# em cidade de 4+; numa cidade pequena eles fariam falta para crescer)
 	if _p.tax_workers > 0 and city.population >= 4 and city.has_building(City.Build.CARPENTRY) \
@@ -190,6 +200,8 @@ func _job_priority(city: City, job: City.Construction) -> int:
 			return 2 if wood_short else 7
 		City.Build.CARPENTRY, City.Build.HEADQUARTERS:
 			return 4
+		City.Build.TEMPLE:
+			return 1 if city.mood()["unhappy"] > 0 else 4
 		City.Build.SETTLER:
 			return 3
 	return 8

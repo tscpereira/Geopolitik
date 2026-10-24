@@ -41,9 +41,20 @@ extends Node2D
 ## Trabalhador migre para ela (Game.join_city). Um Trabalhador do dono
 ## reconstrói a ruína em cost() turnos (add_rebuild_progress).
 ##
+## BEM-ESTAR SOCIAL (felicidade, ver mood): cada cidadão fica Feliz, Contente ou
+## Infeliz. Os primeiros BASE_CONTENT são contentes (menos 1 a cada
+## EMPIRE_SIZE_STEP cidades do império); os outros nascem infelizes. Fome,
+## ocupação recente e pilhagem tornam contentes em infelizes. O Templo e a
+## guarnição (lei marcial) acalmam infelizes. Pontos de alegria (festividades e
+## bens da Marcenaria parada) sobem cidadãos um degrau: infeliz -> contente,
+## depois contente -> feliz. Mais infelizes que felizes = DESORDEM CIVIL (sem
+## obras, ouro nem ciência). Nenhum infeliz e pelo menos metade feliz =
+## CELEBRAÇÃO (+1 de alimento por feliz).
+##
 ## Cada cidadão trabalha em uma coisa só: numa obra (gera produção), numa
-## fazenda (gera alimento) ou numa madeireira (gera madeira). Quem o jogador
-## deixar livre (botão "-") continua livre e não produz nada.
+## fazenda (gera alimento), numa madeireira (gera madeira) ou nas festividades
+## (gera alegria). Quem o jogador deixar livre (botão "-") continua livre e não
+## produz nada.
 ##
 ## Obras podem ser melhorias numa casa (Fazenda, Madeireira), unidades
 ## (Guerreiro, Colono, Trabalhador), armas (Lança) ou prédios (Quartel
@@ -57,7 +68,10 @@ extends Node2D
 
 signal changed
 
-enum Build { FARM, LUMBER_MILL, WARRIOR, WORKER, SETTLER, CITY_HALL, HEADQUARTERS, CARPENTRY, SPEAR }
+enum Build { FARM, LUMBER_MILL, WARRIOR, WORKER, SETTLER, CITY_HALL, HEADQUARTERS, CARPENTRY, SPEAR, TEMPLE }
+
+## Humor de um cidadão (bem-estar social).
+enum Mood { UNHAPPY, CONTENT, HAPPY }
 
 ## Classe da cidade, pelo tamanho (ver rank).
 enum Rank { SETTLEMENT, TOWN, CITY, METROPOLIS }
@@ -107,6 +121,10 @@ const CATEGORY_NAMES := {
 ##   idle_science ciência por turno de cada trabalhador do prédio quando não há
 ##               nada em produção nele (ver science_per_turn)
 ##   idle_max_workers  máximo de trabalhadores no prédio parado (ciência)
+##   idle_goods  bens duráveis do prédio parado: +1 ponto de alegria a cada
+##               "idle_goods" trabalhadores (ver joy_points)
+##   calms       infelizes que o prédio torna contentes (Templo; ver mood)
+##   tech        tecnologia (Technology.Tech) que o jogador precisa ter pesquisado
 ##   requires    prédio que produz a unidade ou a arma (a cidade precisa tê-lo)
 ##   native      prédio que toda cidade já tem ao nascer (não aparece na lista)
 ##   description texto explicativo (tooltip da lista de construções)
@@ -157,8 +175,14 @@ const BUILDS := {
 	},
 	Build.CARPENTRY: {
 		"name": "Marcenaria", "article": "a", "category": Category.BUILDING,
-		"cost": 10, "gold": 50, "wood": 10, "on_tile": false, "idle_gold": 1,
-		"description": "Produz armas (Lanças). Sem armas na fila, cada trabalhador rende +1 de ouro por turno. Gasta 10 de madeira.",
+		"cost": 10, "gold": 50, "wood": 10, "on_tile": false, "idle_gold": 1, "idle_goods": 2,
+		"description": "Produz armas (Lanças). Parada, cada trabalhador rende +1 de ouro e cada 2 dão +1 de alegria. Gasta 10 de madeira.",
+	},
+	Build.TEMPLE: {
+		"name": "Templo", "article": "o", "category": Category.BUILDING,
+		"cost": 15, "gold": 50, "wood": 5, "on_tile": false, "calms": 2,
+		"tech": Technology.Tech.MYSTICISM,
+		"description": "Torna 2 cidadãos infelizes em contentes. Exige Misticismo; gasta 5 de madeira.",
 	},
 	Build.SPEAR: {
 		"name": "Lança", "article": "a", "category": Category.WEAPON,
@@ -180,6 +204,33 @@ const FOOD_PER_CITIZEN := 2
 const FOOD_BOX_PER_SIZE := 10
 ## Distância mínima (em casas, contando diagonais) entre duas cidades.
 const MIN_DISTANCE := 3
+
+# --- Bem-estar social (felicidade; ver mood) ---------------------------------
+## Cidadãos contentes de base em cada cidade; os outros nascem infelizes.
+const BASE_CONTENT := 4
+## A cada tantas cidades do império, −1 contente de base em todas (5ª cidade: −1).
+const EMPIRE_SIZE_STEP := 4
+## Fome (saldo de alimento negativo): contentes que viram infelizes. Só nas
+## cidades maiores que os contentes de base (ver unrest_sources).
+const HUNGER_UNREST := 1
+## Cidade recém-ocupada: contentes que viram infelizes, por quantos turnos.
+const OCCUPATION_UNREST := 2
+const OCCUPATION_UNREST_TURNS := 10
+## Melhoria pilhada (cidadãos executados): idem.
+const PILLAGE_UNREST := 1
+const PILLAGE_UNREST_TURNS := 5
+## Lei marcial: cada unidade militar fortificada na cidade ou numa casa vizinha
+## acalma 1 infeliz, até MARTIAL_LAW_MAX.
+const MARTIAL_LAW_MAX := 2
+## Pontos de alegria de cada cidadão nas festividades.
+const FESTIVAL_JOY := 2
+## Celebração: alimento extra por cidadão feliz, e população mínima para celebrar.
+const CELEBRATION_FOOD_PER_HAPPY := 1
+const CELEBRATION_MIN_POPULATION := 3
+## Cores dos rostos (janela da cidade e mapa).
+const HAPPY_COLOR := Color8(255, 215, 60)
+const CONTENT_COLOR := Color8(205, 200, 185)
+const UNHAPPY_COLOR := Color8(235, 75, 60)
 
 ## Nomes dados às novas cidades, na ordem.
 const NAMES: Array[String] = [
@@ -323,6 +374,15 @@ var buildings: Array[int] = []
 ## arma da frente da fila do prédio e ficam lá quando ela fica pronta. Sem nada
 ## na fila, saem (ou, num prédio com "idle_gold", ficam rendendo ouro).
 var building_workers := {}
+## Cidadãos nas festividades: cada um gera FESTIVAL_JOY pontos de alegria.
+var festival_workers := 0
+## Turnos que ainda faltam de agitação pela ocupação e pela pilhagem (ver mood).
+var occupation_unrest_turns := 0
+var pillage_unrest_turns := 0
+## Turnos seguidos em desordem civil (1 = começou neste turno: o Game avisa).
+var disorder_turns := 0
+## Último mood_state desenhado no mapa (redesenha quando muda).
+var _drawn_mood_state := 0
 
 ## Força de trabalho: 1 ponto de produção por cidadão a cada turno.
 var production: int:
@@ -357,6 +417,8 @@ func to_dict() -> Dictionary:
 		"buildings": buildings.duplicate(), "building_workers": SaveGame.int_map_to_json(building_workers),
 		"ruins": ruins.keys().map(func(ruin_cell: Vector2i) -> Array:
 			return [ruin_cell.x, ruin_cell.y, ruins[ruin_cell]["build"], ruins[ruin_cell]["progress"]]),
+		"festival_workers": festival_workers, "occupation_unrest_turns": occupation_unrest_turns,
+		"pillage_unrest_turns": pillage_unrest_turns, "disorder_turns": disorder_turns,
 	}
 
 
@@ -379,6 +441,10 @@ func apply_dict(data: Dictionary) -> void:
 	ruins.clear()
 	for entry: Array in data.get("ruins", []):
 		ruins[Vector2i(int(entry[0]), int(entry[1]))] = {"build": int(entry[2]), "progress": int(entry[3])}
+	festival_workers = int(data.get("festival_workers", 0))
+	occupation_unrest_turns = int(data.get("occupation_unrest_turns", 0))
+	pillage_unrest_turns = int(data.get("pillage_unrest_turns", 0))
+	disorder_turns = int(data.get("disorder_turns", 0))
 	_painted_improvements.clear()
 	_notify_changed()
 
@@ -407,6 +473,8 @@ func build_error(build: int) -> String:
 			return "A cidade já tem %s." % info["name"]
 		if construction_of(build):
 			return "Já está em obra."
+	if info.has("tech") and not owner_player.researched.has(info["tech"]):
+		return "Precisa da tecnologia %s." % Technology.tech_name(info["tech"])
 	if info.has("requires") and not has_building(info["requires"]):
 		return "Precisa de %s." % BUILDS[info["requires"]]["name"]
 	var error := wood_error(build)
@@ -544,6 +612,7 @@ func pillage(target: Vector2i) -> int:
 	farms.erase(target)
 	lumber_mills.erase(target)
 	ruins[target] = {"build": build, "progress": 0}
+	pillage_unrest_turns = PILLAGE_UNREST_TURNS
 	population = maxi(population - executed, 0)
 	_release_extra_workers()
 	_notify_changed()
@@ -609,9 +678,11 @@ func receive_cell(target: Vector2i, taken: Dictionary) -> void:
 ## população (uma cidade vazia continua vazia; ninguém cai abaixo de 1) e
 ## tudo o que estava em produção (obras, unidades e armas da fila, sem
 ## devolver madeira nem armas). Território, fazendas, madeireiras, ruínas e
-## prédios ficam. Os cidadãos são realocados do zero.
+## prédios ficam. Os cidadãos são realocados do zero. O povo fica agitado por
+## OCCUPATION_UNREST_TURNS turnos (ver mood).
 func change_owner(new_owner: Player) -> void:
 	owner_player = new_owner
+	occupation_unrest_turns = OCCUPATION_UNREST_TURNS
 	if population > 1:
 		population -= 1
 	constructions.clear()
@@ -666,6 +737,8 @@ func workers_on(construction: Construction) -> int:
 ## Ouro por turno: trabalhadores de prédios com "idle_gold" (Marcenaria) sem
 ## nada em produção rendem impostos.
 func gold_per_turn() -> int:
+	if is_in_disorder():
+		return 0
 	var total := 0
 	for building in buildings:
 		if active_unit(building) == null:
@@ -675,9 +748,9 @@ func gold_per_turn() -> int:
 
 ## Ciência por turno: cada prédio com "science" gera sozinho (a Prefeitura, 1)
 ## e, parado (sem nada na fila), cada trabalhador dele gera "idle_science"
-## (Prefeitura: até 2 cidadãos, +1 cada). Cidade vazia não gera nada.
+## (Prefeitura: até 2 cidadãos, +1 cada). Cidade vazia ou em desordem não gera nada.
 func science_per_turn() -> int:
-	if population <= 0:
+	if population <= 0 or is_in_disorder():
 		return 0
 	var total := 0
 	for building in buildings:
@@ -709,7 +782,7 @@ func mill_workers() -> int:
 
 ## Cidadãos que não estão trabalhando em nada.
 func free_citizens() -> int:
-	return population - construction_workers() - farm_workers() - mill_workers()
+	return population - construction_workers() - farm_workers() - mill_workers() - festival_workers
 
 
 ## Madeira que as madeireiras da cidade vão tirar no próximo turno.
@@ -722,13 +795,25 @@ func wood_per_turn() -> int:
 
 ## Alimento produzido por turno. Cidade vazia (população 0) não produz nada,
 ## nem na casa da cidade: ela só volta a viver com um Trabalhador que migre.
+## Com a cidade em celebração, +CELEBRATION_FOOD_PER_HAPPY por cidadão feliz.
 func food_produced() -> int:
+	return _base_food_produced() + celebration_food()
+
+
+func _base_food_produced() -> int:
 	if population <= 0:
 		return 0
 	var total := CENTER_FOOD
 	for farm_cell: Vector2i in farms:
 		total += farm_food(farm_cell) * farms[farm_cell]
 	return total
+
+
+## Alimento extra da celebração (0 sem celebração).
+func celebration_food() -> int:
+	if not is_celebrating():
+		return 0
+	return mood()["happy"] * CELEBRATION_FOOD_PER_HAPPY
 
 
 ## Alimento por turno da fazenda em [param farm_cell] com 1 cidadão: depende do
@@ -779,6 +864,153 @@ func turns_to_finish(construction: Construction) -> int:
 	if workers <= 0:
 		return -1
 	return ceili(float(construction.cost() - construction.progress) / workers)
+
+
+# --- Bem-estar social --------------------------------------------------------
+
+## Contentes de base: BASE_CONTENT, menos 1 a cada EMPIRE_SIZE_STEP cidades do
+## império (com 5 cidades, 3; com 9, 2).
+func base_content() -> int:
+	return maxi(0, BASE_CONTENT - empire_size_penalty())
+
+
+func empire_size_penalty() -> int:
+	return maxi(0, owner_player.cities.size() - 1) / EMPIRE_SIZE_STEP
+
+
+## Agitação: contentes que viram infelizes (fome, ocupação, pilhagem).
+## Retorna [[motivo, quantidade], ...]. A fome só agita a cidade maior que os
+## contentes de base: num povoado pequeno ela levaria sozinha à desordem, e a
+## desordem pararia a fazenda que acabaria com a fome.
+func unrest_sources() -> Array:
+	var sources := []
+	if population > base_content() and _base_food_produced() - food_consumed() < 0:
+		sources.append(["fome", HUNGER_UNREST])
+	if occupation_unrest_turns > 0:
+		sources.append(["ocupação recente (%d t)" % occupation_unrest_turns, OCCUPATION_UNREST])
+	if pillage_unrest_turns > 0:
+		sources.append(["pilhagem (%d t)" % pillage_unrest_turns, PILLAGE_UNREST])
+	return sources
+
+
+## Infelizes que os prédios acalmam (Templo: "calms").
+func building_calm() -> int:
+	var total := 0
+	for building in buildings:
+		total += BUILDS[building].get("calms", 0)
+	return total
+
+
+## Lei marcial: unidades militares do dono fortificadas na cidade ou nas casas
+## vizinhas, até MARTIAL_LAW_MAX.
+func martial_law() -> int:
+	var total := 0
+	for unit in owner_player.units:
+		if unit.attack > 0 and unit.fortified and unit.working_mill == null \
+				and maxi(absi(unit.cell.x - cell.x), absi(unit.cell.y - cell.y)) <= 1:
+			total += 1
+	return mini(total, MARTIAL_LAW_MAX)
+
+
+## Pontos de alegria das festividades (FESTIVAL_JOY por cidadão).
+func festival_joy() -> int:
+	return festival_workers * FESTIVAL_JOY
+
+
+## Bens duráveis: prédio parado com "idle_goods" (Marcenaria sem armas na fila)
+## dá +1 ponto de alegria a cada "idle_goods" trabalhadores.
+func goods_joy() -> int:
+	var total := 0
+	for building in buildings:
+		var every: int = BUILDS[building].get("idle_goods", 0)
+		if every > 0 and active_unit(building) == null:
+			total += building_workers.get(building, 0) / every
+	return total
+
+
+func joy_points() -> int:
+	return festival_joy() + goods_joy()
+
+
+## Humor dos cidadãos: {"happy", "content", "unhappy"}. Ordem:
+##   1. os primeiros base_content() são contentes, o resto infeliz;
+##   2. agitação (unrest_sources): contentes viram infelizes;
+##   3. Templo e lei marcial: infelizes viram contentes;
+##   4. cada ponto de alegria sobe 1 cidadão um degrau: primeiro infeliz ->
+##      contente, depois contente -> feliz.
+func mood() -> Dictionary:
+	var result := {"happy": 0, "content": 0, "unhappy": 0}
+	if population <= 0:
+		return result
+	var content := mini(population, base_content())
+	var unhappy := population - content
+	var unrest := 0
+	for source: Array in unrest_sources():
+		unrest += source[1]
+	var moved := mini(unrest, content)
+	content -= moved
+	unhappy += moved
+	var calmed := mini(building_calm() + martial_law(), unhappy)
+	unhappy -= calmed
+	content += calmed
+	var happy := 0
+	var joy := joy_points()
+	var lifted := mini(joy, unhappy)
+	unhappy -= lifted
+	content += lifted
+	joy -= lifted
+	happy = mini(joy, content)
+	content -= happy
+	result["happy"] = happy
+	result["content"] = content
+	result["unhappy"] = unhappy
+	return result
+
+
+## Desordem civil: mais infelizes que felizes. A cidade não avança obras nem
+## rende ouro ou ciência (o alimento e a madeira continuam).
+func is_in_disorder() -> bool:
+	var current := mood()
+	return current["unhappy"] > current["happy"]
+
+
+## Celebração: nenhum infeliz, pelo menos metade feliz e população mínima.
+func is_celebrating() -> bool:
+	if population < CELEBRATION_MIN_POPULATION:
+		return false
+	var current := mood()
+	return current["unhappy"] == 0 and current["happy"] * 2 >= population
+
+
+## -1 desordem, 1 celebração, 0 em ordem (para o desenho no mapa).
+func mood_state() -> int:
+	return -1 if is_in_disorder() else 1 if is_celebrating() else 0
+
+
+## Explicação do humor, uma linha por fator (janela da cidade).
+func mood_details() -> Array[String]:
+	var lines: Array[String] = []
+	var penalty := empire_size_penalty()
+	lines.append("Base: %d contentes%s; os outros nascem infelizes" % [base_content(),
+			" (−%d pelo tamanho do império: %d cidades)" % [penalty, owner_player.cities.size()] if penalty > 0 else ""])
+	for source: Array in unrest_sources():
+		lines.append("Agitação: %s, −%d contente%s" % [source[0], source[1], "s" if source[1] > 1 else ""])
+	for building in buildings:
+		if BUILDS[building].get("calms", 0) > 0:
+			lines.append("%s: acalma %d infelizes" % [BUILDS[building]["name"], BUILDS[building]["calms"]])
+	if martial_law() > 0:
+		lines.append("Guarnição (lei marcial): acalma %d infeliz%s" % [martial_law(), "es" if martial_law() > 1 else ""])
+	if festival_joy() > 0:
+		lines.append("Festividades: +%d de alegria" % festival_joy())
+	if goods_joy() > 0:
+		lines.append("Bens da Marcenaria: +%d de alegria" % goods_joy())
+	return lines
+
+
+## Cidadãos nas festividades (limitado aos livres).
+func set_festival_workers(workers: int) -> void:
+	festival_workers = clampi(workers, 0, festival_workers + free_citizens())
+	_notify_changed()
 
 
 # --- Ordens do jogador ------------------------------------------------------
@@ -876,6 +1108,7 @@ func clear_workers() -> void:
 		construction.workers = 0
 	for building: int in building_workers:
 		building_workers[building] = 0
+	festival_workers = 0
 	_notify_changed()
 
 
@@ -928,6 +1161,14 @@ func process_turn(spawn_unit: Callable) -> Array[String]:
 	# Livres por escolha do jogador (botão "-"): continuam livres. Só os que
 	# ficarem livres agora (obra pronta, crescimento) são realocados no fim.
 	var idle_by_choice := free_citizens()
+	# Desordem civil: as obras não avançam e não há impostos neste turno
+	var disorder := is_in_disorder()
+	if disorder:
+		var current := mood()
+		events.append("está em DESORDEM CIVIL (%d infelizes x %d felizes): sem obras, ouro nem ciência neste turno" % [
+			current["unhappy"], current["happy"]])
+	elif is_celebrating():
+		events.append("está em celebração (+%d de alimento)" % celebration_food())
 	# Primeiro todas as obras avançam (unidades e armas: a da frente da fila de
 	# cada prédio, com os trabalhadores do prédio); prédio que rende ouro parado
 	# paga os impostos. Depois as prontas são resolvidas.
@@ -941,7 +1182,8 @@ func process_turn(spawn_unit: Callable) -> Array[String]:
 			producing.append(building)
 	for construction in constructions:
 		var workers: int = advancing.get(construction, 0) if construction.is_produced() else construction.workers
-		construction.progress = mini(construction.progress + workers, construction.cost())
+		if not disorder:
+			construction.progress = mini(construction.progress + workers, construction.cost())
 	for construction in constructions.duplicate():
 		if not construction.is_done():
 			continue
@@ -1004,6 +1246,9 @@ func process_turn(spawn_unit: Callable) -> Array[String]:
 			events.append("passou fome e caiu para %d de população" % population)
 
 	_assign_free_citizens(free_citizens() - idle_by_choice)
+	disorder_turns = disorder_turns + 1 if disorder else 0
+	occupation_unrest_turns = maxi(0, occupation_unrest_turns - 1)
+	pillage_unrest_turns = maxi(0, pillage_unrest_turns - 1)
 	_notify_changed()
 	return events
 
@@ -1073,7 +1318,8 @@ func _assign_free_citizens(count: int) -> void:
 
 
 ## Depois de perder população, tira trabalhadores (primeiro das obras, depois
-## das madeireiras e por fim das fazendas) até o total caber na população.
+## das festividades, das madeireiras e por fim das fazendas) até o total caber
+## na população.
 func _release_extra_workers() -> void:
 	for construction in constructions:
 		while free_citizens() < 0 and construction.workers > 0:
@@ -1081,12 +1327,21 @@ func _release_extra_workers() -> void:
 	for building: int in building_workers:
 		while free_citizens() < 0 and building_workers[building] > 0:
 			building_workers[building] -= 1
+	while free_citizens() < 0 and festival_workers > 0:
+		festival_workers -= 1
 	for mill_cell in lumber_mills:
 		while free_citizens() < 0 and lumber_mills[mill_cell] > 0:
 			lumber_mills[mill_cell] -= 1
 	for farm_cell in farms:
 		if free_citizens() < 0 and farms[farm_cell] > 0:
 			farms[farm_cell] = 0
+
+
+## O humor também muda sem a cidade mudar (unidade fortificada por perto, nova
+## cidade no império): redesenha quando o estado (desordem/celebração) muda.
+func _process(_delta: float) -> void:
+	if owner_player and mood_state() != _drawn_mood_state:
+		queue_redraw()
 
 
 func _notify_changed() -> void:
@@ -1143,19 +1398,25 @@ func _draw() -> void:
 		# Obras paradas e ninguém livre: o jogador precisa tirar cidadãos de outro lugar
 		_draw_idle_warning(top, stalled_count(), STALLED_COLOR)
 
-	# Embaixo: [estrela da capital] [população na cor do dono] Nome
+	# Embaixo: [estrela da capital] [rosto: desordem ou celebração]
+	# [população na cor do dono] Nome
 	var font := ThemeDB.fallback_font
 	var name_width := font.get_string_size(city_name, HORIZONTAL_ALIGNMENT_LEFT, -1, NAME_FONT_SIZE).x
 	var badge_width := population_badge_width(population, NAME_FONT_SIZE)
 	var gap := NAME_FONT_SIZE * 0.3
 	var star := NAME_FONT_SIZE * 1.1 if is_capital else 0.0
-	var left := -(star + badge_width + gap + name_width) / 2.0
+	_drawn_mood_state = mood_state()
+	var face := NAME_FONT_SIZE * 1.15 if _drawn_mood_state != 0 else 0.0
+	var left := -(star + face + badge_width + gap + name_width) / 2.0
 	var baseline := sprite.end.y + NAME_FONT_SIZE * 0.9
 	var middle := baseline - (font.get_ascent(NAME_FONT_SIZE) - font.get_descent(NAME_FONT_SIZE)) / 2.0
 	if is_capital:
 		draw_star(self, Vector2(left + NAME_FONT_SIZE * 0.5, middle), NAME_FONT_SIZE * 0.55)
-	draw_population_badge(self, Vector2(left + star, middle), population, owner_player.color, NAME_FONT_SIZE)
-	var origin := Vector2(left + star + badge_width + gap, baseline)
+	if _drawn_mood_state != 0:
+		Icons.draw_face(self, Vector2(left + star + NAME_FONT_SIZE * 0.5, middle), NAME_FONT_SIZE * 0.52,
+				Mood.UNHAPPY if _drawn_mood_state < 0 else Mood.HAPPY)
+	draw_population_badge(self, Vector2(left + star + face, middle), population, owner_player.color, NAME_FONT_SIZE)
+	var origin := Vector2(left + star + face + badge_width + gap, baseline)
 	draw_string_outline(font, origin, city_name, HORIZONTAL_ALIGNMENT_LEFT, -1, NAME_FONT_SIZE, NAME_FONT_SIZE / 3, Color.BLACK)
 	draw_string(font, origin, city_name, HORIZONTAL_ALIGNMENT_LEFT, -1, NAME_FONT_SIZE, Color.WHITE)
 

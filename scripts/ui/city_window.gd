@@ -59,6 +59,7 @@ var _food_bar_label: Label
 var _hint: Label
 var _map_view: CityMapView
 var _build_box: VBoxContainer
+var _mood_box: VBoxContainer
 var _constructions_box: VBoxContainer
 var _farms_box: VBoxContainer
 var _buildings_box: VBoxContainer
@@ -212,6 +213,9 @@ func _build_layout() -> void:
 	_food_bar_label = Label.new()
 	_food_bar_label.custom_minimum_size.x = 70
 	food_row.add_child(_food_bar_label)
+	right.add_child(_make_section("Bem-estar social"))
+	_mood_box = VBoxContainer.new()
+	right.add_child(_mood_box)
 	_build_box = VBoxContainer.new()
 	right.add_child(_build_box)
 	right.add_child(_make_section("Prédios da cidade"))
@@ -317,6 +321,7 @@ func _refresh() -> void:
 			if _picking >= 0 else
 			"Passe o mouse sobre uma casa para ver detalhes. Os números brancos indicam os cidadãos trabalhando ali."
 			+ (" Casas em vermelho são de outra cidade sua: clique para trazê-las." if _has_transferable() else ""))
+	_rebuild_mood()
 	_rebuild_build_button()
 	_rebuild_constructions()
 	_rebuild_farms()
@@ -341,8 +346,10 @@ func _summary_text() -> String:
 		("   (cresce em %d %s)" % [growth, "turno" if growth == 1 else "turnos"]) if growth > 0 else "",
 	])
 	var center_food := City.CENTER_FOOD if _city.population > 0 else 0
-	lines.append("    produção %d (cidade %d + fazendas %d)  -  consumo %d" % [
-		_city.food_produced(), center_food, _city.food_produced() - center_food, _city.food_consumed(),
+	var party_food := _city.celebration_food()
+	lines.append("    produção %d (cidade %d + fazendas %d%s)  -  consumo %d" % [
+		_city.food_produced(), center_food, _city.food_produced() - center_food - party_food,
+		" + celebração %d" % party_food if party_food > 0 else "", _city.food_consumed(),
 	])
 	if not _city.lumber_mills.is_empty():
 		lines.append("Madeira: [color=#%s]+%d[/color] por turno   (%d em madeireiras)" % [
@@ -371,6 +378,89 @@ func _summary_text() -> String:
 		lines.append("[color=#%s]%d %s pela pilhagem: um Trabalhador pode reconstruir (tecla R).[/color]" % [
 			WARNING_COLOR.to_html(false), _city.ruins.size(), "melhoria destruída" if _city.ruins.size() == 1 else "melhorias destruídas"])
 	return "\n".join(lines)
+
+
+## Seção "Bem-estar social": um rosto por cidadão (felizes, contentes e
+## infelizes), a situação (desordem civil, celebração ou em ordem), de onde
+## vem cada coisa e a linha das festividades (cidadãos que geram alegria).
+func _rebuild_mood() -> void:
+	_clear(_mood_box)
+	if _city.population <= 0:
+		_mood_box.add_child(_make_muted("Cidade vazia."))
+		return
+	var mood := _city.mood()
+	var faces_row := HBoxContainer.new()
+	faces_row.add_theme_constant_override("separation", 10)
+	_mood_box.add_child(faces_row)
+	var faces := Control.new()
+	# Rostos menores numa cidade grande, para caberem na coluna
+	var face_size := clampf(340.0 / _city.population - 4.0, 8.0, 22.0)
+	faces.custom_minimum_size = Vector2(face_size * _city.population + 4 * (_city.population - 1), face_size)
+	faces.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	faces.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var order: Array = []
+	for i in mood["happy"]:
+		order.append(City.Mood.HAPPY)
+	for i in mood["content"]:
+		order.append(City.Mood.CONTENT)
+	for i in mood["unhappy"]:
+		order.append(City.Mood.UNHAPPY)
+	faces.draw.connect(func() -> void:
+		for i in order.size():
+			Icons.draw_face(faces, Vector2(face_size / 2.0 + i * (face_size + 4), face_size / 2.0), face_size / 2.0 - 2.0, order[i]))
+	faces_row.add_child(faces)
+	var counts := RichTextLabel.new()
+	counts.bbcode_enabled = true
+	counts.fit_content = true
+	counts.scroll_active = false
+	counts.autowrap_mode = TextServer.AUTOWRAP_OFF
+	counts.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	counts.text = "[color=#%s]%d felizes[/color]  [color=#%s]%d contentes[/color]  [color=#%s]%d infelizes[/color]" % [
+		City.HAPPY_COLOR.to_html(false), mood["happy"], City.CONTENT_COLOR.to_html(false), mood["content"],
+		City.UNHAPPY_COLOR.to_html(false), mood["unhappy"]]
+	faces_row.add_child(counts)
+
+	var status := RichTextLabel.new()
+	status.bbcode_enabled = true
+	status.fit_content = true
+	status.scroll_active = false
+	if _city.is_in_disorder():
+		status.text = "[color=#%s]DESORDEM CIVIL: mais infelizes que felizes. A cidade não avança obras nem rende ouro ou ciência. Ponha cidadãos nas festividades, fortifique soldados na cidade ou construa um Templo.[/color]" % NEGATIVE_COLOR.to_html(false)
+	elif _city.is_celebrating():
+		status.text = "[color=#%s]CELEBRAÇÃO: nenhum infeliz e pelo menos metade feliz. +%d de alimento por turno (+%d por feliz).[/color]" % [
+			City.HAPPY_COLOR.to_html(false), _city.celebration_food(), City.CELEBRATION_FOOD_PER_HAPPY]
+	else:
+		status.text = "[color=#%s]Em ordem.[/color] Desordem: infelizes > felizes. Celebração: nenhum infeliz e metade feliz (%d+ de população)." % [
+			POSITIVE_COLOR.to_html(false), City.CELEBRATION_MIN_POPULATION]
+	_mood_box.add_child(status)
+	var details := _make_muted("    " + "\n    ".join(_city.mood_details()))
+	details.add_theme_font_size_override("font_size", 13)
+	_mood_box.add_child(details)
+
+	# Festividades: cada cidadão gera FESTIVAL_JOY pontos de alegria
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 6)
+	row.mouse_filter = Control.MOUSE_FILTER_STOP
+	row.tooltip_text = wrap_tooltip("Cidadãos que organizam festas e jogos: cada um gera +%d de alegria. Cada ponto de alegria torna um infeliz contente ou, sem infelizes, um contente feliz." % City.FESTIVAL_JOY)
+	_mood_box.add_child(row)
+	var icon := Control.new()
+	icon.custom_minimum_size = Vector2.ONE * Icons.ICON_SIZE
+	icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	icon.draw.connect(func() -> void: Icons.draw_face(icon, icon.size / 2.0, icon.size.x / 2.0 - 2.0, City.Mood.HAPPY))
+	row.add_child(icon)
+	var label := Label.new()
+	label.text = "Festividades"
+	label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	row.add_child(label)
+	var joy := Label.new()
+	joy.text = "+%d alegria" % _city.festival_joy()
+	joy.custom_minimum_size.x = 120
+	joy.add_theme_color_override("font_color", City.HAPPY_COLOR if _city.festival_workers > 0 else MUTED_COLOR)
+	row.add_child(joy)
+	_add_worker_controls(row, _city.festival_workers, _city.festival_workers + _city.free_citizens(), _city.set_festival_workers)
+	var x_space := Control.new()
+	x_space.custom_minimum_size.x = 30 # alinha com o X das outras linhas
+	row.add_child(x_space)
 
 
 ## Botão "Construir" (ou, durante a escolha da casa, o aviso e o "Cancelar").
@@ -580,7 +670,9 @@ func _add_idle_gold_row(building: int) -> void:
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override("separation", 6)
 	row.mouse_filter = Control.MOUSE_FILTER_STOP
-	row.tooltip_text = wrap_tooltip("Sem armas na fila: os trabalhadores produzem bens para a população e recolhem impostos (+%d de ouro cada por turno)." % gold_each)
+	var goods_every: int = City.BUILDS[building].get("idle_goods", 0)
+	row.tooltip_text = wrap_tooltip("Sem armas na fila: os trabalhadores produzem bens para a população e recolhem impostos (+%d de ouro cada por turno)." % gold_each
+			+ (" A cada %d trabalhadores, os bens duráveis dão +1 de alegria (bem-estar social)." % goods_every if goods_every > 0 else ""))
 	_buildings_box.add_child(row)
 	var indent := Control.new()
 	indent.custom_minimum_size.x = UNIT_INDENT
@@ -590,11 +682,13 @@ func _add_idle_gold_row(building: int) -> void:
 	coin.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	row.add_child(coin)
 	var label := Label.new()
-	label.text = "Impostos (sem armas na fila)"
+	label.text = "Impostos e bens (sem armas na fila)"
 	label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	row.add_child(label)
 	var status := Label.new()
 	status.text = "+%d ouro" % (workers * gold_each)
+	if goods_every > 0 and workers >= goods_every:
+		status.text += " +%d alegria" % (workers / goods_every)
 	status.custom_minimum_size.x = 120
 	status.add_theme_color_override("font_color", Icons.GOLD_COLOR if workers > 0 else MUTED_COLOR)
 	row.add_child(status)

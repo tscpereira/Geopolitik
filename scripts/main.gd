@@ -27,6 +27,9 @@ const PILLAGE_MILL_GOLD := 5
 ## Pontos de reconstrução que um Trabalhador faz por turno numa ruína da cidade
 ## (a melhoria custa City.BUILDS[...]["cost"]: 4 turnos, como uma obra nova).
 const REBUILD_PER_TURN := 1
+## Aviso de início de turno (no lugar de um City.Build): a cidade entrou em
+## desordem civil.
+const DISORDER_NOTICE := -1
 
 var players: Array[Player] = []
 var selected_unit: Unit = null
@@ -54,7 +57,7 @@ var _research_done := -1
 ## Dono de cada casa de território: {casa: City} (ver refresh_territories).
 var _territory := {}
 ## Construções concluídas nas cidades do humano neste início de turno, à espera
-## do aviso: [[City, City.Build], ...].
+## do aviso: [[City, City.Build], ...] (DISORDER_NOTICE: entrou em desordem).
 var _completion_notices: Array[Array] = []
 
 @onready var game_map: GameMap = $GameMap
@@ -1275,6 +1278,8 @@ func _process_cities(player: Player) -> void:
 		if not player.is_ai:
 			for build in city.completed:
 				_completion_notices.append([city, build])
+			if city.disorder_turns == 1:
+				_completion_notices.append([city, DISORDER_NOTICE]) # entrou em desordem neste turno
 	for message in messages:
 		print(message)
 	if not player.is_ai and not messages.is_empty():
@@ -1300,6 +1305,10 @@ func _show_completion_notices() -> void:
 
 ## "A construção da fazenda foi concluída." + situação dos cidadãos livres.
 func _completion_notice_text(city: City, build: int) -> String:
+	if build == DISORDER_NOTICE:
+		var mood := city.mood()
+		return "[color=#%s]A cidade entrou em desordem civil[/color]: %d infelizes contra %d felizes.\nEnquanto durar, ela não avança obras nem rende ouro ou ciência. Abra a cidade para pôr cidadãos nas festividades, fortifique um soldado nela ou construa um Templo." % [
+			City.UNHAPPY_COLOR.to_html(false), mood["unhappy"], mood["happy"]]
 	var text := City.completion_text(build)
 	var idle := city.free_citizens()
 	if idle > 0:
@@ -1707,9 +1716,12 @@ func _update_info() -> void:
 		var city := get_city_at(_hover_cell)
 		var mill := lumber_mill_at(_hover_cell)
 		if city:
-			lines.append("Cidade %s (%s, %s) - População %d | Alimentos %d/%d (%+d por turno)" % [
+			var mood := city.mood()
+			lines.append("Cidade %s (%s, %s) - População %d | Alimentos %d/%d (%+d por turno) | %d felizes, %d contentes, %d infelizes%s" % [
 				city.city_name, city.owner_player.display_name, city.rank_text(), city.population,
 				city.food_stock, city.food_capacity(), city.food_per_turn(),
+				mood["happy"], mood["content"], mood["unhappy"],
+				" - DESORDEM CIVIL" if city.is_in_disorder() else " - celebração" if city.is_celebrating() else "",
 			])
 		elif ruins_layer.cities.has(_hover_cell):
 			lines.append("Ruínas de %s (cidade saqueada e destruída)" % ruins_layer.city_name_at(_hover_cell))

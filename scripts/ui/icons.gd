@@ -43,6 +43,7 @@ static func build_icon(build: int, player_color: Color, size := ICON_SIZE) -> Co
 ##   Prefeitura      prédio romano (frontão e colunas);
 ##   Quartel General espada;
 ##   Marcenaria      serrote;
+##   Templo          zigurate com chama;
 ##   armas           o desenho da arma (Lança: lança).
 static func draw_build(canvas: CanvasItem, build: int, rect: Rect2, player_color: Color) -> void:
 	var info: Dictionary = City.BUILDS[build]
@@ -64,6 +65,8 @@ static func draw_build(canvas: CanvasItem, build: int, rect: Rect2, player_color
 			draw_sword(canvas, rect)
 		City.Build.CARPENTRY:
 			draw_saw(canvas, rect)
+		City.Build.TEMPLE:
+			draw_temple(canvas, rect)
 	if info.has("weapon"):
 		draw_weapon(canvas, info["weapon"], rect)
 
@@ -139,6 +142,49 @@ static func draw_city_hall(canvas: CanvasItem, rect: Rect2) -> void:
 		_draw_block(canvas, Rect2(o + Vector2(x, h * 0.42), Vector2(w * 0.12, h * 0.38)), STONE_COLOR, line)
 	_draw_block(canvas, Rect2(o + Vector2(w * 0.06, h * 0.8), Vector2(w * 0.88, h * 0.07)), STONE_SHADE, line)
 	_draw_block(canvas, Rect2(o + Vector2(w * 0.02, h * 0.87), Vector2(w * 0.96, h * 0.09)), STONE_COLOR, line)
+
+
+## Templo: zigurate de degraus de pedra com um santuário e uma chama no topo.
+static func draw_temple(canvas: CanvasItem, rect: Rect2) -> void:
+	var o := rect.position
+	var w := rect.size.x
+	var h := rect.size.y
+	var line := maxf(1.0, w / 24.0)
+	# Três degraus, do mais largo (embaixo) ao mais estreito
+	for i in 3:
+		_draw_block(canvas, Rect2(o + Vector2(w * (0.04 + i * 0.1), h * (0.8 - i * 0.16)), Vector2(w * (0.92 - i * 0.2), h * 0.16)),
+				STONE_COLOR if i % 2 == 0 else STONE_SHADE, line)
+	# Escadaria no meio
+	_draw_block(canvas, Rect2(o + Vector2(w * 0.43, h * 0.48), Vector2(w * 0.14, h * 0.48)), STONE_SHADE.darkened(0.15), line)
+	# Santuário com porta escura
+	_draw_block(canvas, Rect2(o + Vector2(w * 0.34, h * 0.31), Vector2(w * 0.32, h * 0.17)), STONE_COLOR, line)
+	_draw_block(canvas, Rect2(o + Vector2(w * 0.45, h * 0.36), Vector2(w * 0.1, h * 0.12)), Color(0.12, 0.1, 0.1), line)
+	# Chama
+	var flame := PackedVector2Array([o + Vector2(w * 0.5, h * 0.03), o + Vector2(w * 0.6, h * 0.19),
+			o + Vector2(w * 0.55, h * 0.3), o + Vector2(w * 0.45, h * 0.3), o + Vector2(w * 0.4, h * 0.19), o + Vector2(w * 0.5, h * 0.03)])
+	canvas.draw_colored_polygon(flame, Color8(255, 150, 30))
+	canvas.draw_circle(o + Vector2(w * 0.5, h * 0.22), w * 0.04, Color8(255, 230, 120))
+	canvas.draw_polyline(flame, Color.BLACK, line)
+
+
+## Rosto de um cidadão (bem-estar social): feliz (dourado, sorrindo), contente
+## (bege, boca reta) ou infeliz (vermelho, boca para baixo).
+static func draw_face(canvas: CanvasItem, center: Vector2, radius: float, mood: City.Mood) -> void:
+	var color: Color = {City.Mood.HAPPY: City.HAPPY_COLOR, City.Mood.CONTENT: City.CONTENT_COLOR,
+			City.Mood.UNHAPPY: City.UNHAPPY_COLOR}[mood]
+	var line := maxf(1.0, radius / 5.0)
+	canvas.draw_circle(center, radius + line * 0.6, Color.BLACK)
+	canvas.draw_circle(center, radius, color)
+	var eye := radius * 0.14
+	canvas.draw_circle(center + Vector2(-radius * 0.35, -radius * 0.25), eye, Color.BLACK)
+	canvas.draw_circle(center + Vector2(radius * 0.35, -radius * 0.25), eye, Color.BLACK)
+	match mood:
+		City.Mood.HAPPY:
+			canvas.draw_arc(center + Vector2(0, radius * 0.05), radius * 0.5, PI * 0.15, PI * 0.85, 8, Color.BLACK, line)
+		City.Mood.CONTENT:
+			canvas.draw_line(center + Vector2(-radius * 0.38, radius * 0.38), center + Vector2(radius * 0.38, radius * 0.38), Color.BLACK, line)
+		City.Mood.UNHAPPY:
+			canvas.draw_arc(center + Vector2(0, radius * 0.75), radius * 0.45, PI * 1.2, PI * 1.8, 8, Color.BLACK, line)
 
 
 ## Espada na diagonal: lâmina de aço, guarda e pomo dourados, cabo de couro.
