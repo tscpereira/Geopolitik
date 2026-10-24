@@ -149,7 +149,7 @@ static func draw_icon(canvas: CanvasItem, rect: Rect2, alpha := 1.0) -> void:
 		canvas.draw_circle(Vector2(body.end.x, log_center.y), log_height / 2.0, Color(LOG_END_COLOR, alpha))
 
 
-## Barra azul no topo da casa: madeira que resta na floresta (de 30).
+## Barra azul no topo da casa: madeira que resta na floresta (de Terrain.WOOD_PER_FOREST).
 static func draw_wood_bar(canvas: CanvasItem, rect: Rect2, wood: int) -> void:
 	draw_bar(canvas, rect, float(wood) / Terrain.WOOD_PER_FOREST, WOOD_BAR_COLOR)
 

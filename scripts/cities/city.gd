@@ -139,7 +139,7 @@ const BUILDS := {
 	Build.LUMBER_MILL: {
 		"name": "Madeireira", "article": "a", "category": Category.TERRAIN_IMPROVEMENT,
 		"cost": 4, "gold": 50, "on_tile": true,
-		"description": "Melhoria em floresta. Até 2 cidadãos, cada um tira 1 de madeira por turno. A floresta tem 30 de madeira e depois vira cerrado.",
+		"description": "Melhoria em floresta. Até 2 cidadãos, cada um tira 1 de madeira por turno. Cada floresta tem 100 de madeira e depois vira cerrado.",
 	},
 	Build.WARRIOR: {
 		"name": "Guerreiro", "article": "o", "category": Category.UNIT,
@@ -180,9 +180,9 @@ const BUILDS := {
 	},
 	Build.TEMPLE: {
 		"name": "Templo", "article": "o", "category": Category.BUILDING,
-		"cost": 15, "gold": 50, "wood": 5, "on_tile": false, "calms": 2,
+		"cost": 20, "gold": 50, "wood": 30, "on_tile": false, "calms": 2,
 		"tech": Technology.Tech.MYSTICISM,
-		"description": "Torna 2 cidadãos infelizes em contentes. Exige Misticismo; gasta 5 de madeira.",
+		"description": "Torna 2 cidadãos infelizes em contentes. Exige Misticismo; gasta 30 de madeira.",
 	},
 	Build.SPEAR: {
 		"name": "Lança", "article": "a", "category": Category.WEAPON,

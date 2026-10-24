@@ -425,14 +425,17 @@ FLORESTA (scripts/map/terrain.gd)
       Sair da floresta para a pradaria custa o normal (1).
     * Não aceita fazenda (Terrain.can_farm).
     * Cidade fundada na floresta: a casa vira Pradaria.
-    * Tem 30 de madeira por casa (Terrain.WOOD_PER_FOREST), tirada
-      pelas madeireiras. Quando a madeira acaba, a casa vira
-      Cerrado.
+    * A madeira é da FLORESTA, não da madeireira: cada casa de
+      floresta tem o seu próprio estoque, 100 de madeira
+      (Terrain.WOOD_PER_FOREST), guardado no mapa (GameMap, salvo
+      no save). A madeireira (da cidade ou remota) só extrai a
+      madeira da casa em que está, para o estoque do jogador.
+      Quando a madeira da casa acaba, ela vira Cerrado.
 - Cerrado: o que sobra da floresta explorada. Igual à Pradaria em
   movimento e cidade, mas é um solo menos fértil: a fazenda no
   cerrado rende +2 de alimento (na pradaria, +3; Terrain.FARM_FOOD).
 - Passar o mouse sobre uma floresta mostra a madeira que resta
-  (ex.: "Floresta (madeira 25/30, defesa +1...)").
+  (ex.: "Floresta (madeira 85/100, defesa +1...)").
 
 OURO (TESOURO)
 - Cada jogador tem um tesouro em ouro (Player.gold). Para testes,
@@ -502,7 +505,7 @@ TRABALHADOR (data/units/trabalhador.tres)
       topo da madeireira;
     * pronta: cada Trabalhador tira 1 de madeira por turno, com um
       "+N" azul subindo no mapa. A barra vira azul e vai diminuindo
-      com a madeira que resta (de 30).
+      com a madeira que resta na floresta da casa (de 100).
 - Um segundo Trabalhador pode entrar: ande até a casa da
   madeireira e aperte M ("Trabalhar na madeireira [M]"). Precisa
   ter movimento sobrando, então quem chega no turno entra no
@@ -611,13 +614,14 @@ CIDADES (scripts/cities/city.gd)
     General     madeira
     Marcenaria  10 de produção + 10 de      prédio da cidade
                 madeira
-    Templo      15 de produção + 5 de       prédio da cidade
+    Templo      20 de produção + 30 de      prédio da cidade
                 madeira                     (exige Misticismo)
   Todos custam 50 de ouro para comprar na hora (menos as
   melhorias de terreno, que não podem ser compradas).
 
 CONSTRUÇÕES QUE GASTAM RECURSOS (campos "wood" e "weapons" em City.BUILDS)
 - Algumas construções gastam madeira do estoque do jogador:
+    Templo           30 de madeira
     Quartel General  15 de madeira
     Marcenaria       10 de madeira
     Lança             2 de madeira
@@ -683,8 +687,8 @@ PRÉDIOS (City.buildings)
                      ouro + 10 de madeira). Produz as armas (hoje,
                      a Lança). Parada, rende impostos e bens
                      duráveis (ver MARCENARIA E IMPOSTOS).
-    Templo           15 de produção + 5 de madeira (ou 50 de ouro
-                     + 5 de madeira). Exige a tecnologia
+    Templo           20 de produção + 30 de madeira (ou 50 de ouro
+                     + 30 de madeira). Exige a tecnologia
                      Misticismo. Torna 2 infelizes em contentes
                      (ver BEM-ESTAR SOCIAL).
 - UNIDADES E ARMAS SÃO PRODUZIDAS NOS PRÉDIOS: cada uma só pode
@@ -2243,6 +2247,12 @@ Screenshots também confirmaram o visual.
   uma vez só; janela em desordem e em celebração; Templo na lista;
   rosto no mapa; save e save antigo; máquina com festividades e
   Templo), mais screenshots da janela, da lista e do mapa.
+- Ajustes do usuário: Templo passa a custar 20 de produção + 30 de
+  madeira (antes 15 + 5). Cada casa de floresta passa a ter 100 de
+  madeira (antes 30). Conceito confirmado: a madeira é da floresta
+  (estoque por casa, no GameMap); a madeireira só extrai. Saves
+  antigos: florestas nunca exploradas passam a ter 100; as já
+  exploradas mantêm o que restava.
 - Correção feita pelos testes antigos: com a fome agitando qualquer
   cidade, um povoado de 2 que fazia a primeira fazenda entrava em
   desordem e a obra parava para sempre. Agora a fome só agita a

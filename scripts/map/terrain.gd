@@ -6,8 +6,9 @@ extends RefCounted
 ##   Água     unidades terrestres não entram.
 ##   Pradaria terreno comum: fazendas, cidades.
 ##   Floresta +1 de defesa para quem defende; custa 1 movimento a mais para
-##            unidades com mais de 1 de movimento; não aceita fazendas; dá
-##            madeira (WOOD_PER_FOREST) por uma madeireira. Esgotada, vira Cerrado.
+##            unidades com mais de 1 de movimento; não aceita fazendas. Cada
+##            casa tem o seu estoque de madeira (WOOD_PER_FOREST, guardado no
+##            GameMap); a madeireira só extrai dele. Esgotada, vira Cerrado.
 ##   Cerrado  o que sobra da floresta explorada. Igual à Pradaria, mas a
 ##            fazenda rende menos (FARM_FOOD: 2 em vez de 3).
 
@@ -58,7 +59,7 @@ const FARM_FOOD := {
 }
 
 ## Madeira de cada casa de floresta. Quando acaba, a casa vira Cerrado.
-const WOOD_PER_FOREST := 30
+const WOOD_PER_FOREST := 100
 
 
 ## Se unidades terrestres podem andar neste terreno.
