@@ -261,8 +261,8 @@ const BUILDS := {
 	Build.SHORT_SWORD: {
 		"name": "Espada Curta", "article": "a", "category": Category.WEAPON,
 		"cost": 6, "gold": 50, "iron": 2, "on_tile": false,
-		"weapon": Arsenal.Weapon.SHORT_SWORD, "requires": Build.FORGE,
-		"description": "Arma do arsenal: as Bigas levam 1. Feita na Forja; gasta 2 de ferro.",
+		"weapon": Arsenal.Weapon.SHORT_SWORD, "requires": Build.FORGE, "tech": Technology.Tech.IRON_WORKING,
+		"description": "Arma do arsenal: as Bigas levam 1. Feita na Forja; gasta 2 de ferro. Exige Trabalho em Ferro.",
 	},
 	Build.CATAPULT: {
 		"name": "Catapulta", "article": "a", "category": Category.UNIT,

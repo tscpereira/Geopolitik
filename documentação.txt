@@ -1179,7 +1179,8 @@ ARSENAL (scripts/players/arsenal.gd, Player.arsenal)
   rústico não precisa de armas.
 - Espada Curta (desde 25/10/2026): feita na Forja, 6 de produção + 2
   de FERRO (pago ao pedir, devolvido se cancelar, como a madeira;
-  City.iron_error). As Bigas levam 1.
+  City.iron_error). As Bigas levam 1. Exige Trabalho em Ferro: antes
+  dela, não aparece na lista "Construir" (pedido do usuário).
 - Lança: classe "Armas" da lista Construir. 5 de produção + 2 de
   madeira (ou 50 de ouro + 2 de madeira). Entra na fila da
   Marcenaria; pronta, vai direto para o arsenal (mensagem "Lança
@@ -3399,6 +3400,10 @@ Screenshots também confirmaram o visual.
   pasta pontos/) e passaram; os do ferro, relevo, Bronze, Muralha,
   rios, ataque pelo modo Mover, lista e carregamento também. Partida
   de 100 rodadas máquina x máquina sem erros (7 e 8 de 9 marcos).
+- Correção (relatada pelo usuário): a Espada Curta aparecia na lista
+  de armas ("Precisa de Forja.") antes de Trabalho em Ferro; agora
+  ela exige a tecnologia e só aparece depois dela. Teste da era
+  antiga com a verificação nova (45), todas passando.
 
 --------------------------------------------------------------
 7. BACKLOG (ideias para depois)
