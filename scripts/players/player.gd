@@ -54,11 +54,14 @@ func wood_per_turn() -> int:
 	return total
 
 
-## Ferro que vai entrar no estoque no início do próximo turno (minas das cidades).
+## Ferro que vai entrar no estoque no início do próximo turno (minas das cidades
+## e minas remotas).
 func iron_per_turn() -> int:
 	var total := 0
 	for city in cities:
 		total += city.iron_per_turn()
+	for mill in lumber_mills:
+		total += mill.iron_per_turn()
 	return total
 
 

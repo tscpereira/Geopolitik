@@ -782,6 +782,16 @@ FERRO E MINA (desde 25/10/2026, pedido do usuário)
 - No mapa: o desenho da mina (boca da galeria na pedra escorada com
   madeira, trilhos, vagonete com minério e picareta;
   assets/sprites/improvements/mina.png), com a bigorna no canto.
+- MINA REMOTA (desde 25/10/2026, pedido do usuário): numa colina com
+  ferro FORA dos territórios, a tecla M faz uma mina remota, como a
+  madeireira remota (LumberMill com is_mine): o Trabalhador entra nela
+  e trabalha lá dentro (até 2), 4 de obra, e depois cada um tira +1 de
+  ferro por turno; não se esgota (sem barra). Clicar nela seleciona
+  ("Retirar trabalhador"); um segundo Trabalhador entra com M
+  ("Trabalhar na mina [M]"). Pilhagem (+5 de ouro, Trabalhadores
+  executados), reconstrução (R) e save iguais aos da madeireira
+  remota. No território de outro jogador, não pode. A máquina ainda
+  não faz minas remotas.
 - Pilhagem: como a madeireira (+5 de ouro, cidadãos executados,
   vira ruína; mina_destruida.png); um Trabalhador do dono
   reconstrói (R). Cidade destruída: a mina vira ruína sem dono.
@@ -3413,6 +3423,11 @@ Screenshots também confirmaram o visual.
   pasta pontos/) e passaram; os do ferro, relevo, Bronze, Muralha,
   rios, ataque pelo modo Mover, lista e carregamento também. Partida
   de 100 rodadas máquina x máquina sem erros (7 e 8 de 9 marcos).
+- Janela da cidade (pedido do usuário): "Nada em produção." só aparece
+  em prédio que produz algo (Prefeitura, Quartel General, Marcenaria,
+  Forja); a Escola mostra uma linha com o ícone da ciência e "+1
+  ciência", como a Prefeitura; Templo, Muralha e Arena não mostram
+  nada embaixo.
 - Correção (relatada pelo usuário): a Espada Curta aparecia na lista
   de armas ("Precisa de Forja.") antes de Trabalho em Ferro; agora
   ela exige a tecnologia e só aparece depois dela. Teste da era
@@ -3432,6 +3447,15 @@ Screenshots também confirmaram o visual.
   tábuas; reflexos sem direção, que na primeira versão viravam
   degraus nos trechos verticais do rio); testes da era antiga e dos
   rios passaram.
+- MINA REMOTA (pedido do usuário: explorar ferro fora do território)
+  e a janela da cidade sem "Nada em produção." nos prédios que não
+  produzem (a Escola ganhou a linha da ciência). Validação: teste novo
+  com 23 verificações (mina remota: tecnologia, ferro, botão, tecla M,
+  obra, +2 de ferro com 2, sem esgotar em 31 turnos, máximo 2,
+  retirar, save, pilhagem com ruína de mina, reconstrução; Escola com
+  a linha de ciência, Muralha sem e o Quartel com "Nada em produção."),
+  mais screenshots; testes do ferro, da era antiga, das obras do
+  Trabalhador, do ataque pelo modo Mover e da lista passaram.
 
 --------------------------------------------------------------
 7. BACKLOG (ideias para depois)

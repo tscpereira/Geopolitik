@@ -662,13 +662,53 @@ func _rebuild_buildings() -> void:
 			_add_idle_gold_row(building)
 		elif active == null and info.get("idle_science", 0) > 0:
 			_add_idle_science_row(building)
-		elif queue.is_empty():
+		elif info.get("science", 0) > 0 and not _produces_something(building):
+			_add_science_row(building)
+		elif queue.is_empty() and _produces_something(building):
 			var empty := _make_muted("          Nada em produção.")
 			empty.add_theme_font_size_override("font_size", 13)
 			_buildings_box.add_child(empty)
 		for construction in queue:
 			# Só a da frente da fila tem os trabalhadores (que são do prédio)
 			_add_construction_row(_buildings_box, construction, construction == active)
+
+
+## Se o prédio faz unidades ou armas (Prefeitura, Quartel, Marcenaria, Forja).
+## Os outros (Escola, Templo, Muralha...) não mostram "Nada em produção.".
+func _produces_something(building: int) -> bool:
+	return City.BUILDS.values().any(func(other: Dictionary) -> bool: return other.get("requires", -1) == building)
+
+
+## Prédio que só gera ciência sozinho (Escola): o ícone da ciência e quanto
+## ele gera por turno, como a linha da Prefeitura, sem cidadãos.
+func _add_science_row(building: int) -> void:
+	var info: Dictionary = City.BUILDS[building]
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 6)
+	row.mouse_filter = Control.MOUSE_FILTER_STOP
+	row.tooltip_text = wrap_tooltip("%s %s gera +%d de ciência por turno sozinha, sem cidadãos." % [
+		info["article"].capitalize(), String(info["name"]).to_lower(), info["science"]])
+	_buildings_box.add_child(row)
+	var indent := Control.new()
+	indent.custom_minimum_size.x = UNIT_INDENT
+	row.add_child(indent)
+	var icon := Control.new()
+	icon.custom_minimum_size = Vector2.ONE * Icons.ICON_SIZE
+	icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	icon.draw.connect(func() -> void: Icons.draw_science(icon, Rect2(Vector2.ZERO, icon.size)))
+	row.add_child(icon)
+	var label := Label.new()
+	label.text = "Ciência"
+	label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	row.add_child(label)
+	var status := Label.new()
+	status.text = "+%d ciência" % info["science"]
+	status.custom_minimum_size.x = 120
+	status.add_theme_color_override("font_color", Icons.SCIENCE_COLOR)
+	row.add_child(status)
+	var controls_space := Control.new()
+	controls_space.custom_minimum_size.x = WORKER_CONTROLS_WIDTH + 30 # alinha com as outras linhas
+	row.add_child(controls_space)
 
 
 ## Prédio que rende ouro parado (Marcenaria e Forja sem armas na fila,

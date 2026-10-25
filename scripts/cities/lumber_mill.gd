@@ -17,6 +17,10 @@ extends Node2D
 ## de volta a madeira já tirada. Um Trabalhador do dono reconstrói entrando
 ## nela (tecla R): é a mesma obra de uma madeireira nova.
 ##
+## MINA REMOTA (is_mine; desde 25/10/2026): a mesma coisa numa colina com ferro
+## fora dos territórios (tecla M). Pronta, cada trabalhador tira
+## City.IRON_PER_WORKER de ferro por turno, e ela não se esgota (sem barra).
+##
 ## Também desenha as madeireiras da cidade (draw_icon, draw_wood_bar).
 
 ## Trabalhadores por madeireira (da cidade ou remota).
@@ -45,22 +49,35 @@ var workers: Array[Unit] = []
 ## Destruída por um inimigo: não produz até ser reconstruída (a obra, de 0
 ## até cost(), é a reconstrução).
 var pillaged := false
+## Mina de ferro (numa colina com ferro) em vez de madeireira.
+var is_mine := false
 
 var _map: GameMap
 
 
-func setup(p_owner: Player, p_cell: Vector2i, map: GameMap) -> void:
+func setup(p_owner: Player, p_cell: Vector2i, map: GameMap, p_is_mine := false) -> void:
 	owner_player = p_owner
 	cell = p_cell
 	_map = map
+	is_mine = p_is_mine
 	position = map.cell_to_world(p_cell)
-	name = "Madeireira_%d_%d" % [p_cell.x, p_cell.y]
+	name = "%s_%d_%d" % ["Mina" if is_mine else "Madeireira", p_cell.x, p_cell.y]
+
+
+## "Madeireira" ou "Mina".
+func display_name() -> String:
+	return "Mina" if is_mine else "Madeireira"
+
+
+## A melhoria da cidade equivalente (para o desenho de ruína e as mensagens).
+func build() -> int:
+	return City.Build.MINE if is_mine else City.Build.LUMBER_MILL
 
 
 ## Estado para o save. Os trabalhadores lá dentro são guardados pela posição
 ## deles em [param owner_units] (a lista de unidades do dono).
 func to_dict(owner_units: Array[Unit]) -> Dictionary:
-	return {"cell": SaveGame.cell_to_json(cell), "progress": progress, "pillaged": pillaged,
+	return {"cell": SaveGame.cell_to_json(cell), "progress": progress, "pillaged": pillaged, "mine": is_mine,
 			"workers": workers.map(func(worker: Unit) -> int: return owner_units.find(worker))}
 
 
@@ -84,9 +101,16 @@ func has_room() -> bool:
 	return workers.size() < MAX_WORKERS
 
 
-## Madeira que vai entrar no estoque no próximo turno.
+## Madeira que vai entrar no estoque no próximo turno (mina: 0).
 func wood_per_turn() -> int:
-	return mini(workers.size() * WOOD_PER_WORKER, _map.wood_left(cell)) if is_done() else 0
+	if is_mine or not is_done():
+		return 0
+	return mini(workers.size() * WOOD_PER_WORKER, _map.wood_left(cell))
+
+
+## Ferro que vai entrar no estoque no próximo turno (madeireira: 0).
+func iron_per_turn() -> int:
+	return workers.size() * City.IRON_PER_WORKER if is_mine and is_done() else 0
 
 
 ## Turnos até a obra terminar, ou -1 se não há trabalhadores.
@@ -96,34 +120,42 @@ func turns_to_finish() -> int:
 	return ceili(float(cost() - progress) / workers.size())
 
 
-## Avança a obra ou tira a madeira (ver regras no topo). Retorna a madeira obtida.
+## Avança a obra ou tira a madeira ou o ferro (ver regras no topo). Retorna
+## quanto foi tirado (madeira na madeireira, ferro na mina).
 func process_turn() -> int:
-	var wood := 0
+	var taken := 0
 	if not is_done():
 		progress = mini(progress + workers.size(), cost())
 		if is_done():
 			pillaged = false # reconstruída
+	elif is_mine:
+		taken = iron_per_turn()
 	else:
-		wood = _map.harvest_wood(cell, workers.size() * WOOD_PER_WORKER)
+		taken = _map.harvest_wood(cell, workers.size() * WOOD_PER_WORKER)
 	queue_redraw()
-	return wood
+	return taken
 
 
-## A floresta acabou: a madeireira já não serve para nada.
+## A floresta acabou: a madeireira já não serve para nada (a mina nunca acaba).
 func is_exhausted() -> bool:
-	return is_done() and _map.wood_left(cell) <= 0
+	return not is_mine and is_done() and _map.wood_left(cell) <= 0
 
 
 func _draw() -> void:
 	var tile := Rect2(-Vector2.ONE * GameMap.TILE_SIZE / 2.0, Vector2.ONE * GameMap.TILE_SIZE)
 	if pillaged:
-		City.draw_ruin(self, City.Build.LUMBER_MILL, tile)
+		City.draw_ruin(self, build(), tile)
+	elif is_mine:
+		City.draw_mine(self, tile, 1.0 if is_done() else CONSTRUCTION_ALPHA)
 	else:
 		draw_icon(self, tile, 1.0 if is_done() else CONSTRUCTION_ALPHA)
+	if is_mine and _map.iron_visible:
+		Icons.draw_iron_marker(self, tile)
 	# Contorno na cor do dono: madeireira remota não tem cidade por perto
 	draw_rect(tile.grow(-MARGIN), owner_player.color, false, MARGIN)
 	if is_done():
-		draw_wood_bar(self, tile, _map.wood_left(cell))
+		if not is_mine: # a mina não se esgota: sem barra
+			draw_wood_bar(self, tile, _map.wood_left(cell))
 	elif not pillaged or progress > 0:
 		draw_bar(self, tile, float(progress) / cost(), PROGRESS_BAR_COLOR)
 	if not workers.is_empty():

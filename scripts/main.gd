@@ -473,6 +473,40 @@ func build_lumber_mill(worker: Unit) -> void:
 		work_lumber_mill(worker)
 
 
+## Motivo pelo qual o trabalhador não pode construir uma mina onde está, nem
+## entrar na mina remota que já existe ali ("" = pode). No território de uma
+## cidade sua, a mina é da cidade (improvement_error); fora dos territórios, é
+## remota, como a madeireira remota.
+func mine_error(unit: Unit) -> String:
+	if not unit.type.can_build_lumber_mill:
+		return "Só trabalhadores constroem minas."
+	if is_city_mill_site(unit):
+		return improvement_error(unit, City.Build.MINE)
+	if not unit.owner_player.researched.has(Technology.Tech.IRON_WORKING):
+		return "Minas exigem a tecnologia Trabalho em Ferro."
+	if unit.moves_left <= 0:
+		return "O trabalhador não tem mais movimentos neste turno."
+	var mine := lumber_mill_at(unit.cell)
+	if mine:
+		if not mine.is_mine:
+			return "Esta casa já tem uma madeireira."
+		if mine.owner_player != unit.owner_player:
+			return "Esta mina é de outro jogador."
+		if mine.pillaged:
+			return "A mina foi destruída: use Reconstruir [R]."
+		if not mine.has_room():
+			return "A mina já tem %d trabalhadores (o máximo)." % LumberMill.MAX_WORKERS
+		return ""
+	if game_map.get_terrain(unit.cell) != Terrain.Type.HILLS or not game_map.has_iron(unit.cell):
+		return "Minas só em colinas com ferro (a bigorna no canto da casa)."
+	if claiming_city(unit.cell):
+		return "Esta casa já é usada por %s." % claiming_city(unit.cell).city_name
+	var owner_city := territory_owner(unit.cell)
+	if owner_city and owner_city.owner_player != unit.owner_player:
+		return "Esta casa é território de %s (%s)." % [owner_city.city_name, owner_city.owner_player.display_name]
+	return ""
+
+
 ## Motivo pelo qual o trabalhador não pode construir uma madeireira onde está,
 ## nem entrar na que já existe ali ("" = pode). No território de uma cidade
 ## sua, a madeireira é da cidade (improvement_error).
@@ -514,7 +548,7 @@ func pillage_target(cell: Vector2i) -> Dictionary:
 		return {"build": city.improvement_at(cell), "owner": city.owner_player, "city": city, "mill": null, "unfinished": false}
 	var mill := lumber_mill_at(cell)
 	if mill and (mill.is_done() or not mill.workers.is_empty() or mill.progress > 0 or not mill.pillaged):
-		return {"build": City.Build.LUMBER_MILL, "owner": mill.owner_player, "city": null, "mill": mill,
+		return {"build": mill.build(), "owner": mill.owner_player, "city": null, "mill": mill,
 				"unfinished": not mill.is_done()}
 	return {}
 
@@ -614,7 +648,7 @@ func ruin_at(cell: Vector2i) -> int:
 		return city.ruins[cell]["build"]
 	var mill := lumber_mill_at(cell)
 	if mill and mill.pillaged:
-		return City.Build.LUMBER_MILL
+		return mill.build()
 	return -1
 
 
@@ -629,9 +663,9 @@ func rebuild_error(unit: Unit) -> String:
 	var mill := lumber_mill_at(unit.cell)
 	if mill and mill.pillaged:
 		if mill.owner_player != unit.owner_player:
-			return "Esta madeireira é de outro jogador."
+			return "Esta %s é de outro jogador." % mill.display_name().to_lower()
 		if not mill.has_room():
-			return "A madeireira já tem %d trabalhadores (o máximo)." % LumberMill.MAX_WORKERS
+			return "A %s já tem %d trabalhadores (o máximo)." % [mill.display_name().to_lower(), LumberMill.MAX_WORKERS]
 	elif city and city.ruins.has(unit.cell):
 		if city.owner_player != unit.owner_player:
 			return "Esta ruína é de %s." % city.city_name
@@ -919,18 +953,19 @@ func found_city(settler: Unit, city_name := "") -> City:
 	return city
 
 
-## O trabalhador constrói uma madeireira remota na casa em que está (ou entra
-## na que já existe ali) e passa a trabalhar nela: some do mapa e não recebe
-## ordens até ser retirado. Use lumber_mill_error antes.
-func work_lumber_mill(worker: Unit) -> LumberMill:
+## O trabalhador constrói uma madeireira remota (ou, com [param is_mine], uma
+## mina remota) na casa em que está, ou entra na que já existe ali, e passa a
+## trabalhar nela: some do mapa e não recebe ordens até ser retirado. Use
+## lumber_mill_error / mine_error antes.
+func work_lumber_mill(worker: Unit, is_mine := false) -> LumberMill:
 	var player := worker.owner_player
 	var mill := lumber_mill_at(worker.cell)
 	if mill == null:
 		mill = LumberMill.new()
-		mill.setup(player, worker.cell, game_map)
+		mill.setup(player, worker.cell, game_map, is_mine)
 		cities_root.add_child(mill)
 		player.lumber_mills.append(mill)
-		print("%s começou uma madeireira em %s" % [player.display_name, worker.cell])
+		print("%s começou uma %s em %s" % [player.display_name, mill.display_name().to_lower(), worker.cell])
 	if worker == selected_unit:
 		select_unit(null)
 	worker.goto_target = Unit.NO_TARGET
@@ -1262,11 +1297,18 @@ func _build_mine_with_selected() -> void:
 	var worker := selected_unit
 	if worker == null or not worker.type.can_build_lumber_mill:
 		return
-	var error := improvement_error(worker, City.Build.MINE)
+	var error := mine_error(worker)
 	if not error.is_empty():
 		hud.show_message(error, Color(1, 0.6, 0.4))
 		return
-	_build_improvement_with(worker, City.Build.MINE)
+	if is_city_mill_site(worker):
+		_build_improvement_with(worker, City.Build.MINE)
+		return
+	var mine := work_lumber_mill(worker, true)
+	var status := "em obra %d/%d" % [mine.progress, mine.cost()] if not mine.is_done() else "pronta"
+	hud.show_message("Trabalhador na mina (%s, %d/%d trabalhadores)." % [
+			status, mine.workers.size(), LumberMill.MAX_WORKERS], Color(0.75, 1, 0.75))
+	_select_next_unit()
 
 
 ## Tecla E / botão "Construir estrada": o trabalhador selecionado faz uma
@@ -1570,20 +1612,23 @@ func _completion_notice_text(city: City, build: int) -> String:
 	return text
 
 
-## Início da vez do jogador: as madeireiras remotas avançam a obra ou tiram
-## madeira (com um "+N" azul subindo). Floresta esgotada vira cerrado: a
+## Início da vez do jogador: as madeireiras e minas remotas avançam a obra ou
+## tiram madeira ou ferro (com um "+N" subindo). Floresta esgotada vira cerrado: a
 ## madeireira some e os trabalhadores voltam ao mapa.
 func _process_lumber_mills(player: Player) -> void:
 	var messages: Array[String] = []
 	for mill: LumberMill in player.lumber_mills.duplicate():
 		var was_done := mill.is_done()
-		var wood := mill.process_turn()
-		player.wood += wood
-		if wood > 0:
+		var taken := mill.process_turn()
+		if mill.is_mine:
+			player.iron += taken
+		else:
+			player.wood += taken
+		if taken > 0:
 			FloatingText.spawn(units_root, mill.position - Vector2(0, GameMap.TILE_SIZE / 2.0),
-					"+%d" % wood, LumberMill.WOOD_BAR_COLOR)
+					"+%d" % taken, Icons.IRON_COLOR if mill.is_mine else LumberMill.WOOD_BAR_COLOR)
 		if mill.is_done() and not was_done:
-			messages.append("Madeireira em (%d, %d) pronta" % [mill.cell.x, mill.cell.y])
+			messages.append("%s em (%d, %d) pronta" % [mill.display_name(), mill.cell.x, mill.cell.y])
 		if mill.is_exhausted():
 			messages.append("A floresta em (%d, %d) acabou e virou cerrado" % [mill.cell.x, mill.cell.y])
 			_remove_lumber_mill(mill)
@@ -1820,7 +1865,7 @@ func restore_state(data: Dictionary) -> void:
 		var mills: Array[LumberMill] = []
 		for mill_data: Dictionary in player_data["lumber_mills"]:
 			var mill := LumberMill.new()
-			mill.setup(player, SaveGame.json_to_cell(mill_data["cell"]), game_map)
+			mill.setup(player, SaveGame.json_to_cell(mill_data["cell"]), game_map, mill_data.get("mine", false))
 			mill.progress = int(mill_data["progress"])
 			mill.pillaged = mill_data.get("pillaged", false)
 			cities_root.add_child(mill)
@@ -1920,14 +1965,19 @@ func _update_unit_actions() -> void:
 	var on_hill := game_map.get_terrain(unit.cell) == Terrain.Type.HILLS
 	if unit.type.can_build_lumber_mill and on_hill and ruin_at(unit.cell) < 0 \
 			and unit.owner_player.researched.has(Technology.Tech.IRON_WORKING): # destruída: botão Reconstruir
-		var error := improvement_error(unit, City.Build.MINE)
+		var error := mine_error(unit)
+		var remote := lumber_mill_at(unit.cell)
 		actions.append({"id": "mine",
-				"label": "Continuar mina [M]" if site.get("build", -1) == City.Build.MINE else "Construir mina [M]",
+				"label": "Trabalhar na mina [M]" if remote else
+					"Continuar mina [M]" if site.get("build", -1) == City.Build.MINE else "Construir mina [M]",
 				"disabled": not error.is_empty(),
 				"tooltip": error if not error.is_empty() else
+					"O trabalhador entra na mina e trabalha nela (até %d por mina)." % LumberMill.MAX_WORKERS if remote else
 					"Mina de %s: %d turnos (o trabalhador fica na casa). Pronta, até %d cidadãos tiram %d de ferro por turno cada (o ferro não se esgota)." % [
 						site_city.city_name, City.BUILDS[City.Build.MINE]["cost"] - site.get("progress", 0), City.MINE_MAX_WORKERS,
-						City.IRON_PER_WORKER]})
+						City.IRON_PER_WORKER] if is_city_mill_site(unit) else
+					"Mina remota nesta colina (%d de produção, 1 por trabalhador por turno). Pronta, cada trabalhador lá dentro tira %d de ferro por turno; ela não se esgota." % [
+						LumberMill.cost(), City.IRON_PER_WORKER]})
 	var existing := lumber_mill_at(unit.cell)
 	if unit.type.can_build_lumber_mill and not on_hill and not (existing and existing.pillaged): # destruída: botão Reconstruir
 		var error := lumber_mill_error(unit)
@@ -1984,7 +2034,7 @@ func _update_unit_actions() -> void:
 
 ## Barra de ações da madeireira remota selecionada: retirar um trabalhador.
 func _update_mill_actions(mill: LumberMill) -> void:
-	var title := "Madeireira (%d, %d) - %d/%d trabalhadores" % [mill.cell.x, mill.cell.y, mill.workers.size(), LumberMill.MAX_WORKERS]
+	var title := "%s (%d, %d) - %d/%d trabalhadores" % [mill.display_name(), mill.cell.x, mill.cell.y, mill.workers.size(), LumberMill.MAX_WORKERS]
 	hud.set_unit_actions(title, [{"id": "release_worker", "label": "Retirar trabalhador",
 			"disabled": mill.workers.is_empty(),
 			"tooltip": "Nenhum trabalhador na madeireira." if mill.workers.is_empty() else
@@ -2036,10 +2086,10 @@ func _update_info() -> void:
 		elif owner_city and owner_city.worked_tiles.has(_hover_cell):
 			lines.append("Trabalhada por um cidadão de %s - +%d alimento" % [owner_city.city_name, owner_city.tile_food(_hover_cell)])
 		elif mill:
-			lines.append("Madeireira%s de %s - %s | %d/%d trabalhadores" % [
-				" destruída" if mill.pillaged else "", mill.owner_player.display_name,
+			lines.append("%s%s de %s - %s | %d/%d trabalhadores" % [
+				mill.display_name(), " destruída" if mill.pillaged else "", mill.owner_player.display_name,
 				("reconstrução %d/%d" if mill.pillaged else "em obra %d/%d") % [mill.progress, mill.cost()] if not mill.is_done() else
-					"+%d de madeira por turno" % mill.wood_per_turn(),
+					"+%d de ferro por turno" % mill.iron_per_turn() if mill.is_mine else "+%d de madeira por turno" % mill.wood_per_turn(),
 				mill.workers.size(), LumberMill.MAX_WORKERS,
 			])
 		var hovered := get_unit_at(_hover_cell)
