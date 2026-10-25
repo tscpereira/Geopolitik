@@ -644,9 +644,14 @@ do usuário)
   soma com o rio, limitado ao movimento cheio). NÃO aceitam fazenda
   (Terrain.can_farm), mas aceitam cidade (a casa continua colina).
   Trabalhadas sem melhoria, dão 1 de alimento, como a pradaria (+1
-  à beira do rio). Por enquanto não dão bônus de defesa.
-- Painel de informações: "Colinas (movimento -1 para quem anda mais
-  de 1, sem fazenda)" e "Montanhas (intransponível)"; o tooltip do
+  à beira do rio). DEFESA (decisão do usuário): quem defende numa
+  colina ganha +1 de defesa, igual à floresta (Terrain.DEFENSE_BONUS;
+  soma com a fortificação, o rio e a Muralha: Guerreiro fortificado
+  na colina tem defesa 3). A prévia do ataque mostra "+1 colinas", e
+  a guarnição da máquina prefere as casas vizinhas de floresta ou
+  colina.
+- Painel de informações: "Colinas (defesa +1, movimento -1 para quem
+  anda mais de 1, sem fazenda)" e "Montanhas (intransponível)"; o tooltip do
   mapa da cidade também avisa.
 - A máquina dá nota 2 às colinas ao escolher o lugar das cidades
   (como floresta e cerrado) e 0 às montanhas.
@@ -1602,7 +1607,7 @@ IA: ECONOMIA, EXPANSÃO E DEFESA (scripts/ai/ai_economy.gd)
 - Pilhagem: ver PILHAGEM.
 - Guarnição: cada cidade fica com garrison_per_city soldados
   fortificados: o primeiro dentro da cidade (escondido), os outros
-  nas casas vizinhas (floresta primeiro). A guarnição não sai para
+  nas casas vizinhas (floresta ou colina primeiro). A guarnição não sai para
   atacar nem avançar.
 - Exército: os soldados de campo só avançam contra o inimigo
   quando são pelo menos army_to_attack (0 = nunca); antes disso
@@ -1784,8 +1789,9 @@ com energia cheia):
 
 Ajustes: as constantes BASE_DAMAGE (30), LUCK (0,10) e
 MIN_ENERGY_FACTOR (0,5) ficam no topo de combat.gd.
-Bônus de terreno: quem defende na floresta ganha +1 de defesa
-(somado à Defesa, junto com a fortificação; ver FLORESTA), e quem
+Bônus de terreno: quem defende na floresta ou nas colinas ganha +1
+de defesa (somado à Defesa, junto com a fortificação; ver FLORESTA e
+COLINAS E MONTANHAS), e quem
 é atacado do outro lado de um rio ganha mais +1 (ver RIOS). A
 previsão de dano e a IA já levam isso em conta. Bônus em
 porcentagem podem entrar em attack_bonus() e defense_bonus(),
@@ -2093,7 +2099,7 @@ Screenshots também confirmaram o visual.
 [x] Colinas (andáveis, movimento como a floresta, sem fazenda,
     aceitam cidade) e Montanhas (intransponíveis), com relevo visto
     de cima no estilo do Civilization do SNES (25/10/2026)
-[ ] Colinas: bônus de defesa (como a floresta)? Hoje não têm
+[x] Colinas: +1 de defesa, como a floresta (25/10/2026)
 [ ] Outros terrenos (ex.: deserto, pântano, tundra)
 [x] Rios pelas bordas das casas, sinuosos, com +1 de alimento nas
     casas vizinhas (25/10/2026)
@@ -3158,6 +3164,15 @@ Screenshots também confirmaram o visual.
   Trabalhador está numa floresta (+1 de defesa), não por causa
   desta mudança. Partida de 100 rodadas máquina x máquina sem erros
   (Econômica 7 de 9 marcos, Equilibrada 8 de 9, como antes).
+- DEFESA NAS COLINAS (decisão do usuário): +1 de defesa para quem
+  defende numa colina, igual à floresta. O painel e o tooltip do mapa
+  da cidade mostram "defesa +1"; a guarnição da máquina prefere casas
+  vizinhas de floresta ou colina. Validação: o teste do relevo ganhou
+  6 verificações (bônus igual ao da floresta, Guerreiro com defesa 2
+  na colina e 1 na pradaria, força de defesa 2 e dano 21 em vez de
+  30, fortificado 3, painel), 38 no total, todas passando; testes do
+  Bronze, da Muralha, das regras dos rios e do ataque pelo modo Mover
+  passaram.
 
 --------------------------------------------------------------
 7. BACKLOG (ideias para depois)

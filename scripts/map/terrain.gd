@@ -10,8 +10,9 @@ extends RefCounted
 ##            casa tem o seu estoque de madeira (WOOD_PER_FOREST, guardado no
 ##            GameMap); a madeireira só extrai dele. Esgotada, vira Cerrado.
 ##   Cerrado  o que sobra da floresta explorada. Igual à Pradaria.
-##   Colinas  verdes; custam 1 movimento a mais, como a floresta (unidades com
-##            mais de 1 de movimento); não aceitam fazendas; aceitam cidades.
+##   Colinas  verdes; como a floresta, +1 de defesa para quem defende e 1
+##            movimento a mais (unidades com mais de 1 de movimento); não
+##            aceitam fazendas; aceitam cidades.
 ##   Montanhas rochosas e intransponíveis: nenhuma unidade entra; não dão
 ##            alimento nem aceitam melhorias.
 ## Um cidadão trabalhando a casa sem melhoria tira TILE_FOOD de alimento por
@@ -56,6 +57,7 @@ const COLORS := {
 ## Defesa extra de quem defende neste terreno (soma com a fortificação).
 const DEFENSE_BONUS := {
 	Type.FOREST: 1,
+	Type.HILLS: 1,
 }
 
 ## Movimento extra para entrar neste terreno, só para unidades com mais de

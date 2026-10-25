@@ -1967,7 +1967,8 @@ func _terrain_text(cell: Vector2i) -> String:
 		text += " (madeira %d/%d, defesa +%d, movimento -%d para quem anda mais de 1)" % [
 			game_map.wood_left(cell), Terrain.WOOD_PER_FOREST, Terrain.DEFENSE_BONUS[type], Terrain.MOVE_PENALTY[type]]
 	elif type == Terrain.Type.HILLS:
-		text += " (movimento -%d para quem anda mais de 1, sem fazenda)" % Terrain.MOVE_PENALTY[type]
+		text += " (defesa +%d, movimento -%d para quem anda mais de 1, sem fazenda)" % [
+			Terrain.DEFENSE_BONUS[type], Terrain.MOVE_PENALTY[type]]
 	elif type == Terrain.Type.MOUNTAINS:
 		text += " (intransponível)"
 	if game_map.has_river(cell):

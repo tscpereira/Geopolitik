@@ -693,7 +693,7 @@ func garrison_cities(focus: Callable) -> void:
 
 
 ## Casa livre para mais um soldado da guarnição: a cidade, depois uma vizinha
-## (floresta primeiro). NO_TARGET se não houver.
+## (floresta ou colina primeiro: +1 de defesa). NO_TARGET se não houver.
 func _garrison_post(city: City) -> Vector2i:
 	var occupants := _game.occupants()
 	var occupant: Unit = occupants.get(city.cell)
@@ -707,7 +707,7 @@ func _garrison_post(city: City) -> Vector2i:
 		var there: Unit = occupants.get(cell)
 		if there and (there.owner_player != _player or is_garrison(there)):
 			continue
-		if best == Unit.NO_TARGET or _game.game_map.get_terrain(cell) == Terrain.Type.FOREST:
+		if best == Unit.NO_TARGET or Terrain.DEFENSE_BONUS.has(_game.game_map.get_terrain(cell)):
 			best = cell
 	return best
 
