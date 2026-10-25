@@ -5,7 +5,10 @@ extends RefCounted
 ## cada ataque tira energia dos dois lados e a unidade é destruída ao chegar a 0.
 ##
 ##   força de ataque = Ataque × fator de energia × bônus de ataque
-##   força de defesa = Defesa × fator de energia × bônus de defesa
+##   força de defesa = (Defesa + rio) × fator de energia × bônus de defesa
+## Rio: o defensor ganha +1 se o ataque vem do outro lado de um rio
+## (Unit.river_defense_bonus). Por isso as funções recebem a casa de onde o
+## atacante ataca ([param from_cell]); sem ela, vale a casa em que ele está.
 ##   razão           = força de ataque / força de defesa
 ##   dano ao defensor = BASE_DAMAGE × √razão × sorte
 ##   dano ao atacante = BASE_DAMAGE ÷ √razão × sorte
@@ -47,21 +50,24 @@ static func attack_strength(attacker: Unit, defender: Unit) -> float:
 	return attacker.attack * energy_factor(attacker) * attack_bonus(attacker, defender)
 
 
-static func defense_strength(attacker: Unit, defender: Unit) -> float:
-	return defender.defense * energy_factor(defender) * defense_bonus(attacker, defender)
+static func defense_strength(attacker: Unit, defender: Unit, from_cell := Unit.NO_TARGET) -> float:
+	var origin := attacker.cell if from_cell == Unit.NO_TARGET else from_cell
+	return (defender.defense + defender.river_defense_bonus(origin)) * energy_factor(defender) \
+			* defense_bonus(attacker, defender)
 
 
 ## Dano médio esperado, sem a sorte: {"to_defender": float, "to_attacker": float}.
-static func expected_damage(attacker: Unit, defender: Unit) -> Dictionary:
+static func expected_damage(attacker: Unit, defender: Unit, from_cell := Unit.NO_TARGET) -> Dictionary:
 	var ratio := sqrt(maxf(attack_strength(attacker, defender), MIN_STRENGTH)
-			/ maxf(defense_strength(attacker, defender), MIN_STRENGTH))
+			/ maxf(defense_strength(attacker, defender, from_cell), MIN_STRENGTH))
 	return {
 		"to_defender": BASE_DAMAGE * ratio,
 		"to_attacker": BASE_DAMAGE / ratio,
 	}
 
 
-## Resolve um ataque e aplica o dano às duas unidades.
+## Resolve um ataque e aplica o dano às duas unidades (o atacante já está na
+## casa de onde ataca).
 static func resolve(attacker: Unit, defender: Unit, rng: RandomNumberGenerator) -> Result:
 	var expected := expected_damage(attacker, defender)
 	var result := Result.new()

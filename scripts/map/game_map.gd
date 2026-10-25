@@ -41,6 +41,8 @@ var rivers: Array = []
 var _wood := {}
 ## Casas que encostam num rio: {casa: true} (ver has_river).
 var _river_cells := {}
+## Bordas com rio entre duas casas vizinhas: {_edge_key(a, b): true}.
+var _river_edges := {}
 var _river_layer: Node2D
 ## Imagem de cada terreno, usada pelo shader e pela janela da cidade.
 var _terrain_textures := {}
@@ -113,12 +115,34 @@ func load_from_image(image: Image) -> void:
 func set_rivers(new_rivers: Array) -> void:
 	rivers = new_rivers
 	_river_cells = {}
+	_river_edges = {}
 	for river: Array in rivers:
 		for i in river.size() - 1:
-			for cell in Rivers.edge_cells(river[i], river[i + 1]):
+			var sides := Rivers.edge_cells(river[i], river[i + 1])
+			_river_edges[_edge_key(sides[0], sides[1])] = true
+			for cell in sides:
 				if is_in_bounds(cell):
 					_river_cells[cell] = true
 	_river_layer.queue_redraw()
+
+
+## Se andar da casa [param from] para a vizinha [param to] atravessa um rio.
+## Na diagonal, atravessa quando o rio separa as duas casas: os dois caminhos
+## pelas casas do lado (por uma e pela outra) cruzam o rio. Passar em volta da
+## nascente não conta.
+func crosses_river(from: Vector2i, to: Vector2i) -> bool:
+	if from.x == to.x or from.y == to.y:
+		return _river_edges.has(_edge_key(from, to))
+	var side_a := Vector2i(to.x, from.y)
+	var side_b := Vector2i(from.x, to.y)
+	return ((_river_edges.has(_edge_key(from, side_a)) or _river_edges.has(_edge_key(side_a, to)))
+			and (_river_edges.has(_edge_key(from, side_b)) or _river_edges.has(_edge_key(side_b, to))))
+
+
+## Chave da borda entre duas casas vizinhas (na horizontal ou na vertical), a
+## mesma nos dois sentidos.
+static func _edge_key(a: Vector2i, b: Vector2i) -> Vector4i:
+	return Vector4i(a.x, a.y, b.x, b.y) if a < b else Vector4i(b.x, b.y, a.x, a.y)
 
 
 ## Se a casa encosta num rio (algum lado dela tem um trecho de rio): ganha

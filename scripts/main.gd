@@ -1010,8 +1010,10 @@ func _show_goto_path(unit: Unit, target: Vector2i) -> void:
 func _turns_for_path(unit: Unit, path: Array[Vector2i]) -> int:
 	var turns := 1
 	var moves := unit.moves_left if unit.moves_left > 0 else unit.movement
+	var previous := unit.cell
 	for cell in path:
-		var cost := Movement.step_cost(game_map, unit, cell)
+		var cost := Movement.step_cost(game_map, unit, previous, cell)
+		previous = cell
 		if cost > moves:
 			turns += 1
 			moves = unit.movement
@@ -1091,7 +1093,7 @@ func advance_goto(unit: Unit) -> void:
 	var stop := -1
 	var spent := 0
 	for i in path.size():
-		spent += Movement.step_cost(game_map, unit, path[i])
+		spent += Movement.step_cost(game_map, unit, unit.cell if i == 0 else path[i - 1], path[i])
 		if spent > unit.moves_left:
 			break
 		if not current.has(path[i]):
@@ -1935,10 +1937,12 @@ func _update_info() -> void:
 			lines[-1] += " | Construindo" if building_city and building_city.sites.has(unit.cell) else " | Reconstruindo"
 	if selected_unit and _attack_targets.has(_hover_cell):
 		var defender := get_unit_at(_hover_cell)
-		var expected := Combat.expected_damage(selected_unit, defender)
-		lines.append("Atacar: %s (força %.2f) x %s (força %.2f) - dano estimado: causa ~%d | recebe ~%d" % [
+		var from_cell: Vector2i = _attack_targets[_hover_cell] # de onde a unidade vai atacar
+		var expected := Combat.expected_damage(selected_unit, defender, from_cell)
+		lines.append("Atacar: %s (força %.2f) x %s (força %.2f%s) - dano estimado: causa ~%d | recebe ~%d" % [
 			selected_unit.type.display_name, Combat.attack_strength(selected_unit, defender),
-			defender.type.display_name, Combat.defense_strength(selected_unit, defender),
+			defender.type.display_name, Combat.defense_strength(selected_unit, defender, from_cell),
+			", +%d atrás do rio" % Terrain.RIVER_DEFENSE_BONUS if defender.river_defense_bonus(from_cell) > 0 else "",
 			roundi(expected["to_defender"]), roundi(expected["to_attacker"]),
 		])
 	hud.set_info("\n".join(lines))

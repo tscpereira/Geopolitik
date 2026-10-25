@@ -64,6 +64,11 @@ const TILE_FOOD := {
 ## Alimento a mais da casa que encosta num rio (soma no alimento base da casa:
 ## sem melhoria 1 + 1 = 2; com fazenda 2 + 1 = 3; na casa da cidade, também).
 const RIVER_FOOD := 1
+## Atravessar um rio (GameMap.crosses_river): custa RIVER_MOVE_PENALTY a mais
+## para unidades com mais de 1 de movimento (como a floresta; os dois somam), e
+## quem é atacado do outro lado do rio ganha RIVER_DEFENSE_BONUS de defesa.
+const RIVER_MOVE_PENALTY := 1
+const RIVER_DEFENSE_BONUS := 1
 
 ## Madeira de cada casa de floresta. Quando acaba, a casa vira Cerrado.
 const WOOD_PER_FOREST := 100

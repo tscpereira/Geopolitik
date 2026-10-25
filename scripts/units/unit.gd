@@ -125,6 +125,12 @@ func terrain_defense_bonus() -> int:
 	return Terrain.DEFENSE_BONUS.get(_map.get_terrain(cell), 0) if _map else 0
 
 
+## Defesa extra contra um ataque vindo da casa [param attacker_cell]: o rio
+## entre as duas casas dá Terrain.RIVER_DEFENSE_BONUS (ver Combat).
+func river_defense_bonus(attacker_cell: Vector2i) -> int:
+	return Terrain.RIVER_DEFENSE_BONUS if _map and _map.crosses_river(attacker_cell, cell) else 0
+
+
 func reset_moves() -> void:
 	moves_left = movement
 	_update_exhausted_look()
@@ -166,7 +172,8 @@ func heal_if_fortified() -> int:
 
 
 ## Anda casa a casa pelo caminho, gastando o custo de cada casa
-## (Movement.step_cost: 1, ou 2 na floresta para quem tem mais de 1 de movimento).
+## (Movement.step_cost: 1, ou mais na floresta e ao atravessar um rio para quem
+## tem mais de 1 de movimento).
 func move_along(path: Array[Vector2i], map: GameMap) -> void:
 	fortified = false
 	rebuilding = false

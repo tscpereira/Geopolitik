@@ -545,9 +545,25 @@ RIOS (scripts/map/rivers.gd; desde 25/10/2026, pedido do usuário)
   casa), para as fazendas e para os cidadãos.
 - Save: o mapa guarda os rios ("rivers"); save antigo sem rios fica
   com os rios gerados.
+- ATRAVESSAR UM RIO (desde 25/10/2026, pedido do usuário;
+  GameMap.crosses_river):
+    * movimento: +1 para unidades com mais de 1 de movimento
+      (Terrain.RIVER_MOVE_PENALTY; soma com a floresta). O Cavaleiro
+      (2) atravessa e para do outro lado. Um passo nunca custa mais
+      que o movimento cheio da unidade: com todos os movimentos ela
+      sempre consegue entrar (floresta + rio = turno inteiro);
+    * combate: quem é atacado do outro lado do rio ganha +1 de defesa
+      (Terrain.RIVER_DEFENSE_BONUS; escolha do usuário, no lugar de
+      -1 de ataque, que deixaria o Guerreiro com força 0). Soma com a
+      floresta e a fortificação. Vale a casa de onde o atacante ataca
+      (ele pode andar antes de atacar). A prévia do ataque mostra
+      "+1 atrás do rio", e a máquina leva isso em conta;
+    * o que conta como atravessar: lado a lado com o rio na borda
+      entre as casas; na diagonal, quando o rio separa as duas casas
+      (os dois caminhos pelas casas do lado cruzam o rio). Passar em
+      volta da nascente ou andar ao longo do rio não conta.
 - Ideias para depois: rios desenhados no próprio PNG do mapa (uma
-  camada de rios), efeito no movimento ou na defesa (atravessar rio),
-  ponte, comércio pelo rio.
+  camada de rios), ponte, comércio pelo rio.
 
 FLORESTA (scripts/map/terrain.gd)
 - Terreno novo, verde-escuro no mapa. As regras ficam em
@@ -1570,10 +1586,11 @@ MOVER PARA UM DESTINO (tecla G)
 
 MOVIMENTO (scripts/map/movement.gd)
 - 8 direções (diagonais incluídas), custo 1 por casa, como no
-  Civilization 1. Exceção: entrar na floresta custa 2 para
-  unidades com mais de 1 de movimento (ver FLORESTA). Sem
-  movimento suficiente, a unidade espera o próximo turno para
-  entrar.
+  Civilization 1. Exceções, para unidades com mais de 1 de
+  movimento: entrar na floresta custa 2 (ver FLORESTA) e atravessar
+  um rio custa +1 (ver RIOS); somam, mas um passo nunca custa mais
+  que o movimento cheio da unidade. Sem movimento suficiente, a
+  unidade espera o próximo turno para entrar.
 - Unidades só andam em terra (Pradaria, Floresta, Cerrado).
 - Uma unidade por casa, sem empilhar, em terrenos e em cidades:
   dá para atravessar casas com unidades aliadas, mas não parar
@@ -1646,7 +1663,8 @@ com energia cheia):
 Ajustes: as constantes BASE_DAMAGE (30), LUCK (0,10) e
 MIN_ENERGY_FACTOR (0,5) ficam no topo de combat.gd.
 Bônus de terreno: quem defende na floresta ganha +1 de defesa
-(somado à Defesa, junto com a fortificação; ver FLORESTA). A
+(somado à Defesa, junto com a fortificação; ver FLORESTA), e quem
+é atacado do outro lado de um rio ganha mais +1 (ver RIOS). A
 previsão de dano e a IA já levam isso em conta. Bônus em
 porcentagem podem entrar em attack_bonus() e defense_bonus(),
 que hoje retornam 1,0.
@@ -1949,8 +1967,9 @@ Screenshots também confirmaram o visual.
 [ ] Outros terrenos com bônus (ex.: montanha, colina)
 [x] Rios pelas bordas das casas, sinuosos, com +1 de alimento nas
     casas vizinhas (25/10/2026)
-[ ] Rios: desenhar no PNG do mapa (hoje são gerados), efeito no
-    movimento/defesa, pontes
+[x] Rios: +1 de movimento ao atravessar (movimento > 1) e +1 de
+    defesa para quem é atacado do outro lado (25/10/2026)
+[ ] Rios: desenhar no PNG do mapa (hoje são gerados), pontes
 [x] Recuperação de energia: unidade fortificada recupera 5 por
     turno
 [x] Ação Fortificar (+1 de defesa)
@@ -2886,6 +2905,22 @@ Screenshots também confirmaram o visual.
   janela da cidade, revisados e ajustados (leque começando ainda na
   terra, cor do mar mais escura, nascente afinando); teste dos rios
   passou.
+- ATRAVESSAR RIOS (pedido do usuário): +1 de movimento para unidades
+  com mais de 1 de movimento (soma com a floresta, limitado ao
+  movimento cheio) e +1 de defesa para quem é atacado do outro lado
+  do rio (o usuário escolheu isso no lugar de -1 de ataque). Novo
+  GameMap.crosses_river (diagonal só conta se o rio separa as
+  casas); o custo do passo agora depende de onde a unidade vem
+  (Movement.step_cost); o combate recebe a casa de onde o atacante
+  ataca (prévia, máquina e ataque).
+- Validação: teste com 22 verificações (atravessar lado a lado, nos
+  dois sentidos, ao longo do rio, diagonal com o rio no meio e pela
+  ponta; custo do Cavaleiro e do Guerreiro; alcance do Cavaleiro,
+  contorno da nascente, floresta + rio limitado, 1 movimento não
+  atravessa, andar gasta 2; defesa +1 só do outro lado, força 2,
+  dano esperado 21 x 30 e 42 x 30, prévia "+1 atrás do rio", ataque
+  de verdade pelo clique), mais os testes dos rios, das melhorias,
+  do ataque pelo modo Mover e da conquista.
 
 --------------------------------------------------------------
 7. BACKLOG (ideias para depois)

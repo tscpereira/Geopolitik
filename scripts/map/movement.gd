@@ -4,7 +4,8 @@ extends RefCounted
 ## Cálculo de alcance e caminho das unidades no grid.
 ## Movimento em 8 direções (diagonais incluídas). Entrar numa casa custa 1
 ## movimento, ou mais em terrenos difíceis (ver Terrain.move_cost: a floresta
-## custa 2 para unidades com mais de 1 de movimento).
+## custa 2 para unidades com mais de 1 de movimento) e ao atravessar um rio
+## (+1 para essas unidades; ver step_cost).
 
 const DIRECTIONS: Array[Vector2i] = [
 	Vector2i(-1, -1), Vector2i(0, -1), Vector2i(1, -1),
@@ -82,16 +83,26 @@ static func build_path(reachable: Dictionary, target: Vector2i) -> Array[Vector2
 	return path
 
 
-## Movimentos gastos para entrar na casa.
-static func step_cost(map: GameMap, unit: Unit, cell: Vector2i) -> int:
-	return Terrain.move_cost(map.get_terrain(cell), unit.movement)
+## Movimentos gastos para andar da casa [param from] para a vizinha
+## [param cell]: o terreno de destino (floresta) mais Terrain.RIVER_MOVE_PENALTY
+## se o passo atravessa um rio, os dois só para unidades com mais de 1 de
+## movimento. Nunca passa do movimento cheio da unidade: com todos os
+## movimentos ela sempre consegue entrar (Cavaleiro: floresta + rio = turno todo).
+static func step_cost(map: GameMap, unit: Unit, from: Vector2i, cell: Vector2i) -> int:
+	var cost := Terrain.move_cost(map.get_terrain(cell), unit.movement)
+	if unit.movement > 1 and map.crosses_river(from, cell):
+		cost += Terrain.RIVER_MOVE_PENALTY
+	return mini(cost, unit.movement)
 
 
-## Movimentos gastos para andar o caminho inteiro.
-static func path_cost(map: GameMap, unit: Unit, path: Array[Vector2i]) -> int:
+## Movimentos gastos para andar o caminho inteiro, saindo de [param from]
+## (a casa da unidade, se não for dada).
+static func path_cost(map: GameMap, unit: Unit, path: Array[Vector2i], from := Unit.NO_TARGET) -> int:
 	var total := 0
+	var previous := unit.cell if from == Unit.NO_TARGET else from
 	for cell in path:
-		total += step_cost(map, unit, cell)
+		total += step_cost(map, unit, previous, cell)
+		previous = cell
 	return total
 
 
@@ -132,7 +143,7 @@ static func _search(map: GameMap, unit: Unit, occupants: Dictionary, budget: int
 				var next := cell + direction
 				if not can_enter(map, unit, next, occupants):
 					continue
-				var next_cost := current + step_cost(map, unit, next)
+				var next_cost := current + step_cost(map, unit, cell, next)
 				if next_cost > budget or (cost.has(next) and cost[next] <= next_cost):
 					continue
 				cost[next] = next_cost

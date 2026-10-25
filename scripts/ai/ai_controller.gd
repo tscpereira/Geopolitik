@@ -168,17 +168,19 @@ func _best_attack(game: Game, player: Player) -> Dictionary:
 		if unit.moves_left <= 0 or not _is_field_soldier(unit):
 			continue # a guarnição não sai da cidade para atacar
 		var reachable := Movement.find_reachable(game.game_map, unit, occupants)
-		for target: Vector2i in Movement.attack_targets(game.game_map, unit, reachable, occupants):
-			var score := _attack_score(unit, occupants[target])
+		var targets := Movement.attack_targets(game.game_map, unit, reachable, occupants)
+		for target: Vector2i in targets:
+			var score := _attack_score(unit, occupants[target], targets[target])
 			if score > 0.0 and (best.is_empty() or score > best["score"]):
 				best = {"unit": unit, "target": target, "score": score}
 	return best
 
 
 ## Nota do ataque = dano causado − dano recebido × cautela, com bônus para quem
-## deve destruir o alvo e penalidade para quem arrisca morrer.
-func _attack_score(attacker: Unit, defender: Unit) -> float:
-	var expected := Combat.expected_damage(attacker, defender)
+## deve destruir o alvo e penalidade para quem arrisca morrer. [param from_cell]
+## é de onde o atacante ataca (o rio no meio dá defesa ao alvo).
+func _attack_score(attacker: Unit, defender: Unit, from_cell: Vector2i) -> float:
+	var expected := Combat.expected_damage(attacker, defender, from_cell)
 	var dealt: float = expected["to_defender"]
 	var taken: float = expected["to_attacker"]
 	var score := dealt - taken * CAUTION
