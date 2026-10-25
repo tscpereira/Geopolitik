@@ -1504,6 +1504,15 @@ MOVER PARA UM DESTINO (tecla G)
   o painel de informações mostra "Indo para (x, y)".
 - Se o destino estiver ocupado por uma unidade aliada, a unidade
   para ao lado e a ordem acaba (não dá para empilhar).
+- Clicar num INIMIGO no modo Mover (desde 24/10/2026): se ele está
+  em vermelho (dá para atacar), a unidade ataca; senão, ela anda até
+  a casa vizinha a ele (para atacar no turno seguinte); se já está
+  ao lado, aparece o motivo ("Guerreiro está sem movimentos neste
+  turno: dá para atacar o Trabalhador no próximo turno."). Antes
+  aparecia "Não há caminho por terra até essa casa".
+- Atenção: a ordem Mover anda sozinha no começo da sua vez e gasta
+  os movimentos; uma unidade que chega ao lado do inimigo assim só
+  ataca no turno seguinte.
 - Ainda não ataca no caminho, e a máquina não usa essa ordem.
 
 MOVIMENTO (scripts/map/movement.gd)
@@ -1540,7 +1549,9 @@ energia dos dois lados.
   A unidade que já estava na casa é o DEFENSOR.
 - Inimigos ao alcance aparecem destacados em vermelho. Se o
   inimigo estiver longe, a unidade anda até uma casa vizinha a
-  ele e ataca dali.
+  ele e ataca dali. Clicar num inimigo que não está em vermelho
+  mostra o motivo (sem movimentos, fora de alcance, Ataque 0) e
+  mantém a unidade selecionada (Game._no_attack_reason).
 - Atacar custa 1 movimento e encerra os movimentos da unidade
   no turno.
 - Todas as unidades atacam corpo a corpo. O ataque à distância
@@ -2768,6 +2779,17 @@ Screenshots também confirmaram o visual.
   com a câmera nele. Validação: o teste das melhorias passou com
   as verificações novas (sem aviso, foco no Trabalhador, lista sem
   fazendas e madeireiras prontas), mais screenshot da janela.
+- Correção (relatada pelo usuário: "não consigo atacar um
+  trabalhador pela diagonal"): com os saves do usuário, o ataque
+  funcionava; o problema era a ordem Mover. A unidade com destino
+  anda sozinha no começo da vez e gasta o movimento, e no modo
+  Mover (G) clicar no inimigo dava "Não há caminho por terra até
+  essa casa". Agora, no modo Mover, clicar num inimigo ataca (se
+  der) ou leva a unidade até o lado dele; clicar num inimigo fora
+  de alcance (com ou sem G) explica o motivo e mantém a seleção.
+  Validação: teste com os dois saves do usuário (8 verificações:
+  G + clique ataca quando dá; sem movimento, explica nos dois
+  modos e não cria ordem; longe, anda até o lado sem atacar).
 
 --------------------------------------------------------------
 7. BACKLOG (ideias para depois)

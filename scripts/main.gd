@@ -936,6 +936,9 @@ func _on_cell_clicked(cell: Vector2i) -> void:
 		_select_mill(mill)
 	elif own_unit:
 		select_unit(own_unit)
+	elif selected_unit and unit and unit.owner_player != current and not unit.hidden_in_city:
+		# Inimigo fora do alcance (ou sem movimentos): explica em vez de só tirar a seleção
+		hud.show_message(_no_attack_reason(selected_unit, unit), Color(1, 0.6, 0.4))
 	else:
 		select_unit(null)
 
@@ -1016,11 +1019,25 @@ func _turns_for_path(unit: Unit, path: Array[Vector2i]) -> int:
 
 
 ## Clique no modo "Mover": guarda o destino e a unidade já começa a andar.
+## Clique num inimigo: ataca se der; senão, o destino vira a casa vizinha a ele
+## (ou, se a unidade já está ao lado, aparece o motivo de não poder atacar).
 func _on_goto_clicked(cell: Vector2i) -> void:
 	var unit := selected_unit
 	_set_goto_mode(false)
 	if unit == null:
 		return
+	var enemy := get_unit_at(cell)
+	if enemy and enemy.owner_player != unit.owner_player:
+		if _attack_targets.has(cell):
+			unit.goto_target = Unit.NO_TARGET
+			_human_action(attack.bind(unit, cell))
+			return
+		var near := _cell_next_to(unit, cell)
+		if near == Unit.NO_TARGET or near == unit.cell:
+			hud.show_message(_no_attack_reason(unit, enemy), Color(1, 0.6, 0.4))
+			_show_goto_path(unit, unit.goto_target)
+			return
+		cell = near
 	if not game_map.is_in_bounds(cell) or Movement.find_path(game_map, unit, cell, occupants()).is_empty():
 		hud.show_message("Não há caminho por terra até essa casa.", Color(1, 0.6, 0.4))
 		_show_goto_path(unit, unit.goto_target)
@@ -1028,6 +1045,33 @@ func _on_goto_clicked(cell: Vector2i) -> void:
 	unit.goto_target = cell
 	unit.fortified = false
 	_human_action(advance_goto.bind(unit))
+
+
+## Casa vizinha a [param target] mais perto (pelo caminho) da unidade: a própria
+## casa dela, se já estiver ao lado; NO_TARGET se não der para chegar a nenhuma.
+func _cell_next_to(unit: Unit, target: Vector2i) -> Vector2i:
+	var current := occupants()
+	var best := Unit.NO_TARGET
+	var best_length := 1 << 30
+	for direction in Movement.DIRECTIONS:
+		var cell: Vector2i = target + direction
+		if cell == unit.cell:
+			return cell
+		var path := Movement.find_path(game_map, unit, cell, current)
+		if not path.is_empty() and not current.has(cell) and path.size() < best_length:
+			best_length = path.size()
+			best = cell
+	return best
+
+
+## Por que a unidade não pode atacar o inimigo agora (mensagem para o jogador).
+func _no_attack_reason(unit: Unit, enemy: Unit) -> String:
+	if unit.attack <= 0:
+		return "%s não ataca (Ataque 0)." % unit.type.display_name
+	if unit.moves_left <= 0:
+		return "%s está sem movimentos neste turno: dá para atacar o %s no próximo turno." % [
+				unit.type.display_name, enemy.type.display_name]
+	return "%s está fora do alcance de ataque neste turno." % enemy.type.display_name
 
 
 ## Anda o quanto der neste turno pelo caminho até o destino da ordem "Mover".
