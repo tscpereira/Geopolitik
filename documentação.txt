@@ -6,7 +6,7 @@ Tipo de jogo : Estratégia em turnos 2D
 Engine       : Godot 4.7.2 (versão padrão, GDScript)
 Linguagem    : GDScript
 Pasta        : C:\ProjetoGame
-Última atualização: 24/10/2026
+Última atualização: 25/10/2026
 
 
 --------------------------------------------------------------
@@ -98,6 +98,7 @@ C:\ProjetoGame
 |   |   |-- move_overlay.gd        Destaque das casas alcançáveis
 |   |   |-- territory_overlay.gd   Fronteiras dos territórios
 |   |   |-- ruins_layer.gd         Ruínas sem dono (cidades destruídas)
+|   |   |-- rivers.gd              Rios: geração e desenho
 |   |   `-- terrain.gdshader       Desenho do mapa com transições
 |   |                              naturais entre os terrenos
 |   |-- science/
@@ -495,6 +496,47 @@ UNIDADES (scripts/units/)
 - Uma unidade só é criada em casa de terra (qualquer terreno menos
   Água). Se a casa for água ou estiver fora do mapa, aparece um
   aviso no console.
+
+RIOS (scripts/map/rivers.gd; desde 25/10/2026, pedido do usuário)
+- Os rios correm pelas BORDAS das casas, no limiar entre uma casa e
+  outra, de um canto da grade ao próximo (cada rio é a lista dos
+  cantos por onde passa; o canto (x, y) é o de cima à esquerda da
+  casa (x, y)). Só correm entre casas de terra.
+- BÔNUS: toda casa que encosta num trecho de rio (qualquer um dos 4
+  lados) ganha +1 de alimento na produtividade base
+  (Terrain.RIVER_FOOD; GameMap.has_river):
+    casa sem melhoria  1 -> 2
+    fazenda            2 -> 3
+    casa da cidade     2 -> 3 (cidade à beira do rio; City.center_food)
+  Vale para pradaria, floresta e cerrado. A madeireira não muda (só
+  dá madeira).
+- GERAÇÃO (Rivers.generate): o PNG do mapa só tem os terrenos, então
+  os rios são criados ao montar o mapa, sempre iguais para o mesmo
+  mapa (semente fixa). Até 8 rios (RIVER_COUNT), de pelo menos 8
+  trechos: nascem no interior (as nascentes mais longe da costa
+  primeiro, a pelo menos 5 cantos da água e 7 de outro rio) e descem
+  em direção ao mar pela distância até a água, sorteando o passo
+  (descer é o normal, andar de lado faz as curvas, subir é raro;
+  STEP_WEIGHTS) e sem encostar no próprio caminho. Terminam na costa
+  ou ao encontrar outro rio (afluente). No mapa de teste saem 8 rios
+  de 8 a 19 trechos, com 108+ casas à beira de rio.
+- DESENHO (Rivers.draw, nó RiverLayer do GameMap, por cima do
+  terreno e das fazendas): curva suavizada (Chaikin, 4 passadas) que
+  ondula um pouco em volta das bordas (sinuosa), com margem de terra,
+  água azul acinzentada e um reflexo claro no meio; estreita na
+  nascente (0,09 casa) e mais larga na foz (0,22), entrando um pouco
+  no mar. A janela da cidade desenha os mesmos rios no mapa dela.
+- O painel de informações e o tooltip do mapa da cidade mostram "à
+  beira do rio (+1 de alimento)".
+- A realocação automática põe os cidadãos primeiro nas casas sem
+  melhoria que dão mais alimento (à beira do rio). A máquina também:
+  prefere casas à beira do rio para as cidades (+1,5 na nota de cada
+  casa), para as fazendas e para os cidadãos.
+- Save: o mapa guarda os rios ("rivers"); save antigo sem rios fica
+  com os rios gerados.
+- Ideias para depois: rios desenhados no próprio PNG do mapa (uma
+  camada de rios), efeito no movimento ou na defesa (atravessar rio),
+  ponte, comércio pelo rio.
 
 FLORESTA (scripts/map/terrain.gd)
 - Terreno novo, verde-escuro no mapa. As regras ficam em
@@ -1894,6 +1936,10 @@ Screenshots também confirmaram o visual.
 [x] Combate por desgaste de energia (corpo a corpo)
 [x] Bônus de combate por terreno: +1 de defesa na floresta
 [ ] Outros terrenos com bônus (ex.: montanha, colina)
+[x] Rios pelas bordas das casas, sinuosos, com +1 de alimento nas
+    casas vizinhas (25/10/2026)
+[ ] Rios: desenhar no PNG do mapa (hoje são gerados), efeito no
+    movimento/defesa, pontes
 [x] Recuperação de energia: unidade fortificada recupera 5 por
     turno
 [x] Ação Fortificar (+1 de defesa)
@@ -2797,6 +2843,29 @@ Screenshots também confirmaram o visual.
   de carregar. F9 continua valendo fora do editor. Linha de ajuda
   do HUD: "L: carregar". Validação: teste abrindo a janela com L e
   carregando o save do usuário (turno 91).
+
+25/10/2026
+- RIOS (pedido do usuário): correm pelas bordas das casas, no limiar
+  entre uma e outra, sinuosos; toda casa à beira de um rio ganha +1
+  de alimento na base (sem melhoria 2, fazenda 3, casa da cidade 3).
+  Gerados ao montar o mapa (sempre iguais para o mesmo mapa), da
+  nascente no interior até o mar ou outro rio; desenhados com curva
+  suavizada e ondulada, margem e reflexo, mais largos na foz; também
+  na janela da cidade. Salvos no save (save antigo fica com os
+  gerados). A realocação automática e a máquina preferem as casas à
+  beira do rio (cidadãos, fazendas e lugar das cidades).
+- Validação: teste com 17 verificações (cada trecho na borda entre
+  duas casas de terra, nascentes no interior, fim na costa ou noutro
+  rio, mesma geração sempre, casas à beira de rio; alimento 2 / 3 /
+  cidade 3 e 1 longe do rio; save, save com outros rios e save
+  antigo), mais screenshots (zoom 0,2, 0,75 e 1,3 e janela da
+  cidade), revisados e ajustados (rios mais compridos, mais
+  sinuosos, mais largos e sem emendas no reflexo). Os testes das
+  melhorias, do ataque e da lista de construções passaram de novo.
+  Partida de 100 rodadas máquina x máquina sem erros: com os rios, a
+  Equilibrada chegou a 4 cidades e 27 de população (20 sem rios); as
+  prioridades da máquina continuam sem fazer prédios (ver PRÓXIMOS
+  PASSOS).
 
 --------------------------------------------------------------
 7. BACKLOG (ideias para depois)

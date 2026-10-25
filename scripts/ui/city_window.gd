@@ -357,7 +357,7 @@ func _summary_text() -> String:
 		_city.food_stock, _city.food_capacity(), food_color.to_html(false), food,
 		("   (cresce em %d %s)" % [growth, "turno" if growth == 1 else "turnos"]) if growth > 0 else "",
 	])
-	var center_food := City.CENTER_FOOD if _city.population > 0 else 0
+	var center_food := _city.center_food()
 	var party_food := _city.celebration_food()
 	var tiles_food := 0
 	for tile_cell: Vector2i in _city.worked_tiles:

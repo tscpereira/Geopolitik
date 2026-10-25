@@ -186,6 +186,7 @@ func _workable_tiles(city: City) -> Array[Vector2i]:
 	for tile_cell in city.territory:
 		if city.can_work_tile(tile_cell) and not city.worked_tiles.has(tile_cell) and _game.lumber_mill_at(tile_cell) == null:
 			cells.append(tile_cell)
+	cells.sort_custom(func(a: Vector2i, b: Vector2i) -> bool: return city.tile_food(a) > city.tile_food(b))
 	return cells
 
 
@@ -362,7 +363,10 @@ func _farm_cells() -> Array[Vector2i]:
 			if city.sites[site_cell]["build"] == City.Build.FARM and not _is_worked_site(site_cell):
 				cells.append(site_cell)
 		if _needs_farm(city):
-			cells.append_array(_game.buildable_cells(city, City.Build.FARM))
+			# À beira do rio a fazenda rende mais: se houver, só essas casas
+			var options := _game.buildable_cells(city, City.Build.FARM)
+			var by_river := options.filter(func(c: Vector2i) -> bool: return _game.game_map.has_river(c))
+			cells.append_array(by_river if not by_river.is_empty() else options)
 	return cells
 
 
@@ -443,8 +447,9 @@ func _rebuild_jobs() -> int:
 
 ## Melhor casa para uma cidade nova ao alcance do Colono (ou NO_TARGET), fora
 ## de qualquer território. Nota = terreno do território que ela teria (21 casas
-## para a capital, 9 para as outras; pradaria 3, cerrado e floresta 2, água 1),
-## sem as casas que já são de outra cidade, menos a distância a andar.
+## para a capital, 9 para as outras; pradaria 3, cerrado e floresta 2, água 1,
+## +1,5 à beira do rio), sem as casas que já são de outra cidade, menos a
+## distância a andar.
 func _best_city_site(settler: Unit) -> Vector2i:
 	var map := _game.game_map
 	var occupants := _game.occupants()
@@ -473,6 +478,8 @@ func _best_city_site(settler: Unit) -> Vector2i:
 					score += 2.0
 				Terrain.Type.WATER:
 					score += 1.0
+			if map.has_river(area_cell):
+				score += 1.5 # casa à beira do rio: +1 de alimento
 			if _game.claiming_city(area_cell) or _game.get_city_at(area_cell):
 				score -= 3.0
 		score -= Movement.build_path(reachable, cell).size() * 1.5

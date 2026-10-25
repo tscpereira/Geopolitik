@@ -1951,6 +1951,8 @@ func _terrain_text(cell: Vector2i) -> String:
 	if type == Terrain.Type.FOREST:
 		text += " (madeira %d/%d, defesa +%d, movimento -%d para quem anda mais de 1)" % [
 			game_map.wood_left(cell), Terrain.WOOD_PER_FOREST, Terrain.DEFENSE_BONUS[type], Terrain.MOVE_PENALTY[type]]
+	if game_map.has_river(cell):
+		text += " à beira do rio (+%d de alimento)" % Terrain.RIVER_FOOD
 	return text
 
 

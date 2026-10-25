@@ -11,7 +11,8 @@ extends RefCounted
 ##            GameMap); a madeireira só extrai dele. Esgotada, vira Cerrado.
 ##   Cerrado  o que sobra da floresta explorada. Igual à Pradaria.
 ## Um cidadão trabalhando a casa sem melhoria tira TILE_FOOD de alimento por
-## turno (pradaria, floresta e cerrado: 1; água: não dá para trabalhar).
+## turno (pradaria, floresta e cerrado: 1; água: não dá para trabalhar). Casa
+## que encosta num rio (Rivers, GameMap.has_river) tira RIVER_FOOD a mais.
 
 ## A ordem do enum é a ordem das imagens no atlas do mapa (ver GameMap).
 enum Type { WATER, GRASSLAND, FOREST, CERRADO }
@@ -59,6 +60,10 @@ const TILE_FOOD := {
 	Type.FOREST: 1,
 	Type.CERRADO: 1,
 }
+
+## Alimento a mais da casa que encosta num rio (soma no alimento base da casa:
+## sem melhoria 1 + 1 = 2; com fazenda 2 + 1 = 3; na casa da cidade, também).
+const RIVER_FOOD := 1
 
 ## Madeira de cada casa de floresta. Quando acaba, a casa vira Cerrado.
 const WOOD_PER_FOREST := 100

@@ -54,6 +54,7 @@ var _terrain: ColorRect
 
 func _ready() -> void:
 	custom_minimum_size = Vector2.ONE * CELL_SIZE * 5
+	clip_contents = true # os rios continuam para fora das 5x5 casas
 	texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
 	mouse_filter = Control.MOUSE_FILTER_STOP
 	_terrain = ColorRect.new()
@@ -122,6 +123,8 @@ func _get_tooltip(at_position: Vector2) -> String:
 	var text := "(%d, %d) %s" % [cell.x, cell.y, Terrain.NAMES[map.get_terrain(cell)]]
 	if map.get_terrain(cell) == Terrain.Type.FOREST:
 		text += " (madeira %d/%d)" % [map.wood_left(cell), Terrain.WOOD_PER_FOREST]
+	if map.has_river(cell):
+		text += " à beira do rio (+%d alimento)" % Terrain.RIVER_FOOD
 	if _is_transferable(cell):
 		var other := _game.territory_owner(cell)
 		text += " - território de %s%s.\nClique para passar esta casa para %s: a melhoria vem junto e quem trabalhava nela fica livre em %s." % [
@@ -132,7 +135,7 @@ func _get_tooltip(at_position: Vector2) -> String:
 		if _game.lumber_mill_at(cell):
 			text += "; madeireira de %s" % _game.lumber_mill_at(cell).owner_player.display_name
 	elif cell == _city.cell:
-		text += " - %s (+%d alimento)" % [_city.city_name, City.CENTER_FOOD if _city.population > 0 else 0]
+		text += " - %s (+%d alimento)" % [_city.city_name, _city.center_food()]
 	elif _city.farms.has(cell):
 		text += " - Fazenda %s" % ("trabalhada (+%d alimento)" % _city.farm_food(cell) if _city.farms[cell] > 0 else "sem trabalhador (renderia +%d)" % _city.farm_food(cell))
 		if editable:
@@ -176,35 +179,45 @@ func _draw() -> void:
 	# Pontas do quadrado 5x5 (fora da área): escurecidas, como antes
 	for corner in [Vector2i(-2, -2), Vector2i(2, -2), Vector2i(-2, 2), Vector2i(2, 2)]:
 		draw_rect(_cell_rect(_city.cell + corner), Color(0.06, 0.06, 0.08, 0.85))
+	# 1ª passada: os desenhos das melhorias (ocupam a casa inteira)
 	for cell in _view_cells():
 		var rect := _cell_rect(cell)
 		if not map.is_in_bounds(cell):
 			draw_rect(rect, Color.BLACK)
-			continue
-
-		if _city.farms.has(cell):
+		elif _city.farms.has(cell):
 			City.draw_farm(self, rect)
+		elif _city.lumber_mills.has(cell):
+			LumberMill.draw_icon(self, rect)
+		elif _city.ruins.has(cell):
+			City.draw_ruin(self, _city.ruins[cell]["build"], rect)
+		elif _city.sites.has(cell):
+			City.draw_improvement(self, _city.sites[cell]["build"], rect, City.CONSTRUCTION_ALPHA)
+		elif _is_transferable(cell):
+			# De outra cidade do jogador: mostra a melhoria dela sob o vermelho
+			_draw_other_improvement(_game.territory_owner(cell), cell, rect)
+	# Rios por cima das melhorias (correm pelas bordas das casas)
+	Rivers.draw(self, map, map.rivers, CELL_SIZE, -Vector2(_city.cell - Vector2i(2, 2)) * CELL_SIZE)
+	# 2ª passada: números, setas, barras e tons por cima de tudo
+	for cell in _view_cells():
+		var rect := _cell_rect(cell)
+		if not map.is_in_bounds(cell):
+			continue
+		if _city.farms.has(cell):
 			if _city.farms[cell] > 0:
 				_draw_food(rect, _city.farm_food(cell) * _city.farms[cell])
 				_draw_worker(rect, _city.farms[cell])
 		elif _city.lumber_mills.has(cell):
-			LumberMill.draw_icon(self, rect)
 			LumberMill.draw_wood_bar(self, rect, map.wood_left(cell))
 			if editable:
 				_draw_mill_controls(rect, _city.lumber_mills[cell])
 			elif _city.lumber_mills[cell] > 0:
 				_draw_worker(rect, _city.lumber_mills[cell])
-		elif _city.ruins.has(cell):
-			City.draw_ruin(self, _city.ruins[cell]["build"], rect)
 		elif _city.sites.has(cell):
 			var site: Dictionary = _city.sites[cell]
-			City.draw_improvement(self, site["build"], rect, City.CONSTRUCTION_ALPHA)
 			_draw_progress(rect, site["progress"], City.BUILDS[site["build"]]["cost"])
 		elif _is_transferable(cell):
-			# De outra cidade do jogador: mostra a melhoria dela sob o vermelho
-			_draw_other_improvement(_game.territory_owner(cell), cell, rect)
 			draw_rect(rect, TRANSFER_TINT)
-		elif cell != _city.cell and (_game.claiming_city(cell) or _game.lumber_mill_at(cell)):
+		elif cell != _city.cell and not _city.ruins.has(cell) and (_game.claiming_city(cell) or _game.lumber_mill_at(cell)):
 			draw_rect(rect, BLOCKED_TINT)
 		if _city.worked_tiles.has(cell):
 			_draw_food(rect, _city.tile_food(cell))

@@ -15,7 +15,8 @@ extends Node2D
 ##      estoque do jogador. Floresta esgotada vira cerrado e a madeireira some;
 ##   3. alimento = CENTER_FOOD + 1 por casa trabalhada sem melhoria
 ##                 (Terrain.TILE_FOOD) + 2 por fazenda trabalhada (a casa + o
-##                 FARM_BONUS da fazenda: farm_food)
+##                 FARM_BONUS da fazenda: farm_food); casa à beira de um
+##                 rio, e a casa da cidade, dão +1 (Terrain.RIVER_FOOD)
 ##                 − FOOD_PER_CITIZEN (1) por habitante;
 ##   4. a sobra vai para o estoque (como no Civilization II). Quando o
 ##      estoque enche, a cidade ganha 1 de população e o estoque esvazia.
@@ -900,9 +901,20 @@ func can_work_tile(target: Vector2i) -> bool:
 			and not farms.has(target) and not lumber_mills.has(target) and not ruins.has(target))
 
 
-## Alimento de um cidadão trabalhando a casa sem melhoria (Terrain.TILE_FOOD).
+## Alimento de um cidadão trabalhando a casa sem melhoria (Terrain.TILE_FOOD),
+## mais Terrain.RIVER_FOOD se ela encosta num rio.
 func tile_food(target: Vector2i) -> int:
-	return Terrain.TILE_FOOD.get(_map.get_terrain(target), 0)
+	if not Terrain.TILE_FOOD.has(_map.get_terrain(target)):
+		return 0
+	return Terrain.TILE_FOOD[_map.get_terrain(target)] + (Terrain.RIVER_FOOD if _map.has_river(target) else 0)
+
+
+## Alimento que a casa da cidade produz sozinha: CENTER_FOOD, mais
+## Terrain.RIVER_FOOD se a cidade fica à beira de um rio (0 na cidade vazia).
+func center_food() -> int:
+	if population <= 0:
+		return 0
+	return CENTER_FOOD + (Terrain.RIVER_FOOD if _map.has_river(cell) else 0)
 
 
 ## Madeira que as madeireiras da cidade vão tirar no próximo turno.
@@ -923,7 +935,7 @@ func food_produced() -> int:
 func _base_food_produced() -> int:
 	if population <= 0:
 		return 0
-	var total := CENTER_FOOD
+	var total := center_food()
 	for farm_cell: Vector2i in farms:
 		total += farm_food(farm_cell) * farms[farm_cell]
 	for tile_cell: Vector2i in worked_tiles:
@@ -1443,8 +1455,12 @@ func _assign_free_citizens(count: int) -> void:
 		if BUILDS[building].get("idle_gold", 0) > 0 and active_unit(building) == null:
 			building_workers[building] = building_workers.get(building, 0) + count
 			return
-	for tile_cell in territory:
-		if count > 0 and not worked_tiles.has(tile_cell) and can_work_tile(tile_cell):
+	# Casas sem melhoria: as que dão mais alimento primeiro (à beira do rio)
+	var tiles := territory.filter(func(tile_cell: Vector2i) -> bool:
+		return not worked_tiles.has(tile_cell) and can_work_tile(tile_cell))
+	tiles.sort_custom(func(a: Vector2i, b: Vector2i) -> bool: return tile_food(a) > tile_food(b))
+	for tile_cell: Vector2i in tiles:
+		if count > 0:
 			worked_tiles[tile_cell] = 1
 			count -= 1
 

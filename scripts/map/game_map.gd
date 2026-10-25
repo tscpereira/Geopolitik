@@ -4,8 +4,9 @@ extends Node2D
 ## Mapa em grid quadrado. Guarda o terreno de cada casa (e a madeira das
 ## florestas) e desenha o mapa inteiro com o shader terrain.gdshader, que faz
 ## as transições naturais entre os terrenos (costa arredondada, borda das
-## florestas, pradaria <-> cerrado) e as fazendas (set_improvement). O
-## TileMapLayer só serve para converter posições em casas.
+## florestas, pradaria <-> cerrado) e as fazendas (set_improvement). Os rios
+## (Rivers) correm pelas bordas das casas e são desenhados por cima do terreno
+## (RiverLayer). O TileMapLayer só serve para converter posições em casas.
 
 ## Tamanho de cada casa em pixels. As imagens dos terrenos devem ter este tamanho.
 ## (80 desde 23/10/2026; antes 40, em pixel art.)
@@ -33,9 +34,14 @@ var height := 0
 var city_owners := {}
 
 var _terrain := PackedByteArray()
+## Rios: cada um é a lista dos cantos da grade por onde passa (ver Rivers).
+var rivers: Array = []
 ## Madeira que resta nas florestas já exploradas: {casa: quantidade}. Casa de
 ## floresta fora daqui ainda tem Terrain.WOOD_PER_FOREST.
 var _wood := {}
+## Casas que encostam num rio: {casa: true} (ver has_river).
+var _river_cells := {}
+var _river_layer: Node2D
 ## Imagem de cada terreno, usada pelo shader e pela janela da cidade.
 var _terrain_textures := {}
 ## Mapa de terrenos para o shader: 1 pixel por casa, tipo no canal vermelho.
@@ -72,6 +78,12 @@ func _ready() -> void:
 	_view.material = material
 	add_child(_view)
 	move_child(_view, 0)
+	# Rios por cima do terreno (e das fazendas, que o shader pinta)
+	_river_layer = Node2D.new()
+	_river_layer.name = "RiverLayer"
+	_river_layer.draw.connect(func() -> void: Rivers.draw(_river_layer, self, rivers, TILE_SIZE))
+	add_child(_river_layer)
+	move_child(_river_layer, 1)
 
 
 ## Monta o mapa a partir de uma imagem: cada pixel vira uma casa.
@@ -94,6 +106,25 @@ func load_from_image(image: Image) -> void:
 	_improvement_map = ImageTexture.create_from_image(_improvement_image)
 	material.set_shader_parameter("improvement_map", _improvement_map)
 	material.set_shader_parameter("map_size", Vector2(width, height))
+	set_rivers(Rivers.generate(self))
+
+
+## Troca os rios do mapa (gerados ou de um save) e redesenha.
+func set_rivers(new_rivers: Array) -> void:
+	rivers = new_rivers
+	_river_cells = {}
+	for river: Array in rivers:
+		for i in river.size() - 1:
+			for cell in Rivers.edge_cells(river[i], river[i + 1]):
+				if is_in_bounds(cell):
+					_river_cells[cell] = true
+	_river_layer.queue_redraw()
+
+
+## Se a casa encosta num rio (algum lado dela tem um trecho de rio): ganha
+## Terrain.RIVER_FOOD de alimento.
+func has_river(cell: Vector2i) -> bool:
+	return _river_cells.has(cell)
 
 
 func is_in_bounds(cell: Vector2i) -> bool:
@@ -112,11 +143,12 @@ func set_terrain(cell: Vector2i, type: Terrain.Type) -> void:
 	_terrain_map.update(_terrain_image)
 
 
-## Terreno de cada casa (as florestas viram cerrado ou pradaria durante o jogo)
-## e a madeira que resta nas florestas exploradas, para o save.
+## Terreno de cada casa (as florestas viram cerrado ou pradaria durante o jogo),
+## a madeira que resta nas florestas exploradas e os rios, para o save.
 func to_dict() -> Dictionary:
 	return {"width": width, "height": height, "terrain": Marshalls.raw_to_base64(_terrain),
-			"wood": SaveGame.cell_map_to_json(_wood)}
+			"wood": SaveGame.cell_map_to_json(_wood),
+			"rivers": rivers.map(func(river: Array) -> Array: return SaveGame.cells_to_json(river))}
 
 
 ## Volta ao terreno de um jogo salvo. O mapa precisa ter o mesmo tamanho (é
@@ -133,6 +165,9 @@ func from_dict(data: Dictionary) -> void:
 			_terrain_image.set_pixel(x, y, Color8(_terrain[y * width + x], 0, 0))
 	_terrain_map.update(_terrain_image)
 	_wood = SaveGame.json_to_cell_map(data["wood"])
+	# Save antigo (sem rios): ficam os rios gerados ao montar o mapa
+	if data.has("rivers"):
+		set_rivers(data["rivers"].map(func(river: Array) -> Array: return SaveGame.json_to_cells(river)))
 	_improvement_image.fill(Color8(Improvement.NONE, 0, 0))
 	_improvement_map.update(_improvement_image)
 
