@@ -31,6 +31,8 @@ const MESSAGE_TIME := 3.0
 @onready var _gold_label: RichTextLabel = $TopRight/ResourcePanel/VBox/GoldRow/GoldLabel
 @onready var _wood_icon: Control = $TopRight/ResourcePanel/VBox/WoodRow/WoodIcon
 @onready var _wood_label: RichTextLabel = $TopRight/ResourcePanel/VBox/WoodRow/WoodLabel
+@onready var _iron_icon: Control = $TopRight/ResourcePanel/VBox/IronRow/IronIcon
+@onready var _iron_label: RichTextLabel = $TopRight/ResourcePanel/VBox/IronRow/IronLabel
 @onready var city_window: CityWindow = $CityWindow
 @onready var city_name_dialog: CityNameDialog = $CityNameDialog
 @onready var notice_dialog: NoticeDialog = $NoticeDialog
@@ -48,6 +50,8 @@ var _shown_gold := -1
 var _shown_gold_rate := 0
 var _shown_wood := -1
 var _shown_wood_rate := 0
+var _shown_iron := -1
+var _shown_iron_rate := 0
 ## Linha de cada arma no painel Arsenal: {Arsenal.Weapon: RichTextLabel}.
 var _weapon_labels := {}
 var _shown_arsenal := {}
@@ -64,6 +68,10 @@ func _ready() -> void:
 	_wood_icon.draw.connect(func() -> void:
 		LumberMill.draw_icon(_wood_icon, Rect2(Vector2.ZERO, _wood_icon.size)))
 	_wood_icon.tooltip_text = "Madeira: vem das madeireiras na floresta (1 por trabalhador por turno)."
+	_iron_icon.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
+	_iron_icon.draw.connect(func() -> void:
+		Icons.draw_iron(_iron_icon, Rect2(Vector2.ZERO, _iron_icon.size)))
+	_iron_icon.tooltip_text = "Ferro: vem das minas nas colinas com ferro (1 por trabalhador por turno; a mina não se esgota)."
 	_build_arsenal_rows()
 	_build_science_panel()
 
@@ -194,9 +202,9 @@ func set_arsenal(arsenal: Dictionary, in_production: Dictionary) -> void:
 
 
 ## Painel do canto superior direito: tesouro (ouro) e recursos estratégicos
-## (madeira), com quanto entra por turno. Quando um número muda, ele pisca
-## (verde se subiu, vermelho se caiu).
-func set_resources(gold: int, gold_per_turn: int, wood: int, wood_per_turn: int) -> void:
+## (madeira e ferro), com quanto entra por turno. Quando um número muda, ele
+## pisca (verde se subiu, vermelho se caiu).
+func set_resources(gold: int, gold_per_turn: int, wood: int, wood_per_turn: int, iron: int, iron_per_turn: int) -> void:
 	if gold != _shown_gold or gold_per_turn != _shown_gold_rate:
 		_gold_label.text = "Ouro [b][color=#%s]%d[/color][/b]   [color=#%s]%+d por turno[/color]" % [
 			Icons.GOLD_COLOR.to_html(false), gold, _rate_color(gold_per_turn).to_html(false), gold_per_turn]
@@ -205,14 +213,20 @@ func set_resources(gold: int, gold_per_turn: int, wood: int, wood_per_turn: int)
 			_flash(_gold_label, gold > _shown_gold)
 		_shown_gold = gold
 		_shown_gold_rate = gold_per_turn
-	if wood == _shown_wood and wood_per_turn == _shown_wood_rate:
-		return
-	_wood_label.text = "Madeira [b]%d[/b]   [color=#%s]%+d por turno[/color]" % [wood, _rate_color(wood_per_turn).to_html(false), wood_per_turn]
-	_wood_label.tooltip_text = "Estoque de madeira e quanto entra no início do seu próximo turno."
-	if _shown_wood >= 0 and wood != _shown_wood:
-		_flash(_wood_label, wood > _shown_wood)
-	_shown_wood = wood
-	_shown_wood_rate = wood_per_turn
+	if wood != _shown_wood or wood_per_turn != _shown_wood_rate:
+		_wood_label.text = "Madeira [b]%d[/b]   [color=#%s]%+d por turno[/color]" % [wood, _rate_color(wood_per_turn).to_html(false), wood_per_turn]
+		_wood_label.tooltip_text = "Estoque de madeira e quanto entra no início do seu próximo turno."
+		if _shown_wood >= 0 and wood != _shown_wood:
+			_flash(_wood_label, wood > _shown_wood)
+		_shown_wood = wood
+		_shown_wood_rate = wood_per_turn
+	if iron != _shown_iron or iron_per_turn != _shown_iron_rate:
+		_iron_label.text = "Ferro [b]%d[/b]   [color=#%s]%+d por turno[/color]" % [iron, _rate_color(iron_per_turn).to_html(false), iron_per_turn]
+		_iron_label.tooltip_text = "Estoque de ferro e quanto entra no início do seu próximo turno."
+		if _shown_iron >= 0 and iron != _shown_iron:
+			_flash(_iron_label, iron > _shown_iron)
+		_shown_iron = iron
+		_shown_iron_rate = iron_per_turn
 
 
 func _rate_color(rate: int) -> Color:

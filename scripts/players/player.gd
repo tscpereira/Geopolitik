@@ -21,6 +21,8 @@ var cities: Array[City] = []
 var lumber_mills: Array[LumberMill] = []
 ## Estoque de madeira (recurso estratégico). Futuras obras vão consumi-lo.
 var wood := 0
+## Estoque de ferro (recurso estratégico), tirado das minas das cidades.
+var iron := 0
 ## Tesouro: ouro para comprar unidades e prédios na hora (ver Game.buy_build).
 var gold := START_GOLD
 ## Arsenal: armas estocadas, {Arsenal.Weapon: quantidade}.
@@ -49,6 +51,14 @@ func wood_per_turn() -> int:
 		total += city.wood_per_turn()
 	for mill in lumber_mills:
 		total += mill.wood_per_turn()
+	return total
+
+
+## Ferro que vai entrar no estoque no início do próximo turno (minas das cidades).
+func iron_per_turn() -> int:
+	var total := 0
+	for city in cities:
+		total += city.iron_per_turn()
 	return total
 
 
@@ -109,7 +119,7 @@ func weapons_in_production(weapon: Arsenal.Weapon) -> int:
 func to_dict() -> Dictionary:
 	return {
 		"id": id, "name": display_name, "color": color.to_html(), "is_ai": is_ai,
-		"personality": personality.to_dict(), "wood": wood, "gold": gold,
+		"personality": personality.to_dict(), "wood": wood, "iron": iron, "gold": gold,
 		"arsenal": SaveGame.int_map_to_json(arsenal),
 		"researched": researched.duplicate(), "research": research,
 		"research_progress": SaveGame.int_map_to_json(research_progress),
@@ -125,6 +135,7 @@ static func from_dict(data: Dictionary) -> Player:
 	var player := Player.new(int(data["id"]), data["name"], Color.html(data["color"]), data["is_ai"])
 	player.personality = AIPersonality.from_dict(data["personality"])
 	player.wood = int(data["wood"])
+	player.iron = int(data.get("iron", 0))
 	player.gold = int(data["gold"])
 	player.arsenal.merge(SaveGame.json_to_int_map(data["arsenal"]), true)
 	for tech in data.get("researched", []):

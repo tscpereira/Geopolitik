@@ -173,6 +173,9 @@ func _distribute_workers(city: City) -> void:
 	if _p.collect_taxes and city.has_building(City.Build.CARPENTRY) and city.active_unit(City.Build.CARPENTRY) == null:
 		city.set_building_workers(City.Build.CARPENTRY,
 				city.building_workers.get(City.Build.CARPENTRY, 0) + city.free_citizens())
+	# Minas (o ferro ainda não tem uso: só quem sobrou)
+	for mine_cell: Vector2i in city.mines:
+		city.set_mine_workers(mine_cell, City.MINE_MAX_WORKERS)
 	# Ainda sobrando: as fazendas que faltam e as casas sem melhoria (comida a
 	# mais nunca faz mal)
 	for farm_cell: Vector2i in farm_cells:
@@ -339,6 +342,10 @@ func _move_worker(worker: Unit, focus: Callable) -> void:
 			if _game.lumber_mill_error(worker).is_empty():
 				await focus.call(worker)
 				_game.build_lumber_mill(worker)
+		City.Build.MINE:
+			if _game.improvement_error(worker, City.Build.MINE).is_empty():
+				await focus.call(worker)
+				_game.build_improvement(worker, City.Build.MINE)
 		_:
 			# Cidade vazia ou ruína: migra ou reconstrói no próximo turno
 			if _game.rebuild_error(worker).is_empty():
@@ -346,11 +353,12 @@ func _move_worker(worker: Unit, focus: Callable) -> void:
 				_game.rebuild(worker)
 
 
-## Tarefa do Trabalhador: {"cell": casa, "build": Build.FARM, LUMBER_MILL ou -1
-## (cidade vazia ou ruína)}, ou {} se não houver nada. Primeiro repovoar e
+## Tarefa do Trabalhador: {"cell": casa, "build": Build.FARM, LUMBER_MILL, MINE
+## ou -1 (cidade vazia ou ruína)}, ou {} se não houver nada. Primeiro repovoar e
 ## reconstruir, depois a fazenda que falta mais perto, depois uma madeireira se
-## falta madeira (da cidade, no território; senão remota). Casas que outro
-## Trabalhador já ocupa ou tem como destino ficam de fora.
+## falta madeira (da cidade, no território; senão remota) e, por último, uma
+## mina no ferro do território. Casas que outro Trabalhador já ocupa ou tem
+## como destino ficam de fora.
 func _worker_job(worker: Unit) -> Dictionary:
 	var rebuild := _rebuild_target(worker)
 	if rebuild != Unit.NO_TARGET:
@@ -370,7 +378,12 @@ func _worker_job(worker: Unit) -> Dictionary:
 	var farm := _nearest(worker.cell, _farm_cells().filter(func(c: Vector2i) -> bool: return not taken.has(c)))
 	if farm != Unit.NO_TARGET:
 		return {"cell": farm, "build": City.Build.FARM}
-	return _forest_job(worker, taken) if wood_short else {}
+	if wood_short:
+		var forest := _forest_job(worker, taken)
+		if not forest.is_empty():
+			return forest
+	var mine := _nearest(worker.cell, _mine_cells().filter(func(c: Vector2i) -> bool: return not taken.has(c)))
+	return {"cell": mine, "build": City.Build.MINE} if mine != Unit.NO_TARGET else {}
 
 
 ## Madeireira para o Trabalhador: numa floresta do território (da cidade) ou,
@@ -439,6 +452,18 @@ func _city_forest_cells() -> Array[Vector2i]:
 			if city.sites[site_cell]["build"] == City.Build.LUMBER_MILL and not _is_worked_site(site_cell):
 				cells.append(site_cell)
 		cells.append_array(_game.buildable_cells(city, City.Build.LUMBER_MILL))
+	return cells
+
+
+## Colinas com ferro das cidades onde dá para fazer mina (e as obras de mina
+## paradas).
+func _mine_cells() -> Array[Vector2i]:
+	var cells: Array[Vector2i] = []
+	for city in _player.cities:
+		for site_cell: Vector2i in city.sites:
+			if city.sites[site_cell]["build"] == City.Build.MINE and not _is_worked_site(site_cell):
+				cells.append(site_cell)
+		cells.append_array(_game.buildable_cells(city, City.Build.MINE))
 	return cells
 
 

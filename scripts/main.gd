@@ -6,6 +6,8 @@ extends Node2D
 ## cliques; o jogador máquina, pelo AIController, usando exatamente as mesmas ações.
 
 const MAP_TEXTURE: Texture2D = preload("res://data/maps/mapa_teste.png")
+## Recursos estratégicos do mapa (ferro): casas listadas num JSON ao lado do PNG.
+const MAP_RESOURCES_PATH := "res://data/maps/mapa_teste_recursos.json"
 const WARRIOR: UnitType = preload("res://data/units/guerreiro.tres")
 const ARCHER: UnitType = preload("res://data/units/arqueiro.tres")
 const HORSEMAN: UnitType = preload("res://data/units/cavaleiro.tres")
@@ -77,6 +79,7 @@ var _finished_workers: Array[Unit] = []
 func _ready() -> void:
 	_rng.randomize()
 	game_map.load_from_image(MAP_TEXTURE.get_image())
+	game_map.load_resources(MAP_RESOURCES_PATH)
 	camera.set_bounds(game_map.get_pixel_size())
 	camera.position = game_map.cell_to_world(START_CAMERA_CELL)
 
@@ -150,7 +153,7 @@ func _unhandled_input(event: InputEvent) -> void:
 			KEY_B:
 				_found_city_with_selected()
 			KEY_M:
-				_work_lumber_mill_with_selected()
+				_mine_or_lumber_mill_with_selected()
 			KEY_C:
 				_build_farm_with_selected()
 			KEY_P:
@@ -293,13 +296,15 @@ func lumber_mill_at(cell: Vector2i) -> LumberMill:
 
 
 ## Casas da área da cidade onde dá para construir a melhoria [param build]:
-## terreno certo (fazenda em pradaria/cerrado, madeireira em floresta), dentro
-## do mapa e sem cidade, melhoria ou obra (de qualquer cidade) nem madeireira remota.
+## terreno certo (fazenda em pradaria/cerrado, madeireira em floresta, mina em
+## colina com ferro), dentro do mapa e sem cidade, melhoria ou obra (de qualquer
+## cidade) nem madeireira remota.
 func buildable_cells(city: City, build: int) -> Array[Vector2i]:
 	var result: Array[Vector2i] = []
 	for cell in city.area_cells():
 		if (cell != city.cell and game_map.is_in_bounds(cell)
 				and City.allows_terrain(build, game_map.get_terrain(cell))
+				and (build != City.Build.MINE or game_map.has_iron(cell))
 				and get_city_at(cell) == null and claiming_city(cell) == null
 				and lumber_mill_at(cell) == null):
 			result.append(cell)
@@ -369,10 +374,11 @@ func buy_build(city: City, build: int) -> void:
 	print("%s comprou %s em %s por %d de ouro" % [player.display_name, info["name"], city.city_name, info["gold"]])
 
 
-## Motivo pelo qual o trabalhador não pode construir (ou continuar) a fazenda ou
-## madeireira [param build] da cidade na casa em que está ("" = pode): só no
-## território de uma cidade sua, fora da casa dela, no terreno certo e numa casa
-## sem outra melhoria (a obra parada da mesma melhoria pode continuar).
+## Motivo pelo qual o trabalhador não pode construir (ou continuar) a fazenda,
+## madeireira ou mina [param build] da cidade na casa em que está ("" = pode):
+## só no território de uma cidade sua, fora da casa dela, no terreno certo (a
+## mina, numa colina com ferro) e numa casa sem outra melhoria (a obra parada da
+## mesma melhoria pode continuar).
 func improvement_error(unit: Unit, build: int) -> String:
 	var info: Dictionary = City.BUILDS[build]
 	if not (unit.type.can_build_farm if build == City.Build.FARM else unit.type.can_build_lumber_mill):
@@ -384,8 +390,14 @@ func improvement_error(unit: Unit, build: int) -> String:
 		return "%ss só podem ser feitas no território de uma cidade sua." % info["name"]
 	if unit.cell == city.cell:
 		return "Não dá para construir na casa da cidade."
-	if not City.allows_terrain(build, game_map.get_terrain(unit.cell)):
-		return "Fazendas só em pradaria ou cerrado." if build == City.Build.FARM else "Madeireiras só na floresta."
+	if not City.allows_terrain(build, game_map.get_terrain(unit.cell)) \
+			or (build == City.Build.MINE and not game_map.has_iron(unit.cell)):
+		match build:
+			City.Build.FARM:
+				return "Fazendas só em pradaria ou cerrado."
+			City.Build.MINE:
+				return "Minas só em colinas com ferro (a bigorna no canto da casa)."
+		return "Madeireiras só na floresta."
 	var site: Dictionary = city.sites.get(unit.cell, {})
 	if site.is_empty() and (claiming_city(unit.cell) or lumber_mill_at(unit.cell)):
 		return "Esta casa já tem uma melhoria."
@@ -450,7 +462,7 @@ func lumber_mill_error(unit: Unit) -> String:
 	return ""
 
 
-## O que dá para pilhar na casa: {"build": City.Build.FARM ou LUMBER_MILL,
+## O que dá para pilhar na casa: {"build": City.Build.FARM, LUMBER_MILL ou MINE,
 ## "owner": Player, "city": City ou null, "mill": LumberMill ou null,
 ## "unfinished": bool}, ou {} se não houver nada. Contam as fazendas e
 ## madeireiras prontas e também a madeireira remota em obra ou em
@@ -485,7 +497,7 @@ func pillage_error(unit: Unit) -> String:
 		var mill := lumber_mill_at(unit.cell)
 		if (city and city.ruins.has(unit.cell)) or (mill and mill.pillaged):
 			return "Esta melhoria já foi destruída."
-		return "Não há fazenda nem madeireira nesta casa."
+		return "Não há fazenda, madeireira nem mina nesta casa."
 	if target["owner"] == unit.owner_player:
 		return "Não dá para pilhar as próprias melhorias."
 	if not is_pillageable_by(unit.owner_player, unit.cell):
@@ -495,10 +507,10 @@ func pillage_error(unit: Unit) -> String:
 	return ""
 
 
-## A unidade militar destrói a fazenda ou madeireira inimiga da casa em que
-## está (use pillage_error antes). Custa PILLAGE_COST movimento.
-##   fazenda    : a unidade recupera PILLAGE_FARM_ENERGY de energia;
-##   madeireira : o jogador ganha PILLAGE_MILL_GOLD de ouro.
+## A unidade militar destrói a fazenda, madeireira ou mina inimiga da casa em
+## que está (use pillage_error antes). Custa PILLAGE_COST movimento.
+##   fazenda           : a unidade recupera PILLAGE_FARM_ENERGY de energia;
+##   madeireira ou mina: o jogador ganha PILLAGE_MILL_GOLD de ouro.
 ## Da cidade: os cidadãos que trabalhavam ali são executados (a população
 ## pode chegar a 0). Remota: os Trabalhadores lá dentro são executados. A
 ## melhoria vira ruína, que um Trabalhador do dono pode reconstruir.
@@ -733,6 +745,8 @@ func raze_city(city: City, raider: Player) -> String:
 		ruins_layer.improvements[cell] = {"build": City.Build.FARM, "progress": 0}
 	for cell: Vector2i in city.lumber_mills:
 		ruins_layer.improvements[cell] = {"build": City.Build.LUMBER_MILL, "progress": 0}
+	for cell: Vector2i in city.mines:
+		ruins_layer.improvements[cell] = {"build": City.Build.MINE, "progress": 0}
 	for cell: Vector2i in city.ruins:
 		ruins_layer.improvements[cell] = city.ruins[cell]
 	ruins_layer.add_city(city.cell, city.city_name, city.rank(), city.has_walls())
@@ -740,6 +754,7 @@ func raze_city(city: City, raider: Player) -> String:
 	# Apaga as fazendas pintadas no mapa antes de a cidade sumir
 	city.farms.clear()
 	city.lumber_mills.clear()
+	city.mines.clear()
 	city.ruins.clear()
 	city.sites.clear()
 	city.constructions.clear()
@@ -1133,6 +1148,8 @@ func _on_unit_action(action_id: String) -> void:
 				_cancel_goto(selected_unit)
 		"lumber_mill":
 			_work_lumber_mill_with_selected()
+		"mine":
+			_build_mine_with_selected()
 		"farm":
 			_build_farm_with_selected()
 		"release_worker":
@@ -1186,6 +1203,28 @@ func _work_lumber_mill_with_selected() -> void:
 	hud.show_message("Trabalhador na madeireira (%s, %d/%d trabalhadores)." % [
 			status, mill.workers.size(), LumberMill.MAX_WORKERS], Color(0.75, 1, 0.75))
 	_select_next_unit()
+
+
+## Tecla M: numa colina, a mina (_build_mine_with_selected); no resto, a
+## madeireira (_work_lumber_mill_with_selected).
+func _mine_or_lumber_mill_with_selected() -> void:
+	if selected_unit and game_map.get_terrain(selected_unit.cell) == Terrain.Type.HILLS:
+		_build_mine_with_selected()
+	else:
+		_work_lumber_mill_with_selected()
+
+
+## Tecla M numa colina / botão "Construir mina": o trabalhador selecionado faz
+## uma mina da cidade onde está (colina com ferro, no território de uma cidade sua).
+func _build_mine_with_selected() -> void:
+	var worker := selected_unit
+	if worker == null or not worker.type.can_build_lumber_mill:
+		return
+	var error := improvement_error(worker, City.Build.MINE)
+	if not error.is_empty():
+		hud.show_message(error, Color(1, 0.6, 0.4))
+		return
+	_build_improvement_with(worker, City.Build.MINE)
 
 
 ## Tecla C / botão "Construir fazenda": o trabalhador selecionado faz uma
@@ -1813,8 +1852,18 @@ func _update_unit_actions() -> void:
 					"Fazenda de %s: %d turnos (o trabalhador fica na casa). Pronta, o cidadão que trabalha nela tira +%d de alimento (sem fazenda, +%d)." % [
 						site_city.city_name, City.BUILDS[City.Build.FARM]["cost"] - site.get("progress", 0),
 						site_city.farm_food(unit.cell), site_city.tile_food(unit.cell)]})
+	var on_hill := game_map.get_terrain(unit.cell) == Terrain.Type.HILLS
+	if unit.type.can_build_lumber_mill and on_hill and ruin_at(unit.cell) < 0: # destruída: botão Reconstruir
+		var error := improvement_error(unit, City.Build.MINE)
+		actions.append({"id": "mine",
+				"label": "Continuar mina [M]" if site.get("build", -1) == City.Build.MINE else "Construir mina [M]",
+				"disabled": not error.is_empty(),
+				"tooltip": error if not error.is_empty() else
+					"Mina de %s: %d turnos (o trabalhador fica na casa). Pronta, até %d cidadãos tiram %d de ferro por turno cada (o ferro não se esgota)." % [
+						site_city.city_name, City.BUILDS[City.Build.MINE]["cost"] - site.get("progress", 0), City.MINE_MAX_WORKERS,
+						City.IRON_PER_WORKER]})
 	var existing := lumber_mill_at(unit.cell)
-	if unit.type.can_build_lumber_mill and not (existing and existing.pillaged): # destruída: botão Reconstruir
+	if unit.type.can_build_lumber_mill and not on_hill and not (existing and existing.pillaged): # destruída: botão Reconstruir
 		var error := lumber_mill_error(unit)
 		var city_mill := is_city_mill_site(unit)
 		actions.append({"id": "lumber_mill",
@@ -1843,7 +1892,7 @@ func _update_unit_actions() -> void:
 		var error := pillage_error(unit)
 		actions.append({"id": "pillage", "label": "Pilhar [P]", "disabled": not error.is_empty(),
 				"tooltip": error if not error.is_empty() else
-					"Destrói a melhoria inimiga (%d movimento). Fazenda: +%d de energia. Madeireira: +%d de ouro. Quem trabalhava nela é executado." % [
+					"Destrói a melhoria inimiga (%d movimento). Fazenda: +%d de energia. Madeireira ou mina: +%d de ouro. Quem trabalhava nela é executado." % [
 						PILLAGE_COST, PILLAGE_FARM_ENERGY, PILLAGE_MILL_GOLD]})
 	actions.append({"id": "goto", "label": "Mover [G]",
 			"tooltip": "Escolha uma casa distante: a unidade anda até lá sozinha, turno após turno."})
@@ -1971,6 +2020,8 @@ func _terrain_text(cell: Vector2i) -> String:
 			Terrain.DEFENSE_BONUS[type], Terrain.MOVE_PENALTY[type]]
 	elif type == Terrain.Type.MOUNTAINS:
 		text += " (intransponível)"
+	if game_map.has_iron(cell):
+		text += ", com FERRO (um Trabalhador pode fazer uma mina [M])"
 	if game_map.has_river(cell):
 		text += " à beira do rio (+%d de alimento)" % Terrain.RIVER_FOOD
 	return text
@@ -1988,18 +2039,21 @@ func _city_improvement_text(city: City, cell: Vector2i) -> String:
 			City.BUILDS[ruin["build"]]["name"], city.city_name, ruin["progress"], City.BUILDS[ruin["build"]]["cost"]]
 	if city.lumber_mills.has(cell):
 		return "Madeireira de %s - %d/%d trabalhadores" % [city.city_name, city.lumber_mills[cell], LumberMill.MAX_WORKERS]
+	if city.mines.has(cell):
+		return "Mina de %s - %d/%d trabalhadores (+%d de ferro por turno)" % [
+			city.city_name, city.mines[cell], City.MINE_MAX_WORKERS, city.mines[cell] * City.IRON_PER_WORKER]
 	return "Fazenda de %s - %s" % [city.city_name,
 			"+%d alimento" % city.farm_food(cell) if city.farms[cell] > 0 else "sem trabalhador"]
 
 
-## Painéis do topo (jogador humano): arsenal, ouro e madeira com o saldo por turno.
+## Painéis do topo (jogador humano): arsenal, ouro, madeira e ferro com o saldo por turno.
 func _update_resources() -> void:
 	var player := TurnManager.current_player() if not TurnManager.current_player().is_ai else null
 	for other in players:
 		if player == null and not other.is_ai:
 			player = other
 	if player:
-		hud.set_resources(player.gold, player.gold_per_turn(), player.wood, player.wood_per_turn())
+		hud.set_resources(player.gold, player.gold_per_turn(), player.wood, player.wood_per_turn(), player.iron, player.iron_per_turn())
 		hud.set_science(player)
 		var in_production := {}
 		for weapon: Arsenal.Weapon in Arsenal.NAMES:

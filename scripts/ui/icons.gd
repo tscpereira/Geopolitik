@@ -19,6 +19,13 @@ const WOOD_SHAFT_COLOR := Color8(165, 115, 60)
 const CORN_COLOR := Color8(250, 205, 50)
 const CORN_KERNEL_COLOR := Color8(215, 160, 20)
 const HUSK_COLOR := Color8(90, 170, 60)
+## Cor do texto do ferro (resumo da janela da cidade).
+const IRON_COLOR := Color8(175, 190, 210)
+## Bigorna: o ícone do ferro (no mapa, no HUD e nas janelas; tools/art/gen_art.gd).
+const IRON_TEXTURE: Texture2D = preload("res://assets/sprites/resources/ferro.png")
+## Marcador do ferro no mapa: tamanho (fração da casa) e fundo escuro redondo.
+const IRON_MARKER_SIZE := 0.42
+const IRON_MARKER_BACK := Color(0.08, 0.07, 0.06, 0.55)
 
 
 ## Ícone de uma construção ou unidade (City.Build) para pôr numa linha da
@@ -40,6 +47,7 @@ static func build_icon(build: int, player_color: Color, size := ICON_SIZE) -> Co
 ##                   quadrado escuro com borda na cor do jogador;
 ##   Fazenda         plantação (o mesmo desenho do mapa);
 ##   Madeireira      pilha de toras (o mesmo desenho do mapa);
+##   Mina            boca da galeria na pedra (o mesmo desenho do mapa);
 ##   Prefeitura      prédio romano (frontão e colunas);
 ##   Quartel General espada;
 ##   Marcenaria      serrote;
@@ -60,6 +68,8 @@ static func draw_build(canvas: CanvasItem, build: int, rect: Rect2, player_color
 			City.draw_farm(canvas, rect)
 		City.Build.LUMBER_MILL:
 			LumberMill.draw_icon(canvas, rect)
+		City.Build.MINE:
+			City.draw_mine(canvas, rect)
 		City.Build.CITY_HALL:
 			draw_city_hall(canvas, rect)
 		City.Build.HEADQUARTERS:
@@ -72,6 +82,23 @@ static func draw_build(canvas: CanvasItem, build: int, rect: Rect2, player_color
 			draw_walls(canvas, rect)
 	if info.has("weapon"):
 		draw_weapon(canvas, info["weapon"], rect)
+
+
+## Bigorna (o ferro) em [param rect].
+static func draw_iron(canvas: CanvasItem, rect: Rect2) -> void:
+	canvas.draw_texture_rect(IRON_TEXTURE, rect, false)
+
+
+## Marca de ferro na casa [param cell_rect]: a bigorna sobre um fundo escuro
+## redondo, no canto de cima à esquerda (fica visível com uma unidade na casa,
+## cujo anel cobre a base, e não esbarra nas setas e no número de cidadãos da
+## janela da cidade).
+static func draw_iron_marker(canvas: CanvasItem, cell_rect: Rect2) -> void:
+	var size := cell_rect.size * IRON_MARKER_SIZE
+	var margin := cell_rect.size * 0.04
+	var box := Rect2(cell_rect.position + margin, size)
+	canvas.draw_circle(box.get_center(), size.x * 0.5, IRON_MARKER_BACK)
+	draw_iron(canvas, box.grow(-size.x * 0.06))
 
 
 ## Ícone de uma arma do arsenal (também usado no painel Arsenal do HUD).

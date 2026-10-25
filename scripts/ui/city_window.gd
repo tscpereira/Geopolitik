@@ -110,19 +110,21 @@ func _input(event: InputEvent) -> void:
 		get_viewport().set_input_as_handled()
 
 
-## Clique numa fazenda ou nas setas de uma madeireira do mapa da cidade: põe
+## Clique numa fazenda ou nas setas de uma madeireira ou mina do mapa da cidade: põe
 ## ([param delta] = +1) ou tira (-1) um cidadão. Sem ninguém livre para pôr, avisa.
 func _on_workers_requested(cell: Vector2i, delta: int) -> void:
 	if _read_only:
 		return
 	if delta > 0 and _city.free_citizens() <= 0:
-		_game.hud.show_message("Nenhum cidadão livre em %s: tire alguém de outra fazenda, madeireira, obra ou dos impostos." % _city.city_name,
+		_game.hud.show_message("Nenhum cidadão livre em %s: tire alguém de outra fazenda, madeireira, mina, obra ou dos impostos." % _city.city_name,
 				WARNING_COLOR)
 		return
 	if _city.farms.has(cell):
 		_city.set_farm_worked(cell, delta > 0)
 	elif _city.lumber_mills.has(cell):
 		_city.set_mill_workers(cell, _city.lumber_mills[cell] + delta)
+	elif _city.mines.has(cell):
+		_city.set_mine_workers(cell, _city.mines[cell] + delta)
 	else:
 		_city.set_tile_worked(cell, delta > 0)
 
@@ -331,7 +333,7 @@ func _refresh() -> void:
 	_rebuild_units()
 	_hint.text = ("Cidade de outro jogador: você pode observar, mas não dar ordens. Passe o mouse sobre uma casa para ver detalhes."
 			if _read_only else
-			"Clique numa casa do território para pôr ou tirar o cidadão (sem melhoria: +1 de alimento; fazenda: +2); nas madeireiras, use as setas. Os números brancos indicam os cidadãos trabalhando ali. Fazendas e madeireiras novas são feitas por Trabalhadores, no mapa."
+			"Clique numa casa do território para pôr ou tirar o cidadão (sem melhoria: +1 de alimento; fazenda: +2); nas madeireiras e minas, use as setas. Os números brancos indicam os cidadãos trabalhando ali. Fazendas, madeireiras e minas novas são feitas por Trabalhadores, no mapa."
 			+ (" Casas em vermelho são de outra cidade sua: clique para trazê-las." if _has_transferable() else ""))
 	_rebuild_mood()
 	_rebuild_build_button()
@@ -369,6 +371,10 @@ func _summary_text() -> String:
 	if not _city.lumber_mills.is_empty():
 		lines.append("Madeira: [color=#%s]+%d[/color] por turno   (%d em madeireiras)" % [
 			LumberMill.WOOD_BAR_COLOR.to_html(false), _city.wood_per_turn(), _city.mill_workers(),
+		])
+	if not _city.mines.is_empty():
+		lines.append("Ferro: [color=#%s]+%d[/color] por turno   (%d em minas)" % [
+			Icons.IRON_COLOR.to_html(false), _city.iron_per_turn(), _city.mine_workers(),
 		])
 	if _city.gold_per_turn() > 0:
 		lines.append("Ouro: [color=#%s]+%d[/color] por turno   (impostos da Marcenaria)" % [

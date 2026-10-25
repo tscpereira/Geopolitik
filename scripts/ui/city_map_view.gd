@@ -9,8 +9,9 @@ extends Control
 ## escurecidas.
 ## Alocação dos cidadãos pelo mapa (workers_requested): clicar numa casa do
 ## território (fazenda ou sem melhoria) põe ou tira o cidadão dela; na
-## madeireira, a seta para cima põe e a seta para baixo tira (até
-## LumberMill.MAX_WORKERS). Casa trabalhada mostra o milho com o alimento.
+## madeireira e na mina, a seta para cima põe e a seta para baixo tira (até
+## LumberMill.MAX_WORKERS / City.MINE_MAX_WORKERS). Casa trabalhada mostra o
+## milho com o alimento. Casas com ferro mostram a bigorna no canto.
 ## Casas do raio de ação que são território de outra cidade do mesmo jogador
 ## ficam em vermelho translúcido, com a melhoria da outra cidade por baixo:
 ## clicar numa delas a traz para esta cidade (cell_claimed; ver
@@ -18,7 +19,7 @@ extends Control
 
 ## Clique numa casa vermelha (de outra cidade do jogador, no raio de ação).
 signal cell_claimed(cell: Vector2i)
-## Clique numa fazenda ou nas setas de uma madeireira: [param delta] = +1 põe
+## Clique numa fazenda ou nas setas de uma madeireira ou mina: [param delta] = +1 põe
 ## um cidadão, -1 tira.
 signal workers_requested(cell: Vector2i, delta: int)
 
@@ -85,7 +86,7 @@ func _gui_input(event: InputEvent) -> void:
 			return
 		elif _city.farms.has(cell):
 			workers_requested.emit(cell, -1 if _city.farms[cell] > 0 else 1)
-		elif _city.lumber_mills.has(cell):
+		elif _city.lumber_mills.has(cell) or _city.mines.has(cell):
 			var rect := _cell_rect(cell)
 			if _up_arrow_rect(rect).grow(4).has_point(event.position):
 				workers_requested.emit(cell, 1)
@@ -127,6 +128,8 @@ func _get_tooltip(at_position: Vector2) -> String:
 		text += " (defesa +%d, sem fazenda)" % Terrain.DEFENSE_BONUS[Terrain.Type.HILLS]
 	elif map.get_terrain(cell) == Terrain.Type.MOUNTAINS:
 		text += " (intransponível, não dá para trabalhar)"
+	if map.has_iron(cell):
+		text += ", com ferro"
 	if map.has_river(cell):
 		text += " à beira do rio (+%d alimento)" % Terrain.RIVER_FOOD
 	if _is_transferable(cell):
@@ -147,6 +150,11 @@ func _get_tooltip(at_position: Vector2) -> String:
 	elif _city.lumber_mills.has(cell):
 		text += " - Madeireira, %d/%d trabalhadores (+%d madeira)" % [
 			_city.lumber_mills[cell], LumberMill.MAX_WORKERS, _city.lumber_mills[cell] * LumberMill.WOOD_PER_WORKER]
+		if editable:
+			text += "\nSeta para cima: põe um cidadão. Seta para baixo: tira."
+	elif _city.mines.has(cell):
+		text += " - Mina, %d/%d trabalhadores (+%d ferro; não se esgota)" % [
+			_city.mines[cell], City.MINE_MAX_WORKERS, _city.mines[cell] * City.IRON_PER_WORKER]
 		if editable:
 			text += "\nSeta para cima: põe um cidadão. Seta para baixo: tira."
 	elif _city.ruins.has(cell):
@@ -192,6 +200,8 @@ func _draw() -> void:
 			City.draw_farm(self, rect)
 		elif _city.lumber_mills.has(cell):
 			LumberMill.draw_icon(self, rect)
+		elif _city.mines.has(cell):
+			City.draw_mine(self, rect)
 		elif _city.ruins.has(cell):
 			City.draw_ruin(self, _city.ruins[cell]["build"], rect)
 		elif _city.sites.has(cell):
@@ -213,9 +223,15 @@ func _draw() -> void:
 		elif _city.lumber_mills.has(cell):
 			LumberMill.draw_wood_bar(self, rect, map.wood_left(cell))
 			if editable:
-				_draw_mill_controls(rect, _city.lumber_mills[cell])
+				_draw_mill_controls(rect, _city.lumber_mills[cell], LumberMill.MAX_WORKERS)
 			elif _city.lumber_mills[cell] > 0:
 				_draw_worker(rect, _city.lumber_mills[cell])
+		elif _city.mines.has(cell):
+			# A mina não se esgota: sem barra
+			if editable:
+				_draw_mill_controls(rect, _city.mines[cell], City.MINE_MAX_WORKERS)
+			elif _city.mines[cell] > 0:
+				_draw_worker(rect, _city.mines[cell])
 		elif _city.sites.has(cell):
 			var site: Dictionary = _city.sites[cell]
 			_draw_progress(rect, site["progress"], City.BUILDS[site["build"]]["cost"])
@@ -223,6 +239,8 @@ func _draw() -> void:
 			draw_rect(rect, TRANSFER_TINT)
 		elif cell != _city.cell and not _city.ruins.has(cell) and (_game.claiming_city(cell) or _game.lumber_mill_at(cell)):
 			draw_rect(rect, BLOCKED_TINT)
+		if map.has_iron(cell):
+			Icons.draw_iron_marker(self, rect)
 		if _city.worked_tiles.has(cell):
 			_draw_food(rect, _city.tile_food(cell))
 			_draw_worker(rect, 1)
@@ -253,6 +271,10 @@ func _draw_other_improvement(other: City, cell: Vector2i, rect: Rect2) -> void:
 		LumberMill.draw_icon(self, rect)
 		if other.lumber_mills[cell] > 0:
 			_draw_worker(rect, other.lumber_mills[cell])
+	elif other.mines.has(cell):
+		City.draw_mine(self, rect)
+		if other.mines[cell] > 0:
+			_draw_worker(rect, other.mines[cell])
 	elif other.ruins.has(cell):
 		City.draw_ruin(self, other.ruins[cell]["build"], rect)
 	elif other.sites.has(cell):
@@ -265,6 +287,8 @@ func _improvement_text(other: City, cell: Vector2i) -> String:
 		return " (fazenda, %d %s)" % [other.farms[cell], "cidadão" if other.farms[cell] == 1 else "cidadãos"]
 	if other.lumber_mills.has(cell):
 		return " (madeireira, %d %s)" % [other.lumber_mills[cell], "cidadão" if other.lumber_mills[cell] == 1 else "cidadãos"]
+	if other.mines.has(cell):
+		return " (mina, %d %s)" % [other.mines[cell], "cidadão" if other.mines[cell] == 1 else "cidadãos"]
 	if other.ruins.has(cell):
 		return " (%s destruída)" % String(City.BUILDS[other.ruins[cell]["build"]]["name"]).to_lower()
 	if other.sites.has(cell):
@@ -333,11 +357,12 @@ func _draw_count(center: Vector2, count: int) -> void:
 	draw_string(font, center + Vector2(-width / 2.0, 4), text, HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Color.BLACK)
 
 
-## Madeireira da cidade: seta para cima (põe um cidadão), o número de cidadãos
-## e seta para baixo (tira), na coluna da direita da casa. A seta fica apagada
-## quando não dá para usá-la (madeireira cheia ou sem ninguém livre; vazia).
-func _draw_mill_controls(rect: Rect2, workers: int) -> void:
-	var can_add := workers < LumberMill.MAX_WORKERS and _city.free_citizens() > 0
+## Madeireira ou mina da cidade: seta para cima (põe um cidadão), o número de
+## cidadãos e seta para baixo (tira), na coluna da direita da casa. A seta fica
+## apagada quando não dá para usá-la (cheia, até [param max_workers], ou sem
+## ninguém livre; vazia).
+func _draw_mill_controls(rect: Rect2, workers: int, max_workers: int) -> void:
+	var can_add := workers < max_workers and _city.free_citizens() > 0
 	_draw_arrow(_up_arrow_rect(rect), true, can_add)
 	_draw_count(Vector2(_up_arrow_rect(rect).get_center().x, rect.get_center().y + 4), workers)
 	_draw_arrow(_down_arrow_rect(rect), false, workers > 0)

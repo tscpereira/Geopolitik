@@ -144,7 +144,10 @@ C:\ProjetoGame
 |   |-- sprites/                   Imagens de unidades, objetos
 |   |   |-- cities/                Cidade por classe (povoado...metrópole),
 |   |   |                          intacta e em ruínas
-|   |   `-- improvements/          Fazenda e madeireira destruídas
+|   |   |-- improvements/          Fazenda, madeireira e mina (e as
+|   |   |                          destruídas)
+|   |   `-- resources/             Marcadores dos recursos (ferro.png:
+|   |                              bigorna)
 |   |-- tech/                      Ilustrações das tecnologias
 |   |-- tiles/                     Tilesets do mapa
 |   |-- theme/game_theme.tres     Tema do jogo (tooltips sólidos)
@@ -168,8 +171,10 @@ C:\ProjetoGame
 |                                  (prontos/)
 `-- data/
     |-- maps/
-    |   `-- mapa_teste.png         Mapa de teste 120x75 (era o
-    |                              TemplateMapaTeste.png)
+    |   |-- mapa_teste.png         Mapa de teste 120x75 (era o
+    |   |                          TemplateMapaTeste.png)
+    |   `-- mapa_teste_recursos.json  Recursos estratégicos do mapa
+    |                              (casas com ferro)
     `-- units/
         |-- guerreiro.tres         Tipos de unidade
         |-- lanceiro.tres
@@ -701,13 +706,15 @@ OURO (TESOURO)
 
 RECURSOS ESTRATÉGICOS E MADEIRA
 - Recurso estratégico é um estoque do JOGADOR (não da cidade).
-  Por enquanto, só existe a madeira (Player.wood). Ela é gasta
-  por algumas construções (ver CONSTRUÇÕES QUE GASTAM RECURSOS).
+  Existem a madeira (Player.wood) e, desde 25/10/2026, o ferro
+  (Player.iron; ver FERRO E MINA). A madeira é gasta por algumas
+  construções (ver CONSTRUÇÕES QUE GASTAM RECURSOS); o ferro ainda
+  não é gasto por nada.
 - Painel "Recursos estratégicos" no canto superior direito do
-  HUD: ícone de toras, "Madeira N" e o saldo "+N por turno"
-  (verde quando entra madeira). Quando o estoque muda, o número
-  pisca em verde (subiu) ou vermelho (caiu). Mostra o jogador
-  humano.
+  HUD: uma linha por recurso, com o ícone, o estoque e o saldo
+  "+N por turno" (verde quando entra): toras e "Madeira N";
+  bigorna e "Ferro N". Quando o estoque muda, o número pisca em
+  verde (subiu) ou vermelho (caiu). Mostra o jogador humano.
 - A madeira vem das madeireiras: cada trabalhador tira 1 de
   madeira por turno (LumberMill.WOOD_PER_WORKER), no início da
   vez do dono. Cada madeireira tem no máximo 2 trabalhadores
@@ -727,6 +734,48 @@ RECURSOS ESTRATÉGICOS E MADEIRA
   obra, fazenda ou madeireira; Trabalhadores voltam ao mapa). Uma
   mensagem avisa no topo da tela.
 
+FERRO E MINA (desde 25/10/2026, pedido do usuário)
+- FERRO: recurso estratégico que só aparece em COLINAS. As casas
+  com ferro ficam marcadas com uma BIGORNA sobre um fundo escuro
+  redondo, no canto de cima à esquerda da casa (visível também com
+  uma unidade em cima; Icons.draw_iron_marker; desenho em
+  assets/sprites/resources/ferro.png, gerado por
+  "tools/art/gen_art.gd -- ferro"). O painel de informações mostra
+  "com FERRO (um Trabalhador pode fazer uma mina [M])" e o mapa da
+  janela da cidade também mostra a bigorna.
+- ONDE HÁ FERRO: num arquivo ao lado do mapa,
+  data/maps/mapa_teste_recursos.json ({"ferro": [[x, y], ...]}),
+  porque o PNG só guarda o terreno. Ferro fora de colina é ignorado
+  (aviso no Output). No mapa de exemplo: (59, 38) e (71, 36).
+  GameMap.iron / has_iron; o save guarda as casas (save antigo usa
+  o arquivo). Atenção para quando gerar o executável: o .json
+  precisa entrar no filtro de arquivos da exportação.
+- MINA (City.Build.MINE, City.mines): melhoria de terreno feita pelo
+  Trabalhador numa colina COM ferro do território de uma cidade
+  sua: tecla M (numa colina, M faz a mina; na floresta, a
+  madeireira) ou botão "Construir mina [M]". Custa 4, como as
+  outras: o Trabalhador fica 4 turnos na casa. Sem ferro: "Minas só
+  em colinas com ferro".
+- Pronta, até 2 cidadãos da cidade trabalham nela
+  (City.MINE_MAX_WORKERS), cada um tirando 1 de ferro por turno
+  (City.IRON_PER_WORKER) para o estoque do jogador, no início da
+  vez do dono (também em desordem civil, como a madeira). A mina
+  NÃO se esgota: não tem barra de estoque. Na janela da cidade:
+  setas para pôr e tirar cidadãos (como na madeireira) e "Ferro: +N
+  por turno (N em minas)" no resumo. A realocação automática põe
+  quem sobrar nas minas com vaga, logo depois das madeireiras.
+- No mapa: o desenho da mina (boca da galeria na pedra escorada com
+  madeira, trilhos, vagonete com minério e picareta;
+  assets/sprites/improvements/mina.png), com a bigorna no canto.
+- Pilhagem: como a madeireira (+5 de ouro, cidadãos executados,
+  vira ruína; mina_destruida.png); um Trabalhador do dono
+  reconstrói (R). Cidade destruída: a mina vira ruína sem dono.
+  Passar a casa para outra cidade sua leva a mina junto.
+- A MÁQUINA: os Trabalhadores fazem a mina no ferro do território
+  depois das fazendas e da madeireira que falta (ela não faz
+  Trabalhadores só para isso), e os cidadãos que sobram depois dos
+  impostos vão para as minas (o ferro ainda não tem uso).
+
 TRABALHADOR (data/units/trabalhador.tres)
 - Ataque 0, Defesa 0, Movimento 1. Sprite provisório: boneco com
   um machado (assets/sprites/units/trabalhador.png).
@@ -739,7 +788,9 @@ TRABALHADOR (data/units/trabalhador.tres)
       "Can Build Farm" do .tres), numa pradaria ou cerrado do
       território de uma cidade sua;
     * Madeireira da cidade: tecla M ou "Construir madeireira [M]"
-      numa floresta do território de uma cidade sua.
+      numa floresta do território de uma cidade sua;
+    * Mina: tecla M ou "Construir mina [M]" numa colina com ferro
+      do território de uma cidade sua (ver FERRO E MINA).
   O Trabalhador fica na casa (martelo amarelo, como na
   reconstrução) e faz 1 ponto por turno, no início da sua vez,
   até o custo (4): 4 turnos. A obra aparece no mapa (terra arada
@@ -1812,6 +1863,7 @@ PILHAGEM (Game.pillage, tecla P)
     pilhar FAZENDA     a unidade recupera 30 de energia
                        (PILLAGE_FARM_ENERGY), até a energia máxima
     pilhar MADEIREIRA  o jogador ganha 5 de ouro (PILLAGE_MILL_GOLD)
+    pilhar MINA        o mesmo da madeireira (+5 de ouro)
 - A melhoria é danificada e perde a função: vira ruína (desenho
   novo, ver abaixo), não produz mais e a casa continua ocupada (a
   cidade não pode fazer outra fazenda nela). A floresta da
@@ -1970,13 +2022,13 @@ SALVAR E CARREGAR (scripts/save/save_game.gd)
 - O que é salvo: turno e vez (TurnManager), terreno de cada casa
   (florestas que viraram cerrado ou pradaria) e a madeira que
   resta em cada floresta (GameMap), e cada jogador (Player) com
-  ouro, madeira, arsenal, tecnologias pesquisadas, pesquisa atual
+  ouro, madeira, ferro, arsenal, tecnologias pesquisadas, pesquisa atual
   e o progresso de cada uma, personalidade da máquina e "turnos
   esperando" dela; as unidades (Unit: tipo, casa, movimentos,
   energia, fortificada, escondida na cidade, ordem "Mover",
   reconstruindo); as madeireiras remotas (LumberMill: progresso,
   destruída e os Trabalhadores lá dentro); as cidades (City:
-  população, estoque, fazendas, madeireiras, ruínas, obras com
+  população, estoque, fazendas, madeireiras, minas, ruínas, obras com
   progresso, trabalhadores e madeira/armas pagas, prédios,
   trabalhadores dos prédios, capital e território).
 - Cada classe tem to_dict() e from_dict()/apply_dict();
@@ -2013,7 +2065,8 @@ CÂMERA E CONTROLES
   território de uma cidade sua).
 - M: o Trabalhador selecionado constrói uma madeireira na
   floresta: da cidade no território, remota fora dele (ou entra
-  na remota que já existe ali).
+  na remota que já existe ali). Numa colina com ferro do
+  território, constrói uma mina.
 - Clique na sua madeireira remota: seleciona a madeireira
   (botão "Retirar trabalhador").
 - P: a unidade militar selecionada pilha a fazenda ou madeireira
@@ -2048,9 +2101,10 @@ HUD (scripts/ui/hud.gd)
   (só na sua vez). Hoje: "Construir nova cidade [B]" (Colono),
   "Construir fazenda [C]" (Trabalhador em pradaria ou cerrado),
   "Construir madeireira [M]" / "Trabalhar na madeireira [M]"
-  (Trabalhador; "Continuar ..." numa obra parada), "Reconstruir [R]" e "Migrar para <cidade> [J]"
+  (Trabalhador; "Continuar ..." numa obra parada), "Construir mina
+  [M]" (Trabalhador numa colina), "Reconstruir [R]" e "Migrar para <cidade> [J]"
   (Trabalhador, quando fazem sentido), "Pilhar [P]" (unidade
-  militar numa fazenda ou madeireira pronta), "Mover [G]",
+  militar numa fazenda, madeireira ou mina pronta), "Mover [G]",
   "Fortificar [F]" e "Pular turno [Espaço]" (todas). Com uma
   madeireira remota selecionada: "Retirar trabalhador".
 - Canto superior direito: painel CIÊNCIA (frasco, "+N por
@@ -2194,7 +2248,15 @@ Screenshots também confirmaram o visual.
 [x] Madeireira da cidade (até 2 cidadãos, 1 de madeira cada)
 [x] Trabalhador e madeireira remota (tecla M)
 [x] Construções que gastam madeira (Quartel General 15, Guerreiro 2)
-[ ] Outros recursos estratégicos (ex.: pedra, ferro)
+[x] Ferro (só em colinas, marcado com uma bigorna) e a Mina feita
+    pelo Trabalhador (até 2 cidadãos, +1 de ferro cada; não se
+    esgota); estoque no HUD (25/10/2026)
+[ ] Ferro: o que vai gastá-lo (armas e unidades de ferro, ex.:
+    espada, legionário)
+[ ] Ferro: definir no PNG do mapa (hoje vem do arquivo
+    mapa_teste_recursos.json) ou espalhar sozinho nas colinas
+[ ] Mina remota (fora do território), como a madeireira remota
+[ ] Outros recursos estratégicos (ex.: pedra, cavalos)
 [x] IA: produzir Trabalhadores e construir madeireiras
 [x] Madeireiras remotas: pilhagem pelo inimigo (Trabalhadores
     executados)
@@ -3173,6 +3235,35 @@ Screenshots também confirmaram o visual.
   30, fortificado 3, painel), 38 no total, todas passando; testes do
   Bronze, da Muralha, das regras dos rios e do ataque pelo modo Mover
   passaram.
+- FERRO E MINA (pedido do usuário): novo recurso estratégico, o
+  ferro, só em colinas, marcado no mapa com uma bigorna; no mapa de
+  exemplo, em (59, 38) e (71, 36) (data/maps/mapa_teste_recursos.json).
+  Nova melhoria Mina, feita pelo Trabalhador (M numa colina com
+  ferro do território): até 2 cidadãos, +1 de ferro cada por turno,
+  e não se esgota (sem barra). "Ferro N +N por turno" no painel de
+  recursos estratégicos do HUD. A mina segue as regras da
+  madeireira da cidade: setas na janela da cidade, realocação
+  automática, pilhagem (+5 de ouro), reconstrução, cidade destruída,
+  passagem de casa entre cidades e save. A máquina faz minas e põe
+  nelas quem sobra. Desenhos novos (gen_art.gd -- ferro): mina,
+  mina destruída e bigorna.
+- Validação: teste com 32 verificações (ferro nas duas colinas,
+  painel, HUD com 0; mina no ferro do território; recusada em
+  colina sem ferro, floresta e pradaria; botão "Construir mina [M]"
+  no lugar do da madeireira; tecla M começa a obra; pronta em 4
+  turnos com um cidadão; no máximo 2; +2 por turno; estoque 2 e
+  102 depois de 51 turnos, sem esgotar; HUD "Ferro 102 +2 por
+  turno"; save e save antigo; pilhagem com +5 de ouro e 2 cidadãos
+  executados; reconstrução; ruína sem dono), mais screenshots (mapa
+  com a mina e a bigorna, bigorna livre e com uma unidade em cima,
+  HUD e janela da cidade com as setas), revisados e ajustados (a
+  bigorna foi para o canto de cima à esquerda: embaixo, o anel da
+  unidade a cobria). Testes do relevo, do Bronze, da Muralha, dos
+  rios, das regras dos rios, das obras do Trabalhador, do ataque
+  pelo modo Mover, da lista e do carregamento do save do usuário
+  passaram; partida de 100 rodadas máquina x máquina sem erros (7 e
+  8 de 9 marcos, como antes; ninguém chegou ao ferro, que fica fora
+  dos territórios iniciais).
 
 --------------------------------------------------------------
 7. BACKLOG (ideias para depois)

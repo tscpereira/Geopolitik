@@ -27,6 +27,9 @@ Ele grava em assets/:
     tiles/colinas.png e montanhas.png (sem emenda; o relevo visto de cima é
         pintado pelo shader do terreno). Só estes dois:
         godot_console.cmd --path . --script tools/art/gen_art.gd -- relevo
+    sprites/improvements/mina.png e mina_destruida.png, sprites/resources/ferro.png
+        (bigorna). Só estes três:
+        godot_console.cmd --path . --script tools/art/gen_art.gd -- ferro
 
 COR DO JOGADOR: o PNG principal tem a parte do time (túnicas, tabardos,
 crista, escudo, estandartes) em preto, e o _time.png (tons de cinza) diz

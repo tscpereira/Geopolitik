@@ -161,6 +161,22 @@ size_flags_vertical = 4
 theme_override_font_sizes/normal_font_size = 18
 text = "Madeira 0"
 
+[node name="IronRow" type="HBoxContainer" parent="HUD/TopRight/ResourcePanel/VBox"]
+theme_override_constants/separation = 8
+
+[node name="IronIcon" type="Control" parent="HUD/TopRight/ResourcePanel/VBox/IronRow"]
+custom_minimum_size = Vector2(28, 28)
+
+[node name="IronLabel" type="RichTextLabel" parent="HUD/TopRight/ResourcePanel/VBox/IronRow"]
+custom_minimum_size = Vector2(240, 0)
+bbcode_enabled = true
+fit_content = true
+scroll_active = false
+autowrap_mode = 0
+size_flags_vertical = 4
+theme_override_font_sizes/normal_font_size = 18
+text = "Ferro 0"
+
 [node name="InfoPanel" type="PanelContainer" parent="HUD"]
 anchors_preset = 2
 anchor_top = 1.0

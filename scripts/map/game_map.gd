@@ -39,6 +39,13 @@ var city_owners := {}
 ## unidade usa para a defesa da Muralha (Unit.walls_defense_bonus).
 var cities := {}
 
+## Casas com ferro (recurso estratégico; só em colinas): {casa: true}. Vêm do
+## arquivo de recursos do mapa (load_resources) e do save. A bigorna aparece
+## no canto delas (ResourceLayer; onde há mina, a cidade a desenha de novo por
+## cima da mina).
+var iron := {}
+var _resource_layer: Node2D
+
 var _terrain := PackedByteArray()
 ## Rios: cada um é a lista dos cantos da grade por onde passa (ver Rivers).
 var rivers: Array = []
@@ -92,6 +99,12 @@ func _ready() -> void:
 	_river_layer.draw.connect(func() -> void: Rivers.draw(_river_layer, self, rivers, TILE_SIZE))
 	add_child(_river_layer)
 	move_child(_river_layer, 1)
+	# Bigornas das casas com ferro, por cima dos rios
+	_resource_layer = Node2D.new()
+	_resource_layer.name = "ResourceLayer"
+	_resource_layer.draw.connect(_draw_resources)
+	add_child(_resource_layer)
+	move_child(_resource_layer, 2)
 
 
 ## Monta o mapa a partir de uma imagem: cada pixel vira uma casa.
@@ -115,6 +128,42 @@ func load_from_image(image: Image) -> void:
 	material.set_shader_parameter("improvement_map", _improvement_map)
 	material.set_shader_parameter("map_size", Vector2(width, height))
 	set_rivers(Rivers.generate(self))
+
+
+## Lê os recursos estratégicos do mapa de um JSON ({"ferro": [[x, y], ...]}).
+## Ferro fora das colinas é ignorado (com um aviso no Output).
+func load_resources(path: String) -> void:
+	iron = {}
+	if not FileAccess.file_exists(path):
+		_resource_layer.queue_redraw()
+		return
+	var data: Variant = JSON.parse_string(FileAccess.get_file_as_string(path))
+	if not data is Dictionary:
+		push_warning("%s não é um JSON válido." % path)
+		return
+	for entry: Array in data.get("ferro", []):
+		var cell := Vector2i(int(entry[0]), int(entry[1]))
+		if is_in_bounds(cell) and get_terrain(cell) == Terrain.Type.HILLS:
+			iron[cell] = true
+		else:
+			push_warning("Ferro em %s ignorado: o ferro só aparece em colinas." % cell)
+	_resource_layer.queue_redraw()
+
+
+func has_iron(cell: Vector2i) -> bool:
+	return iron.has(cell)
+
+
+func iron_cells() -> Array[Vector2i]:
+	var cells: Array[Vector2i] = []
+	cells.assign(iron.keys())
+	return cells
+
+
+## Bigorna no canto de cada casa com ferro (Icons.draw_iron_marker).
+func _draw_resources() -> void:
+	for cell: Vector2i in iron:
+		Icons.draw_iron_marker(_resource_layer, Rect2(Vector2(cell) * TILE_SIZE, Vector2.ONE * TILE_SIZE))
 
 
 ## Troca os rios do mapa (gerados ou de um save) e redesenha.
@@ -174,10 +223,10 @@ func set_terrain(cell: Vector2i, type: Terrain.Type) -> void:
 
 
 ## Terreno de cada casa (as florestas viram cerrado ou pradaria durante o jogo),
-## a madeira que resta nas florestas exploradas e os rios, para o save.
+## a madeira que resta nas florestas exploradas, o ferro e os rios, para o save.
 func to_dict() -> Dictionary:
 	return {"width": width, "height": height, "terrain": Marshalls.raw_to_base64(_terrain),
-			"wood": SaveGame.cell_map_to_json(_wood),
+			"wood": SaveGame.cell_map_to_json(_wood), "iron": SaveGame.cells_to_json(iron_cells()),
 			"rivers": rivers.map(func(river: Array) -> Array: return SaveGame.cells_to_json(river))}
 
 
@@ -198,6 +247,12 @@ func from_dict(data: Dictionary) -> void:
 	# Save antigo (sem rios): ficam os rios gerados ao montar o mapa
 	if data.has("rivers"):
 		set_rivers(data["rivers"].map(func(river: Array) -> Array: return SaveGame.json_to_cells(river)))
+	# Save antigo (sem ferro): fica o ferro do arquivo de recursos do mapa
+	if data.has("iron"):
+		iron = {}
+		for iron_cell in SaveGame.json_to_cells(data["iron"]):
+			iron[iron_cell] = true
+	_resource_layer.queue_redraw()
 	_improvement_image.fill(Color8(Improvement.NONE, 0, 0))
 	_improvement_map.update(_improvement_image)
 

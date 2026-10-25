@@ -18,6 +18,8 @@ extends SceneTree
 ##   tiles/pradaria.png, floresta.png, agua.png, cerrado.png (sem emenda)
 ##   tiles/colinas.png, montanhas.png (sem emenda; o relevo visto de cima é
 ##     pintado pelo shader do terreno; só estes dois: "-- relevo")
+##   sprites/improvements/mina.png, mina_destruida.png e
+##     sprites/resources/ferro.png (bigorna); só estes três: "-- ferro"
 ##
 ## COR DO JOGADOR: cada desenho com cor de time é feito duas vezes, com a cor
 ## preta e branca. O PNG principal é a versão preta; a máscara (_time.png, em
@@ -35,6 +37,9 @@ const UNITS_DIR := "res://assets/sprites/units/"
 const CITIES_DIR := "res://assets/sprites/cities/"
 const IMPROVEMENTS_DIR := "res://assets/sprites/improvements/"
 const TILES_DIR := "res://assets/tiles/"
+## Marcadores dos recursos estratégicos (ferro: bigorna, ANVIL_SIZE px).
+const RESOURCES_DIR := "res://assets/sprites/resources/"
+const ANVIL_SIZE := 64
 ## Pedra do chão das montanhas.
 const ROCK_L := Color8(152, 144, 130)
 ## Cidades: 128x128 (1,6 casa, City.SPRITE_SIZE), desenhadas num espaço de 112.
@@ -116,6 +121,13 @@ func _run() -> void:
 		print("ok")
 		quit()
 		return
+	# Só a mina e a bigorna do ferro:
+	#   godot_console.cmd --path . --script tools/art/gen_art.gd -- ferro
+	if args.size() >= 1 and args[0] == "ferro":
+		await iron_art()
+		print("ok")
+		quit()
+		return
 	if args.size() >= 2 and args[0] == "ruinas":
 		for file in DirAccess.get_files_at(args[1]):
 			var city_name := file.get_basename()
@@ -146,6 +158,7 @@ func _run() -> void:
 	for tile_name: String in tiles:
 		shrink(await render(S, tiles[tile_name], false), S, false, false).save_png(TILES_DIR + tile_name + ".png")
 	await relief_art()
+	await iron_art()
 	print("ok")
 	quit()
 
@@ -1409,3 +1422,87 @@ func mountain_ground_tile() -> void:
 			var p: Vector2 = s[0] + o
 			c.draw_colored_polygon(ell(p + Vector2(0.8, 1.0), Vector2(s[1], s[1] * 0.6), 0, TAU, 12), Color(0.08, 0.07, 0.05, 0.4))
 			sphere(p, Vector2(s[1], s[1] * 0.75), lit(ROCK_L, s[2] * 0.9)))
+
+
+# --- Ferro: mina e bigorna -----------------------------------------------------------
+
+## Mina (80x80), a ruína dela e a bigorna que marca o ferro no mapa e no HUD.
+func iron_art() -> void:
+	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(RESOURCES_DIR))
+	team = BURNT_CLOTH
+	var mine := await render(S, mine_camp)
+	shrink(mine.duplicate(), S).save_png(IMPROVEMENTS_DIR + "mina.png")
+	(await ruin(mine, "mina", S, float(S))).save_png(IMPROVEMENTS_DIR + "mina_destruida.png")
+	shrink(await render(ANVIL_SIZE, anvil, true, float(S)), ANVIL_SIZE).save_png(RESOURCES_DIR + "ferro.png")
+
+
+## Mina de ferro na encosta: afloramento de pedra com a boca da galeria
+## escorada por madeira, trilhos saindo dela, vagonete com minério, monte de
+## minério e uma picareta.
+func mine_camp() -> void:
+	_rng.seed = 21
+	ground_base(Vector2(40, 54), Vector2(37, 22), 0.85)
+	# Afloramento de pedra (a encosta onde entra a galeria)
+	var rock := pts([8, 50, 12, 34, 22, 22, 34, 15, 48, 14, 60, 20, 70, 32, 73, 50, 56, 54, 24, 54])
+	shaded(rock, Color8(128, 118, 104), 0.5)
+	for i in 14:
+		var p := Vector2(_rng.randf_range(14, 66), _rng.randf_range(20, 48))
+		var w := _rng.randf_range(3, 7)
+		line(p, p + Vector2(w, _rng.randf_range(-1.5, 1.5)), Color8(84, 76, 66), 0.45)
+		line(p + Vector2(0, -0.6), p + Vector2(w * 0.8, -0.6), Color8(168, 158, 140), 0.3)
+	for i in 6:
+		var p := Vector2(_rng.randf_range(16, 64), _rng.randf_range(22, 46))
+		sphere(p, Vector2(1.6, 1.2), Color8(140, 74, 52)) # veios de ferro (vermelho-ferrugem)
+	# Boca da galeria: escuridão com a moldura de madeira
+	var mouth := ell(Vector2(40, 50), Vector2(9.5, 15), PI, TAU, 24)
+	c.draw_colored_polygon(mouth, Color8(20, 16, 14))
+	c.draw_colored_polygon(ell(Vector2(40, 50), Vector2(6.5, 11), PI, TAU, 20), Color8(8, 6, 6))
+	for x in [30.5, 49.5]:
+		tube([Vector2(x, 52), Vector2(x, 35)], [1.5, 1.4], WOOD)
+	tube([Vector2(28.5, 35.5), Vector2(51.5, 34.5)], [1.7, 1.7], WOOD_D)
+	for x in [33.0, 40.0, 47.0]:
+		line(Vector2(x, 34), Vector2(x - 1, 31), WOOD_D, 0.6) # escoras do teto
+	# Trilhos saindo da galeria, com dormentes
+	for k in 7:
+		var t := k / 6.0
+		var center := Vector2(40, 52).lerp(Vector2(58, 74), t)
+		var half := lerpf(3.0, 5.5, t)
+		line(center - Vector2(half + 1, 0), center + Vector2(half + 1, 0), Color8(96, 70, 44), 1.0)
+	for side in [-1.0, 1.0]:
+		line(Vector2(40 + side * 3.0, 52), Vector2(58 + side * 5.5, 74), STEEL, 0.6)
+	# Vagonete com minério
+	c.draw_colored_polygon(ell(Vector2(56, 66), Vector2(9, 2.5), 0, TAU, 20), Color(0.05, 0.04, 0.03, 0.4))
+	var cart := pts([47, 55, 64, 55, 62, 64, 49, 64])
+	shaded(cart, Color8(88, 84, 82), 0.5)
+	line(Vector2(47, 55), Vector2(64, 55), Color8(150, 150, 150), 0.8)
+	for x in [51.0, 60.0]:
+		c.draw_circle(Vector2(x, 65), 2.0, Color8(40, 38, 36))
+		c.draw_circle(Vector2(x, 65), 0.8, Color8(120, 118, 114))
+	for i in 7:
+		sphere(Vector2(_rng.randf_range(49, 62), _rng.randf_range(52, 55)), Vector2(2.0, 1.6),
+				[Color8(118, 64, 46), Color8(76, 72, 70)][i % 2])
+	# Monte de minério e picareta
+	c.draw_colored_polygon(ell(Vector2(20, 64), Vector2(10, 3), 0, TAU, 20), Color(0.05, 0.04, 0.03, 0.4))
+	for i in 12:
+		var p := Vector2(_rng.randf_range(12, 28), _rng.randf_range(57, 64))
+		sphere(p, Vector2(2.4, 1.9), [Color8(126, 66, 46), Color8(84, 78, 74), Color8(150, 84, 58)][i % 3])
+	line(Vector2(26, 66), Vector2(34, 56), WOOD, 0.9)
+	var head := PackedVector2Array([Vector2(30.5, 55.5), Vector2(34, 55.8), Vector2(37.5, 58.5), Vector2(34.2, 57.2), Vector2(31, 57.4)])
+	shaded(head, STEEL, 0.5)
+
+
+## Bigorna de ferro (o marcador do ferro): chifre à esquerda, mesa em cima,
+## cintura estreita e base larga, sobre uma sombra.
+func anvil() -> void:
+	c.draw_colored_polygon(ell(Vector2(41, 64), Vector2(30, 6), 0, TAU, 32), Color(0.04, 0.04, 0.05, 0.45))
+	var body := pts([6, 30, 22, 24, 70, 24, 74, 26, 73, 34, 58, 37, 52, 45, 64, 54, 66, 62, 18, 62, 20, 54, 32, 45, 28, 37, 20, 36])
+	shaded(body, Color8(86, 90, 98), 0.55)
+	# Mesa (o topo, onde bate o martelo) e o brilho do metal
+	shaded(pts([22, 24, 70, 24, 74, 26, 72, 28.5, 24, 28.5]), Color8(172, 178, 186), 0.4)
+	line(Vector2(26, 25.5), Vector2(66, 25.5), Color(1, 1, 1, 0.55), 0.8)
+	line(Vector2(9, 29.5), Vector2(21, 25.5), Color(1, 1, 1, 0.4), 0.7)
+	# Sombra na cintura e na base
+	c.draw_colored_polygon(pts([28, 37, 58, 37, 52, 45, 32, 45]), Color(0, 0, 0, 0.25))
+	line(Vector2(19, 61), Vector2(65, 61), Color(0, 0, 0, 0.3), 1.2)
+	# Furo da mesa (o "furo do punção")
+	c.draw_rect(Rect2(60, 25, 3, 2.2), Color8(36, 38, 42))
