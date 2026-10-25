@@ -20,8 +20,8 @@ extends SceneTree
 ##     pintado pelo shader do terreno; só estes dois: "-- relevo")
 ##   sprites/improvements/mina.png, mina_destruida.png e
 ##     sprites/resources/ferro.png (bigorna); só estes três: "-- ferro"
-##   sprites/units/catapulta.png, cavalaria_leve.png, bigas.png (com _time.png;
-##     provisórias, até os desenhos do ChatGPT); só estas: "-- unidades"
+##   sprites/units/catapulta.png, bigas.png (com _time.png; provisórias, até os
+##     desenhos do ChatGPT); só estas: "-- unidades"
 ##
 ## COR DO JOGADOR: cada desenho com cor de time é feito duas vezes, com a cor
 ## preta e branca. O PNG principal é a versão preta; a máscara (_time.png, em
@@ -1519,12 +1519,13 @@ func anvil() -> void:
 
 # --- Unidades da era antiga (provisórias, até os desenhos do ChatGPT) --------------
 
-## Catapulta, Cavalaria Leve e Bigas (80x80, com a máscara da cor do time).
-## Desenhos provisórios: os prompts 15 a 17 de PROMPTS-CHATGPT.txt pedem os
-## definitivos no estilo das outras unidades.
+## Catapulta e Bigas (80x80, com a máscara da cor do time). Desenhos
+## provisórios: os prompts 15 e 17 de PROMPTS-CHATGPT.txt pedem os definitivos
+## no estilo das outras unidades. A Cavalaria Leve já é o desenho do ChatGPT
+## (tools/art/import_unit.gd, 25/10/2026); light_cavalry() fica só como
+## referência e não é mais gravada.
 func ancient_units_art() -> void:
 	await save_team_art(UNITS_DIR + "catapulta", S, catapult)
-	await save_team_art(UNITS_DIR + "cavalaria_leve", S, light_cavalry)
 	await save_team_art(UNITS_DIR + "bigas", S, chariot)
 
 

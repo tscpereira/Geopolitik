@@ -160,6 +160,9 @@ C:\ProjetoGame
 |       |                          "-- relevo": só o chão das
 |       |                          colinas e montanhas)
 |       |-- import_sheet.gd        Importa a folha do ChatGPT
+|       |-- import_unit.gd         Importa UM desenho de unidade do
+|       |                          ChatGPT (fundo xadrez, azul do time)
+|       |                          direto para assets/sprites/units/
 |       |-- variantes_cidade.gd    Monta as variantes das cidades
 |       |                          (capital/normal, com/sem muralha)
 |       |-- guerreiro_rustico.gd   Monta o Guerreiro rústico (a partir
@@ -466,9 +469,12 @@ UNIDADES (scripts/units/)
   10 de madeira), Cavalaria Leve (15 + 1 de população + 1 Lança) e
   Bigas (20 + 1 de população + 5 de madeira + 1 Espada Curta). A
   Cavalaria Leve e as Bigas são cavalaria (o Lanceiro tem +1 contra
-  elas). Desenhos PROVISÓRIOS feitos por código
-  ("tools/art/gen_art.gd -- unidades", com a cor do time); os prompts
-  15 a 17 de tools/art/PROMPTS-CHATGPT.txt pedem os definitivos.
+  elas). A Cavalaria Leve usa o desenho do ChatGPT trazido pelo
+  usuário (25/10/2026: cavaleiro de crista e capa na cor do time, com
+  lança), importado por tools/art/import_unit.gd. Catapulta e Bigas
+  ainda são desenhos PROVISÓRIOS feitos por código ("tools/art/gen_art.gd
+  -- unidades", com a cor do time); os prompts 15 e 17 de
+  tools/art/PROMPTS-CHATGPT.txt pedem os definitivos.
 - LANCEIRO (desde 25/10/2026, pedido do usuário; exige a
   tecnologia Trabalho em Bronze): +1 de ataque e +1 de defesa
   quando luta contra cavalaria (campo "Anti Cavalry Bonus" do
@@ -3456,6 +3462,15 @@ Screenshots também confirmaram o visual.
   a linha de ciência, Muralha sem e o Quartel com "Nada em produção."),
   mais screenshots; testes do ferro, da era antiga, das obras do
   Trabalhador, do ataque pelo modo Mover e da lista passaram.
+- CAVALARIA LEVE COM O DESENHO DO CHATGPT (pedido do usuário). Novo
+  importador de um desenho avulso, tools/art/import_unit.gd
+  ("-- <imagem> <nome>"): tira o fundo xadrez pintado (inclusive os
+  bolsões fechados entre as patas e perto do pescoço), separa o azul
+  do time (capa, crista, manta) na máscara, reduz para 80x80 com os pés
+  em y = 73 e grava em assets/sprites/units/, com o original e uma
+  prévia em tools/art/chatgpt/. O gen_art.gd não gera mais a Cavalaria
+  Leve. Validação: prévia nas duas cores e screenshot no jogo (zoom 1,4
+  e 0,75) ao lado das outras unidades militares.
 
 --------------------------------------------------------------
 7. BACKLOG (ideias para depois)

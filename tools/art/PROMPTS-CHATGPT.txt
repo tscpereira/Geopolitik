@@ -256,6 +256,9 @@ and the headband are in the team color. No metal armor, no helmet. Full
 body, standing, facing three-quarter to the right. Transparent background.
 
 
+Para importar um desenho avulso de unidade (fundo xadrez, azul do time):
+  godot_console.cmd --headless --path . --script tools/art/import_unit.gd -- <imagem> <nome>
+
 PROMPT 15  ->  salvar como: catapulta.png   (desde 25/10/2026)
 Hoje é um desenho provisório feito por código (tools/art/gen_art.gd --
 unidades). Para o definitivo:
@@ -270,7 +273,8 @@ background.
 
 
 PROMPT 16  ->  salvar como: cavalaria_leve.png   (desde 25/10/2026)
-Provisório feito por código. Para o definitivo:
+JÁ APLICADO (25/10/2026): o desenho do ChatGPT foi importado com
+tools/art/import_unit.gd. Para trocar por outro:
 Following all the rules above: an ancient light cavalryman (Greek/Thracian
 horseman), riding a light bay horse without armor, facing three-quarter to
 the right. The rider wears a short tunic and a short saddle cloth in the
