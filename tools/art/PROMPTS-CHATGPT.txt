@@ -256,6 +256,42 @@ and the headband are in the team color. No metal armor, no helmet. Full
 body, standing, facing three-quarter to the right. Transparent background.
 
 
+PROMPT 15  ->  salvar como: catapulta.png   (desde 25/10/2026)
+Hoje é um desenho provisório feito por código (tools/art/gen_art.gd --
+unidades). Para o definitivo:
+Following all the rules above: an ancient Greek/Roman torsion catapult
+(onager style), a siege engine seen from the side, facing right. Heavy
+wooden frame on four solid wooden wheels with bronze hubs, a thick bundle
+of twisted rope at the base of the throwing arm, the arm pulled back with a
+leather sling cup holding a round stone, a padded crossbeam stop. A small
+pennant on a pole and a painted band on the frame are in the team color. No
+crew. Same painting style and lighting as the other units. Transparent
+background.
+
+
+PROMPT 16  ->  salvar como: cavalaria_leve.png   (desde 25/10/2026)
+Provisório feito por código. Para o definitivo:
+Following all the rules above: an ancient light cavalryman (Greek/Thracian
+horseman), riding a light bay horse without armor, facing three-quarter to
+the right. The rider wears a short tunic and a short saddle cloth in the
+team color, bare legs, a simple bronze or felt cap (no heavy helmet), and
+holds a long spear raised in the right hand. Fast and agile look, no
+shield. Same body proportions and painting style as the hoplite and the
+horseman. Transparent background.
+
+
+PROMPT 17  ->  salvar como: bigas.png   (desde 25/10/2026)
+Provisório feito por código. Para o definitivo:
+Following all the rules above: an ancient two-horse war chariot (biga), seen
+from the side, facing right. Two horses side by side pull a light chariot
+with two large spoked wooden wheels; the front of the chariot box is
+painted in the team color with a bronze rim. One charioteer stands inside,
+wearing a crested bronze helmet and a tunic in the team color, holding the
+reins, with a short sword at the hip. Same painting style as the other
+units. The whole group fits in a square, feet and wheels on the ground.
+Transparent background.
+
+
 ------------------------------------------------------------------------
 O QUE EU FAÇO DEPOIS (para referência)
 ------------------------------------------------------------------------

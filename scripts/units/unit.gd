@@ -97,7 +97,7 @@ func setup(p_type: UnitType, p_owner: Player, p_cell: Vector2i, map: GameMap) ->
 	owner_player = p_owner
 	cell = p_cell
 	_map = map
-	moves_left = movement
+	moves_left = max_points()
 	energy = max_energy
 
 
@@ -105,7 +105,7 @@ func setup(p_type: UnitType, p_owner: Player, p_cell: Vector2i, map: GameMap) ->
 ## guarda isso é a madeireira (LumberMill.to_dict).
 func to_dict() -> Dictionary:
 	return {
-		"type": type.resource_path, "cell": SaveGame.cell_to_json(cell), "moves_left": moves_left,
+		"type": type.resource_path, "cell": SaveGame.cell_to_json(cell), "move_points": moves_left,
 		"energy": energy, "fortified": fortified, "hidden_in_city": hidden_in_city,
 		"goto": SaveGame.cell_to_json(goto_target), "rebuilding": rebuilding,
 	}
@@ -113,7 +113,8 @@ func to_dict() -> Dictionary:
 
 ## Volta ao estado salvo (depois de setup, que já deu o tipo, o dono e a casa).
 func apply_dict(data: Dictionary) -> void:
-	moves_left = int(data["moves_left"])
+	# Save antigo: "moves_left" em movimentos inteiros
+	moves_left = int(data["move_points"]) if data.has("move_points") else int(data["moves_left"]) * Movement.POINTS
 	energy = int(data["energy"])
 	fortified = data["fortified"]
 	hidden_in_city = data["hidden_in_city"]
@@ -145,8 +146,19 @@ func river_defense_bonus(attacker_cell: Vector2i) -> int:
 
 
 func reset_moves() -> void:
-	moves_left = movement
+	moves_left = max_points()
 	_update_exhausted_look()
+
+
+## Movimento cheio em pontos (Movement.POINTS por movimento).
+func max_points() -> int:
+	return movement * Movement.POINTS
+
+
+## Movimentos que sobram, para mostrar: "1", "1,5", "0,5".
+func moves_text() -> String:
+	var whole := moves_left / Movement.POINTS
+	return str(whole) if moves_left % Movement.POINTS == 0 else "%d,5" % whole
 
 
 ## Abre mão dos movimentos restantes neste turno.
@@ -155,9 +167,9 @@ func skip_turn() -> void:
 	_update_exhausted_look()
 
 
-## Gasta movimentos numa ação (ex.: pilhar custa 1).
+## Gasta movimentos (inteiros) numa ação (ex.: pilhar custa 1).
 func spend_moves(amount: int) -> void:
-	moves_left = maxi(moves_left - amount, 0)
+	moves_left = maxi(moves_left - amount * Movement.POINTS, 0)
 	_update_exhausted_look()
 
 
@@ -185,8 +197,8 @@ func heal_if_fortified() -> int:
 
 
 ## Anda casa a casa pelo caminho, gastando o custo de cada casa
-## (Movement.step_cost: 1, ou mais na floresta e ao atravessar um rio para quem
-## tem mais de 1 de movimento).
+## (Movement.step_cost, em pontos: 1 movimento, mais na floresta, nas colinas e
+## ao atravessar um rio para quem tem mais de 1 de movimento, meio na estrada).
 func move_along(path: Array[Vector2i], map: GameMap) -> void:
 	fortified = false
 	rebuilding = false

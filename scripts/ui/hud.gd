@@ -85,7 +85,11 @@ func _build_arsenal_rows() -> void:
 		var icon := Control.new()
 		icon.custom_minimum_size = Vector2(28, 28)
 		icon.draw.connect(func() -> void: Icons.draw_weapon(icon, weapon, Rect2(Vector2.ZERO, icon.size)))
-		icon.tooltip_text = "%s: feitas na Marcenaria; usadas para treinar tropas." % Arsenal.PLURAL_NAMES[weapon]
+		var maker := ""
+		for build: int in City.BUILDS:
+			if City.BUILDS[build].get("weapon", -1) == weapon:
+				maker = City.BUILDS[City.BUILDS[build]["requires"]]["name"]
+		icon.tooltip_text = "%s: feitas na %s; usadas para treinar tropas." % [Arsenal.PLURAL_NAMES[weapon], maker]
 		row.add_child(icon)
 		var label := RichTextLabel.new()
 		label.bbcode_enabled = true

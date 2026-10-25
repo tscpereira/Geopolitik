@@ -128,7 +128,7 @@ func _get_tooltip(at_position: Vector2) -> String:
 		text += " (defesa +%d, sem fazenda)" % Terrain.DEFENSE_BONUS[Terrain.Type.HILLS]
 	elif map.get_terrain(cell) == Terrain.Type.MOUNTAINS:
 		text += " (intransponível, não dá para trabalhar)"
-	if map.has_iron(cell):
+	if map.has_iron(cell) and map.iron_visible:
 		text += ", com ferro"
 	if map.has_river(cell):
 		text += " à beira do rio (+%d alimento)" % Terrain.RIVER_FOOD
@@ -239,7 +239,7 @@ func _draw() -> void:
 			draw_rect(rect, TRANSFER_TINT)
 		elif cell != _city.cell and not _city.ruins.has(cell) and (_game.claiming_city(cell) or _game.lumber_mill_at(cell)):
 			draw_rect(rect, BLOCKED_TINT)
-		if map.has_iron(cell):
+		if map.has_iron(cell) and map.iron_visible:
 			Icons.draw_iron_marker(self, rect)
 		if _city.worked_tiles.has(cell):
 			_draw_food(rect, _city.tile_food(cell))

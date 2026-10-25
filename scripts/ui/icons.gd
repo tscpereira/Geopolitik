@@ -53,6 +53,11 @@ static func build_icon(build: int, player_color: Color, size := ICON_SIZE) -> Co
 ##   Marcenaria      serrote;
 ##   Templo          zigurate com chama;
 ##   Muralha         trecho de muralha com ameias e portão;
+##   Escola          pergaminho aberto com escrita e um estilete;
+##   Biblioteca      estante de madeira cheia de rolos;
+##   Mercado         barraca com toldo listrado e frutas no balcão;
+##   Forja           bigorna (o ferro) com um martelo;
+##   Arena           anfiteatro de pedra com dois andares de arcos;
 ##   armas           o desenho da arma (Lança: lança).
 static func draw_build(canvas: CanvasItem, build: int, rect: Rect2, player_color: Color) -> void:
 	var info: Dictionary = City.BUILDS[build]
@@ -80,6 +85,16 @@ static func draw_build(canvas: CanvasItem, build: int, rect: Rect2, player_color
 			draw_temple(canvas, rect)
 		City.Build.WALLS:
 			draw_walls(canvas, rect)
+		City.Build.SCHOOL:
+			draw_school(canvas, rect)
+		City.Build.LIBRARY:
+			draw_library(canvas, rect)
+		City.Build.MARKET:
+			draw_market(canvas, rect)
+		City.Build.FORGE:
+			draw_forge(canvas, rect)
+		City.Build.ARENA:
+			draw_arena(canvas, rect)
 	if info.has("weapon"):
 		draw_weapon(canvas, info["weapon"], rect)
 
@@ -106,6 +121,8 @@ static func draw_weapon(canvas: CanvasItem, weapon: Arsenal.Weapon, rect: Rect2)
 	match weapon:
 		Arsenal.Weapon.SPEAR:
 			draw_spear(canvas, rect)
+		Arsenal.Weapon.SHORT_SWORD:
+			draw_sword(canvas, rect.grow(-rect.size.x * 0.14)) # espada curta: a espada menor
 
 
 ## Lança na diagonal: cabo de madeira comprido e ponta de aço em folha.
@@ -218,6 +235,93 @@ static func draw_walls(canvas: CanvasItem, rect: Rect2) -> void:
 	canvas.draw_colored_polygon(gate, Color(0.12, 0.1, 0.1))
 	gate.append(gate[0])
 	canvas.draw_polyline(gate, Color.BLACK, line)
+
+
+## Escola: pergaminho aberto com linhas de escrita e um estilete.
+static func draw_school(canvas: CanvasItem, rect: Rect2) -> void:
+	var o := rect.position
+	var w := rect.size.x
+	var h := rect.size.y
+	var line := maxf(1.0, w / 24.0)
+	var parchment := Color8(236, 220, 176)
+	_draw_block(canvas, Rect2(o + Vector2(w * 0.14, h * 0.2), Vector2(w * 0.72, h * 0.56)), parchment, line)
+	for x in [0.08, 0.86]:
+		_draw_block(canvas, Rect2(o + Vector2(w * x, h * 0.16), Vector2(w * 0.08, h * 0.64)), Color8(196, 170, 120), line)
+	for i in 4:
+		var y := h * (0.31 + i * 0.11)
+		canvas.draw_line(o + Vector2(w * 0.22, y), o + Vector2(w * (0.72 if i < 3 else 0.5), y), Color8(80, 60, 40), line)
+	canvas.draw_line(o + Vector2(w * 0.5, h * 0.94), o + Vector2(w * 0.9, h * 0.6), Color.BLACK, line * 3.0)
+	canvas.draw_line(o + Vector2(w * 0.5, h * 0.94), o + Vector2(w * 0.9, h * 0.6), WOOD_SHAFT_COLOR, line * 1.6)
+
+
+## Biblioteca: estante de madeira com rolos de pergaminho deitados.
+static func draw_library(canvas: CanvasItem, rect: Rect2) -> void:
+	var o := rect.position
+	var w := rect.size.x
+	var h := rect.size.y
+	var line := maxf(1.0, w / 24.0)
+	_draw_block(canvas, Rect2(o + Vector2(w * 0.08, h * 0.08), Vector2(w * 0.84, h * 0.86)), LEATHER_COLOR, line)
+	for row in 3:
+		var y := h * (0.12 + row * 0.27)
+		_draw_block(canvas, Rect2(o + Vector2(w * 0.14, y), Vector2(w * 0.72, h * 0.22)), Color8(60, 36, 20), line)
+		for k in 3:
+			var center := o + Vector2(w * (0.27 + k * 0.23), y + h * 0.11)
+			canvas.draw_circle(center, w * 0.095 + line, Color.BLACK)
+			canvas.draw_circle(center, w * 0.095, Color8(236, 220, 176))
+			canvas.draw_circle(center, w * 0.03, Color8(160, 130, 90))
+
+
+## Mercado: barraca com toldo listrado e frutas no balcão.
+static func draw_market(canvas: CanvasItem, rect: Rect2) -> void:
+	var o := rect.position
+	var w := rect.size.x
+	var h := rect.size.y
+	var line := maxf(1.0, w / 24.0)
+	for x in [0.12, 0.82]:
+		_draw_block(canvas, Rect2(o + Vector2(w * x, h * 0.3), Vector2(w * 0.06, h * 0.62)), WOOD_SHAFT_COLOR, line)
+	for i in 5:
+		var stripe := Rect2(o + Vector2(w * (0.06 + i * 0.176), h * 0.12), Vector2(w * 0.176, h * 0.2))
+		canvas.draw_rect(stripe, Color8(200, 50, 40) if i % 2 == 0 else Color8(240, 230, 210))
+		var tooth := PackedVector2Array([stripe.position + Vector2(0, stripe.size.y), stripe.end,
+				stripe.position + Vector2(stripe.size.x * 0.5, stripe.size.y * 1.45)])
+		canvas.draw_colored_polygon(tooth, Color8(200, 50, 40) if i % 2 == 0 else Color8(240, 230, 210))
+	canvas.draw_rect(Rect2(o + Vector2(w * 0.06, h * 0.12), Vector2(w * 0.88, h * 0.2)), Color.BLACK, false, line)
+	_draw_block(canvas, Rect2(o + Vector2(w * 0.1, h * 0.66), Vector2(w * 0.8, h * 0.14)), Color8(140, 96, 52), line)
+	var fruits := [Color8(230, 140, 30), Color8(120, 170, 50), Color8(190, 40, 40), Color8(230, 140, 30)]
+	for i in 4:
+		var center := o + Vector2(w * (0.24 + i * 0.17), h * 0.6)
+		canvas.draw_circle(center, w * 0.07 + line * 0.7, Color.BLACK)
+		canvas.draw_circle(center, w * 0.07, fruits[i])
+
+
+## Forja: a bigorna do ferro com um martelo por cima.
+static func draw_forge(canvas: CanvasItem, rect: Rect2) -> void:
+	var w := rect.size.x
+	var line := maxf(1.0, w / 24.0)
+	draw_iron(canvas, rect.grow(-w * 0.04))
+	var o := rect.position
+	canvas.draw_line(o + Vector2(w * 0.3, w * 0.5), o + Vector2(w * 0.72, w * 0.08), Color.BLACK, line * 3.0)
+	canvas.draw_line(o + Vector2(w * 0.3, w * 0.5), o + Vector2(w * 0.72, w * 0.08), WOOD_SHAFT_COLOR, line * 1.7)
+	canvas.draw_set_transform(o + Vector2(w * 0.72, w * 0.1), -PI / 4.0, Vector2.ONE)
+	_draw_block(canvas, Rect2(-w * 0.16, -w * 0.07, w * 0.32, w * 0.14), STEEL_SHADE, line)
+	canvas.draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+
+
+## Arena: anfiteatro de pedra com dois andares de arcos escuros.
+static func draw_arena(canvas: CanvasItem, rect: Rect2) -> void:
+	var o := rect.position
+	var w := rect.size.x
+	var h := rect.size.y
+	var line := maxf(1.0, w / 24.0)
+	_draw_block(canvas, Rect2(o + Vector2(w * 0.04, h * 0.2), Vector2(w * 0.92, h * 0.72)), STONE_COLOR, line)
+	_draw_block(canvas, Rect2(o + Vector2(w * 0.04, h * 0.2), Vector2(w * 0.92, h * 0.08)), STONE_SHADE, line)
+	for floor_index in 2:
+		var top := h * (0.32 + floor_index * 0.3)
+		for k in 4:
+			var x := w * (0.11 + k * 0.215)
+			var arch := PackedVector2Array([o + Vector2(x, top + h * 0.24), o + Vector2(x, top + h * 0.08),
+					o + Vector2(x + w * 0.07, top), o + Vector2(x + w * 0.14, top + h * 0.08), o + Vector2(x + w * 0.14, top + h * 0.24)])
+			canvas.draw_colored_polygon(arch, Color(0.15, 0.12, 0.1))
 
 
 ## Rosto de um cidadão (bem-estar social): feliz (dourado, sorrindo), contente

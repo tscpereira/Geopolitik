@@ -76,7 +76,10 @@ extends Node2D
 signal changed
 
 ## Novos itens entram no fim: o save guarda o número de cada um.
-enum Build { FARM, LUMBER_MILL, WARRIOR, WORKER, SETTLER, CITY_HALL, HEADQUARTERS, CARPENTRY, SPEAR, TEMPLE, WALLS, SPEARMAN, MINE }
+enum Build {
+	FARM, LUMBER_MILL, WARRIOR, WORKER, SETTLER, CITY_HALL, HEADQUARTERS, CARPENTRY, SPEAR, TEMPLE, WALLS, SPEARMAN, MINE,
+	SCHOOL, LIBRARY, MARKET, FORGE, ARENA, SHORT_SWORD, CATAPULT, LIGHT_CAVALRY, CHARIOT,
+}
 
 ## Humor de um cidadão (bem-estar social).
 enum Mood { UNHAPPY, CONTENT, HAPPY }
@@ -117,6 +120,7 @@ const CATEGORY_NAMES := {
 ##   gold        preço em ouro para concluir na hora (ver Game.buy_error)
 ##   wood        madeira gasta ao pedir a obra ou ao comprar (Player.wood); volta
 ##               para o estoque se a obra for cancelada
+##   iron        ferro gasto da mesma forma (Player.iron)
 ##   on_tile     true = melhoria de terreno: feita por um Trabalhador numa casa
 ##               do território (não aparece na lista "Construir"; ver sites)
 ##   unit        tipo de unidade criada ao terminar (só para unidades)
@@ -129,10 +133,13 @@ const CATEGORY_NAMES := {
 ##   science     ciência por turno que o prédio gera sozinho, sem trabalhadores
 ##   idle_science ciência por turno de cada trabalhador do prédio quando não há
 ##               nada em produção nele (ver science_per_turn)
-##   idle_max_workers  máximo de trabalhadores no prédio parado (ciência)
+##   idle_max_workers  máximo de trabalhadores no prédio parado (Prefeitura,
+##               Biblioteca, Mercado, Forja); sem o campo, não há limite
+##   idle_label  nome da linha do prédio parado na janela da cidade
 ##   idle_goods  bens duráveis do prédio parado: +1 ponto de alegria a cada
 ##               "idle_goods" trabalhadores (ver joy_points)
 ##   calms       infelizes que o prédio torna contentes (Templo; ver mood)
+##   festival_multiplier  multiplica a alegria das festividades (Arena: 2)
 ##   garrison_defense  defesa a mais das unidades do dono dentro da cidade
 ##               (Muralha; ver Unit.walls_defense_bonus)
 ##   tech        tecnologia (Technology.Tech) que o jogador precisa ter pesquisado
@@ -183,22 +190,23 @@ const BUILDS := {
 		"cost": 5, "gold": 50, "on_tile": false,
 		"unit": preload("res://data/units/trabalhador.tres"), "population": 1,
 		"requires": Build.CITY_HALL,
-		"description": "Sem ataque nem defesa (Movimento 1). Constrói fazendas e madeireiras no território (e madeireiras remotas). Feito na Prefeitura.",
+		"description": "Sem ataque nem defesa (Movimento 1). Constrói fazendas, madeireiras, minas e estradas (e madeireiras remotas). Feito na Prefeitura.",
 	},
 	Build.CITY_HALL: {
 		"name": "Prefeitura", "article": "a", "category": Category.BUILDING,
 		"cost": 0, "gold": 0, "on_tile": false, "native": true,
-		"science": 1, "idle_science": 1, "idle_max_workers": 2,
+		"science": 1, "idle_science": 1, "idle_max_workers": 2, "idle_label": "Pesquisa (sem unidades na fila)",
 		"description": "Toda cidade já nasce com ela. Faz Colonos e Trabalhadores. Gera 1 de ciência; parada, até 2 cidadãos geram +1 cada.",
 	},
 	Build.HEADQUARTERS: {
 		"name": "Quartel General", "article": "o", "category": Category.BUILDING,
 		"cost": 15, "gold": 50, "wood": 15, "on_tile": false,
-		"description": "Prédio militar: permite fazer unidades militares (hoje, o Guerreiro). Gasta 15 de madeira.",
+		"description": "Prédio militar: faz as unidades militares (Guerreiro, Lanceiro, Catapulta, Cavalaria Leve, Bigas). Gasta 15 de madeira.",
 	},
 	Build.CARPENTRY: {
 		"name": "Marcenaria", "article": "a", "category": Category.BUILDING,
 		"cost": 10, "gold": 50, "wood": 10, "on_tile": false, "idle_gold": 1, "idle_goods": 2,
+		"idle_label": "Impostos e bens (sem armas na fila)",
 		"description": "Produz armas (Lanças). Parada, cada trabalhador rende +1 de ouro e cada 2 dão +1 de alegria. Gasta 10 de madeira.",
 	},
 	Build.TEMPLE: {
@@ -217,7 +225,65 @@ const BUILDS := {
 		"name": "Lança", "article": "a", "category": Category.WEAPON,
 		"cost": 5, "gold": 50, "wood": 2, "on_tile": false,
 		"weapon": Arsenal.Weapon.SPEAR, "requires": Build.CARPENTRY,
-		"description": "Arma do arsenal: cada Guerreiro leva 1. Feita na Marcenaria; gasta 2 de madeira.",
+		"description": "Arma do arsenal: o Lanceiro e a Cavalaria Leve levam 1. Feita na Marcenaria; gasta 2 de madeira.",
+	},
+	# --- Era antiga (árvore de 25/10/2026) ---
+	Build.SCHOOL: {
+		"name": "Escola", "article": "a", "category": Category.BUILDING,
+		"cost": 20, "gold": 50, "wood": 15, "on_tile": false, "science": 1,
+		"tech": Technology.Tech.WRITING,
+		"description": "Gera +1 de ciência por turno, sem cidadãos. Exige Escrita; gasta 15 de madeira.",
+	},
+	Build.LIBRARY: {
+		"name": "Biblioteca", "article": "a", "category": Category.BUILDING,
+		"cost": 30, "gold": 50, "wood": 20, "on_tile": false, "idle_science": 1, "idle_max_workers": 2,
+		"idle_label": "Estudo", "tech": Technology.Tech.LITERATURE,
+		"description": "Até 2 cidadãos estudam nela: +1 de ciência cada por turno. Exige Literatura; gasta 20 de madeira.",
+	},
+	Build.MARKET: {
+		"name": "Mercado", "article": "o", "category": Category.BUILDING,
+		"cost": 25, "gold": 50, "wood": 15, "on_tile": false, "idle_gold": 1, "idle_max_workers": 2,
+		"idle_label": "Comércio", "tech": Technology.Tech.CURRENCY,
+		"description": "Até 2 cidadãos comerciam nele: +1 de ouro cada por turno. Exige Moeda; gasta 15 de madeira.",
+	},
+	Build.FORGE: {
+		"name": "Forja", "article": "a", "category": Category.BUILDING,
+		"cost": 25, "gold": 50, "wood": 15, "on_tile": false, "idle_gold": 1, "idle_goods": 1, "idle_max_workers": 2,
+		"idle_label": "Impostos e bens (sem espadas na fila)", "tech": Technology.Tech.IRON_WORKING,
+		"description": "Faz Espadas Curtas. Parada, até 2 cidadãos: +1 de ouro e +1 de alegria cada por turno. Exige Trabalho em Ferro; gasta 15 de madeira.",
+	},
+	Build.ARENA: {
+		"name": "Arena", "article": "a", "category": Category.BUILDING,
+		"cost": 40, "gold": 50, "wood": 30, "on_tile": false, "festival_multiplier": 2,
+		"tech": Technology.Tech.BREAD_AND_CIRCUSES,
+		"description": "Espetáculos: dobra a alegria das festividades (+4 por cidadão em vez de +2). Exige Pão e Circo; gasta 30 de madeira.",
+	},
+	Build.SHORT_SWORD: {
+		"name": "Espada Curta", "article": "a", "category": Category.WEAPON,
+		"cost": 6, "gold": 50, "iron": 2, "on_tile": false,
+		"weapon": Arsenal.Weapon.SHORT_SWORD, "requires": Build.FORGE,
+		"description": "Arma do arsenal: as Bigas levam 1. Feita na Forja; gasta 2 de ferro.",
+	},
+	Build.CATAPULT: {
+		"name": "Catapulta", "article": "a", "category": Category.UNIT,
+		"cost": 20, "gold": 50, "wood": 10, "on_tile": false,
+		"unit": preload("res://data/units/catapulta.tres"), "population": 1,
+		"requires": Build.HEADQUARTERS, "tech": Technology.Tech.MATHEMATICS,
+		"description": "Máquina de cerco (Ataque 4, Defesa 1, Movimento 1). Exige Matemática; gasta 10 de madeira.",
+	},
+	Build.LIGHT_CAVALRY: {
+		"name": "Cavalaria Leve", "article": "a", "category": Category.UNIT,
+		"cost": 15, "gold": 50, "weapons": {Arsenal.Weapon.SPEAR: 1}, "on_tile": false,
+		"unit": preload("res://data/units/cavalaria_leve.tres"), "population": 1,
+		"requires": Build.HEADQUARTERS, "tech": Technology.Tech.HORSEBACK_RIDING,
+		"description": "Cavaleiros rápidos (Ataque 1, Defesa 1, Movimento 4). Exige Montaria; leva 1 Lança.",
+	},
+	Build.CHARIOT: {
+		"name": "Bigas", "article": "as", "category": Category.UNIT,
+		"cost": 20, "gold": 50, "wood": 5, "weapons": {Arsenal.Weapon.SHORT_SWORD: 1}, "on_tile": false,
+		"unit": preload("res://data/units/bigas.tres"), "population": 1,
+		"requires": Build.HEADQUARTERS, "tech": Technology.Tech.MOBILE_WARFARE,
+		"description": "Carro de guerra (Ataque 2, Defesa 1, Movimento 3). Exige Guerra de movimento; leva 1 Espada Curta e gasta 5 de madeira.",
 	},
 }
 
@@ -238,6 +304,8 @@ const MIN_DISTANCE := 3
 # --- Bem-estar social (felicidade; ver mood) ---------------------------------
 ## Cidadãos contentes de base em cada cidade; os outros nascem infelizes.
 const BASE_CONTENT := 4
+## Contentes de base a mais com a tecnologia Direito (em todas as cidades).
+const LAW_CONTENT := 1
 ## A cada tantas cidades do império, −1 contente de base em todas (5ª cidade: −1).
 const EMPIRE_SIZE_STEP := 4
 ## Fome (saldo de alimento negativo): contentes que viram infelizes. Só nas
@@ -353,8 +421,9 @@ class Construction:
 	var workers := 0
 	## Unidade pronta já avisou que está esperando população (avisa uma vez só).
 	var waiting_reported := false
-	## Madeira e armas pagas ao pedir a obra; voltam se ela for cancelada.
+	## Madeira, ferro e armas pagos ao pedir a obra; voltam se ela for cancelada.
 	var wood_paid := 0
+	var iron_paid := 0
 	var weapons_paid := {}
 
 	func cost() -> int:
@@ -392,7 +461,7 @@ class Construction:
 
 	func to_dict() -> Dictionary:
 		return {"build": build, "cell": SaveGame.cell_to_json(cell), "progress": progress, "workers": workers,
-				"waiting_reported": waiting_reported, "wood_paid": wood_paid,
+				"waiting_reported": waiting_reported, "wood_paid": wood_paid, "iron_paid": iron_paid,
 				"weapons_paid": SaveGame.int_map_to_json(weapons_paid)}
 
 	static func from_dict(data: Dictionary) -> Construction:
@@ -403,6 +472,7 @@ class Construction:
 		construction.workers = int(data["workers"])
 		construction.waiting_reported = data["waiting_reported"]
 		construction.wood_paid = int(data["wood_paid"])
+		construction.iron_paid = int(data.get("iron_paid", 0))
 		construction.weapons_paid = SaveGame.json_to_int_map(data["weapons_paid"])
 		return construction
 
@@ -576,8 +646,10 @@ func build_error(build: int) -> String:
 		return "Precisa da tecnologia %s." % Technology.tech_name(info["tech"])
 	if info.has("requires") and not has_building(info["requires"]):
 		return "Precisa de %s." % BUILDS[info["requires"]]["name"]
-	var error := wood_error(build)
-	return error if not error.is_empty() else weapons_error(build)
+	for error: String in [wood_error(build), iron_error(build), weapons_error(build)]:
+		if not error.is_empty():
+			return error
+	return ""
 
 
 ## Motivo pelo qual falta madeira para [param build] ("" = tem o suficiente).
@@ -585,6 +657,14 @@ func wood_error(build: int) -> String:
 	var wood: int = BUILDS[build].get("wood", 0)
 	if owner_player.wood < wood:
 		return "Madeira insuficiente: precisa de %d (estoque: %d)." % [wood, owner_player.wood]
+	return ""
+
+
+## Motivo pelo qual falta ferro para [param build] ("" = tem o suficiente).
+func iron_error(build: int) -> String:
+	var iron: int = BUILDS[build].get("iron", 0)
+	if owner_player.iron < iron:
+		return "Ferro insuficiente: precisa de %d (estoque: %d)." % [iron, owner_player.iron]
 	return ""
 
 
@@ -598,15 +678,17 @@ func weapons_error(build: int) -> String:
 	return ""
 
 
-## Tira do jogador a madeira e as armas de [param build] (use build_error
-## antes). Retorna o que foi pago: {"wood": int, "weapons": {arma: qtd}}.
+## Tira do jogador a madeira, o ferro e as armas de [param build] (use
+## build_error antes). Retorna o que foi pago: {"wood": int, "iron": int,
+## "weapons": {arma: qtd}}.
 func pay_resources(build: int) -> Dictionary:
 	var info: Dictionary = BUILDS[build]
 	var weapons: Dictionary = info.get("weapons", {}).duplicate()
 	owner_player.wood -= info.get("wood", 0)
+	owner_player.iron -= info.get("iron", 0)
 	for weapon: Arsenal.Weapon in weapons:
 		owner_player.arsenal[weapon] -= weapons[weapon]
-	return {"wood": info.get("wood", 0), "weapons": weapons}
+	return {"wood": info.get("wood", 0), "iron": info.get("iron", 0), "weapons": weapons}
 
 
 ## O prédio fica pronto (por produção ou comprado). Se ele estava na fila de
@@ -1074,10 +1156,12 @@ func turns_to_finish(construction: Construction) -> int:
 
 # --- Bem-estar social --------------------------------------------------------
 
-## Contentes de base: BASE_CONTENT, menos 1 a cada EMPIRE_SIZE_STEP cidades do
+## Contentes de base: BASE_CONTENT (+LAW_CONTENT com Direito), menos 1 a cada
+## EMPIRE_SIZE_STEP cidades do
 ## império (com 5 cidades, 3; com 9, 2).
 func base_content() -> int:
-	return maxi(0, BASE_CONTENT - empire_size_penalty())
+	var law := LAW_CONTENT if owner_player.researched.has(Technology.Tech.LAW) else 0
+	return maxi(0, BASE_CONTENT + law - empire_size_penalty())
 
 
 func empire_size_penalty() -> int:
@@ -1120,7 +1204,15 @@ func martial_law() -> int:
 
 ## Pontos de alegria das festividades (FESTIVAL_JOY por cidadão).
 func festival_joy() -> int:
-	return festival_workers * FESTIVAL_JOY
+	return festival_workers * FESTIVAL_JOY * festival_multiplier()
+
+
+## A Arena ("festival_multiplier") multiplica a alegria das festividades.
+func festival_multiplier() -> int:
+	var result := 1
+	for building in buildings:
+		result *= BUILDS[building].get("festival_multiplier", 1)
+	return result
 
 
 ## Bens duráveis: prédio parado com "idle_goods" (Marcenaria sem armas na fila)
@@ -1209,7 +1301,7 @@ func mood_details() -> Array[String]:
 	if festival_joy() > 0:
 		lines.append("Festividades: +%d de alegria" % festival_joy())
 	if goods_joy() > 0:
-		lines.append("Bens da Marcenaria: +%d de alegria" % goods_joy())
+		lines.append("Bens (Marcenaria e Forja paradas): +%d de alegria" % goods_joy())
 	return lines
 
 
@@ -1246,6 +1338,7 @@ func order_build(build: int) -> Construction:
 	construction.build = build
 	var paid := pay_resources(build)
 	construction.wood_paid = paid["wood"]
+	construction.iron_paid = paid["iron"]
 	construction.weapons_paid = paid["weapons"]
 	_take_tax_workers()
 	if construction.is_produced():
@@ -1258,13 +1351,14 @@ func order_build(build: int) -> Construction:
 	return construction
 
 
-## Cancela a obra; o progresso é perdido, mas a madeira e as armas pagas
-## voltam. Os trabalhadores de um prédio continuam nele se ainda houver algo na
+## Cancela a obra; o progresso é perdido, mas a madeira, o ferro e as armas
+## pagos voltam. Os trabalhadores de um prédio continuam nele se ainda houver algo na
 ## fila (ou se ele render ouro parado); os outros vão para outra obra ou
 ## fazenda (ver _assign_free_citizens).
 func cancel_construction(construction: Construction) -> void:
 	constructions.erase(construction)
 	owner_player.wood += construction.wood_paid
+	owner_player.iron += construction.iron_paid
 	for weapon: Arsenal.Weapon in construction.weapons_paid:
 		owner_player.arsenal[weapon] += construction.weapons_paid[weapon]
 	if construction.is_produced():
@@ -1277,7 +1371,10 @@ func cancel_construction(construction: Construction) -> void:
 ## Prédio sem nada para produzir: os trabalhadores saem e vão para outra obra
 ## ou fazenda, menos num prédio que rende ouro parado ("idle_gold").
 func _release_idle_building(building: int) -> void:
-	if active_unit(building) != null or BUILDS[building].get("idle_gold", 0) > 0:
+	if active_unit(building) != null:
+		return
+	if BUILDS[building].get("idle_gold", 0) > 0:
+		_assign_free_citizens(_trim_idle_workers(building))
 		return
 	var workers: int = building_workers.get(building, 0)
 	building_workers[building] = 0
@@ -1441,8 +1538,11 @@ func process_turn(spawn_unit: Callable) -> Array[String]:
 	# fim), menos o que rende impostos parado. Quem o jogador pôs na Prefeitura
 	# parada (ciência) continua lá.
 	for building: int in building_workers:
-		if producing.has(building) and active_unit(building) == null and BUILDS[building].get("idle_gold", 0) == 0:
-			building_workers[building] = 0
+		if producing.has(building) and active_unit(building) == null:
+			if BUILDS[building].get("idle_gold", 0) == 0:
+				building_workers[building] = 0
+			else:
+				_trim_idle_workers(building) # parado, cabem só idle_max_workers (Forja)
 
 	for mill_cell: Vector2i in lumber_mills.keys():
 		owner_player.wood += _map.harvest_wood(mill_cell, lumber_mills[mill_cell] * LumberMill.WOOD_PER_WORKER)
@@ -1484,6 +1584,17 @@ func _complete_at(build: int, target: Vector2i) -> void:
 			lumber_mills[target] = 0
 		Build.MINE:
 			mines[target] = 0
+
+
+## Prédio parado com limite (idle_max_workers): quem passa do limite sai.
+## Retorna quantos saíram (ficam livres).
+func _trim_idle_workers(building: int) -> int:
+	var limit := idle_max_workers(building)
+	var workers: int = building_workers.get(building, 0)
+	if limit < 0 or workers <= limit:
+		return 0
+	building_workers[building] = limit
+	return workers - limit
 
 
 ## Os impostos são a reserva de mão de obra: tira os cidadãos dos prédios
@@ -1541,8 +1652,13 @@ func _assign_free_citizens(count: int) -> void:
 		return
 	for building in buildings:
 		if BUILDS[building].get("idle_gold", 0) > 0 and active_unit(building) == null:
-			building_workers[building] = building_workers.get(building, 0) + count
-			return
+			var room := count if idle_max_workers(building) < 0 else \
+					mini(count, idle_max_workers(building) - building_workers.get(building, 0))
+			if room > 0:
+				building_workers[building] = building_workers.get(building, 0) + room
+				count -= room
+			if count <= 0:
+				return
 	# Casas sem melhoria: as que dão mais alimento primeiro (à beira do rio)
 	var tiles := territory.filter(func(tile_cell: Vector2i) -> bool:
 		return not worked_tiles.has(tile_cell) and can_work_tile(tile_cell))
@@ -1622,7 +1738,7 @@ func _draw() -> void:
 		# A mina não se esgota: sem barra. A bigorna continua no canto
 		var mine_rect := Rect2(_local_center(mine_cell) - tile / 2.0, tile)
 		draw_mine(self, mine_rect)
-		if _map.has_iron(mine_cell):
+		if _map.has_iron(mine_cell) and _map.iron_visible:
 			Icons.draw_iron_marker(self, mine_rect)
 	for site_cell: Vector2i in sites:
 		var site_rect := Rect2(_local_center(site_cell) - tile / 2.0, tile)

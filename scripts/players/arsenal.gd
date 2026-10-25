@@ -2,19 +2,21 @@ class_name Arsenal
 extends RefCounted
 
 ## Armas que o império estoca no arsenal (Player.arsenal: {Weapon: quantidade}).
-## Armas são produzidas em prédios (ex.: Lança na Marcenaria) e gastas para
+## Armas são produzidas em prédios (Lança na Marcenaria, Espada Curta na Forja) e gastas para
 ## treinar tropas (ex.: o Lanceiro leva 1 Lança). Para uma arma nova: entre no
 ## enum, nos nomes abaixo, em City.BUILDS (com "weapon") e no ícone
 ## (Icons.draw_weapon).
 
-enum Weapon { SPEAR }
+enum Weapon { SPEAR, SHORT_SWORD }
 
 const NAMES := {
 	Weapon.SPEAR: "Lança",
+	Weapon.SHORT_SWORD: "Espada Curta",
 }
 
 const PLURAL_NAMES := {
 	Weapon.SPEAR: "Lanças",
+	Weapon.SHORT_SWORD: "Espadas Curtas",
 }
 
 

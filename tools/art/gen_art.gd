@@ -20,6 +20,8 @@ extends SceneTree
 ##     pintado pelo shader do terreno; só estes dois: "-- relevo")
 ##   sprites/improvements/mina.png, mina_destruida.png e
 ##     sprites/resources/ferro.png (bigorna); só estes três: "-- ferro"
+##   sprites/units/catapulta.png, cavalaria_leve.png, bigas.png (com _time.png;
+##     provisórias, até os desenhos do ChatGPT); só estas: "-- unidades"
 ##
 ## COR DO JOGADOR: cada desenho com cor de time é feito duas vezes, com a cor
 ## preta e branca. O PNG principal é a versão preta; a máscara (_time.png, em
@@ -125,6 +127,13 @@ func _run() -> void:
 	#   godot_console.cmd --path . --script tools/art/gen_art.gd -- ferro
 	if args.size() >= 1 and args[0] == "ferro":
 		await iron_art()
+		print("ok")
+		quit()
+		return
+	# Só as unidades da era antiga (Catapulta, Cavalaria Leve, Bigas; provisórias):
+	#   godot_console.cmd --path . --script tools/art/gen_art.gd -- unidades
+	if args.size() >= 1 and args[0] == "unidades":
+		await ancient_units_art()
 		print("ok")
 		quit()
 		return
@@ -1506,3 +1515,134 @@ func anvil() -> void:
 	line(Vector2(19, 61), Vector2(65, 61), Color(0, 0, 0, 0.3), 1.2)
 	# Furo da mesa (o "furo do punção")
 	c.draw_rect(Rect2(60, 25, 3, 2.2), Color8(36, 38, 42))
+
+
+# --- Unidades da era antiga (provisórias, até os desenhos do ChatGPT) --------------
+
+## Catapulta, Cavalaria Leve e Bigas (80x80, com a máscara da cor do time).
+## Desenhos provisórios: os prompts 15 a 17 de PROMPTS-CHATGPT.txt pedem os
+## definitivos no estilo das outras unidades.
+func ancient_units_art() -> void:
+	await save_team_art(UNITS_DIR + "catapulta", S, catapult)
+	await save_team_art(UNITS_DIR + "cavalaria_leve", S, light_cavalry)
+	await save_team_art(UNITS_DIR + "bigas", S, chariot)
+
+
+## Cavalo de lado, virado para a direita, com o corpo em [param o] (o centro do
+## tronco) e as patas até [param ground]. [param coat]: cor do pelo.
+func horse_side(o: Vector2, coat: Color, ground: float) -> void:
+	var far := coat.darkened(0.25)
+	for i in 4:
+		stroke(PackedVector2Array([o + Vector2(-21, -5), o + Vector2(-23.5 - i * 0.3, 2), o + Vector2(-24 + i * 0.5, 11)]), lit(MANE, 0.8 + i * 0.1), 1.0)
+	tube([o + Vector2(-13, 4), o + Vector2(-11, 13), o + Vector2(-13, ground - o.y - 1)], [3.8, 2.2, 1.4], far)
+	tube([o + Vector2(11, 5), o + Vector2(10, 15), o + Vector2(11, ground - o.y - 1)], [2.8, 1.7, 1.3], far)
+	sphere(o + Vector2(-11, -1), Vector2(9.5, 8.5), coat, 0.15)
+	sphere(o, Vector2(13, 8), coat, 0.1)
+	sphere(o + Vector2(12, -2), Vector2(7, 8), coat, 0.12)
+	tube([o + Vector2(13, -4), o + Vector2(19, -13), o + Vector2(22, -20)], [6.0, 4.6, 3.5], coat)
+	tube([o + Vector2(22, -22), o + Vector2(27.5, -18), o + Vector2(31.5, -14.5)], [3.5, 2.8, 2.1], coat)
+	sphere(o + Vector2(31.8, -14.2), Vector2(2.4, 2.0), coat.darkened(0.1))
+	shaded(PackedVector2Array([o + Vector2(20.5, -24), o + Vector2(21.5, -29), o + Vector2(23.5, -24.5)]), coat, 0.3)
+	c.draw_circle(o + Vector2(25, -20.5), 0.6, Color8(16, 10, 8))
+	for i in 6:
+		var p := o + Vector2(12, -7).lerp(Vector2(21, -24), i / 5.0)
+		stroke(PackedVector2Array([p, p + Vector2(-2.5, 3), p + Vector2(-3.5, 6)]), lit(MANE, 0.9 + 0.2 * (i % 2)), 1.0)
+	tube([o + Vector2(-8, 5), o + Vector2(-5, 14), o + Vector2(-7, ground - o.y - 1)], [4.0, 2.3, 1.4], coat)
+	tube([o + Vector2(14, 6), o + Vector2(15, 15), o + Vector2(15.5, ground - o.y - 1)], [2.9, 1.8, 1.3], coat)
+	for x in [-13.0, 11.0, -7.0, 15.5]:
+		sphere(Vector2(o.x + x, ground), Vector2(1.9, 1.1), MANE)
+
+
+## Cavalaria Leve: cavalo baio sem armadura, manta curta na cor do time e um
+## cavaleiro de túnica (do time), cabeça descoberta, com a lança erguida.
+func light_cavalry() -> void:
+	c.draw_colored_polygon(ell(Vector2(40, 74), Vector2(30, 4), 0, TAU, 32), Color(0.05, 0.04, 0.02, 0.35))
+	horse_side(Vector2(36, 46), Color8(150, 104, 62), 73)
+	# Manta curta na cor do time
+	shaded(PackedVector2Array([Vector2(24, 38), Vector2(44, 37), Vector2(46, 49), Vector2(25, 51)]), team, 0.5)
+	stroke(PackedVector2Array([Vector2(25, 50.5), Vector2(46, 48.5)]), BRASS, 0.5)
+	# Cavaleiro: perna, túnica do time, braço com a lança
+	tube([Vector2(35, 36), Vector2(39, 44), Vector2(38, 53)], [2.6, 2.0, 1.5], SKIN)
+	sphere(Vector2(39, 54), Vector2(2.1, 1.1), BOOT)
+	shaded(PackedVector2Array([Vector2(31, 21), Vector2(39, 21), Vector2(40.5, 30), Vector2(40, 38), Vector2(30.5, 38), Vector2(30, 30)]), team, 0.45)
+	folds(Vector2(31.5, 30), Vector2(39.5, 30), 4, 7, team)
+	shaded(PackedVector2Array([Vector2(30.5, 30.5), Vector2(40.5, 30.5), Vector2(40.5, 32), Vector2(30.5, 32)]), LEATHER, 0.3)
+	tube([Vector2(38.5, 23), Vector2(43, 28), Vector2(46.5, 25)], [1.8, 1.5, 1.3], SKIN)
+	sphere(Vector2(47, 25), Vector2(1.5, 1.5), SKIN)
+	sphere(Vector2(35, 15), Vector2(4.2, 4.6), SKIN)
+	sphere(Vector2(34.4, 12.6), Vector2(4.4, 3.0), HAIR)
+	line(Vector2(47, -1), Vector2(47, 58), WOOD_D, 1.5)
+	line(Vector2(46.6, -1), Vector2(46.6, 58), WOOD, 0.5)
+	shaded(PackedVector2Array([Vector2(47, -3), Vector2(48.8, 2.5), Vector2(47, 6.5), Vector2(45.2, 2.5)]), STEEL, 0.6)
+
+
+## Bigas: dois cavalos lado a lado puxando um carro de duas rodas, com o
+## condutor de túnica (do time) e elmo de bronze.
+func chariot() -> void:
+	c.draw_colored_polygon(ell(Vector2(42, 74), Vector2(36, 4), 0, TAU, 32), Color(0.05, 0.04, 0.02, 0.35))
+	horse_side(Vector2(52, 48), Color8(96, 62, 40), 72)
+	horse_side(Vector2(47, 51), Color8(132, 88, 52), 74)
+	# Varal do carro até os cavalos e o arreio
+	line(Vector2(22, 56), Vector2(56, 44), WOOD_D, 1.6)
+	shaded(PackedVector2Array([Vector2(52, 40), Vector2(60, 39), Vector2(60, 43), Vector2(52, 44)]), LEATHER, 0.3)
+	# Caixa do carro: frente arredondada na cor do time, aro de bronze
+	shaded(PackedVector2Array([Vector2(8, 42), Vector2(22, 40), Vector2(28, 44), Vector2(28, 58), Vector2(8, 58)]), team, 0.45)
+	stroke(PackedVector2Array([Vector2(8, 42), Vector2(22, 40), Vector2(28, 44), Vector2(28, 58)]), BRONZE, 1.0)
+	shaded(PackedVector2Array([Vector2(6, 57), Vector2(30, 57), Vector2(30, 60), Vector2(6, 60)]), WOOD, 0.3)
+	# Roda grande com raios
+	var hub := Vector2(18, 62)
+	c.draw_circle(hub, 11.5, Color8(60, 40, 24))
+	c.draw_circle(hub, 9.8, Color(0, 0, 0, 0))
+	stroke(ell(hub, Vector2(10.6, 10.6), 0, TAU, 40), WOOD, 2.0)
+	for k in 6:
+		var a := k * TAU / 6.0 + 0.3
+		line(hub, hub + Vector2(cos(a), sin(a)) * 10.0, WOOD_D, 0.9)
+	sphere(hub, Vector2(2.2, 2.2), BRONZE, 0.3)
+	# Condutor de pé no carro, segurando as rédeas, com uma espada curta à cintura
+	shaded(PackedVector2Array([Vector2(13, 24), Vector2(22, 24), Vector2(23, 34), Vector2(22.5, 42), Vector2(12.5, 42), Vector2(12, 34)]), team, 0.45)
+	folds(Vector2(13.5, 34), Vector2(22, 34), 4, 7, team)
+	shaded(PackedVector2Array([Vector2(12.5, 33), Vector2(23, 33), Vector2(23, 34.6), Vector2(12.5, 34.6)]), LEATHER, 0.3)
+	line(Vector2(21, 35), Vector2(27, 40), STEEL, 1.0)
+	tube([Vector2(20.5, 27), Vector2(26, 32), Vector2(31, 31)], [1.8, 1.5, 1.3], SKIN)
+	line(Vector2(31, 31), Vector2(56, 40), LEATHER, 0.4)
+	sphere(Vector2(17.5, 18), Vector2(4.2, 4.6), SKIN)
+	shaded(PackedVector2Array([Vector2(13, 17), Vector2(14, 11.5), Vector2(17.5, 10), Vector2(21.5, 11.5), Vector2(22, 16), Vector2(19.5, 15), Vector2(15.5, 15)]), BRONZE, 0.5)
+	shaded(PackedVector2Array([Vector2(14.5, 10.5), Vector2(17.5, 6.5), Vector2(20.5, 10.5)]), team, 0.3) # crista
+
+
+## Catapulta de torção: base de vigas sobre quatro rodas, cavalete com o
+## feixe de cordas, braço com a concha e uma pedra, e uma flâmula do time.
+func catapult() -> void:
+	c.draw_colored_polygon(ell(Vector2(40, 72), Vector2(34, 4.5), 0, TAU, 32), Color(0.05, 0.04, 0.02, 0.35))
+	# Rodas de trás (mais escuras)
+	for x in [20.0, 58.0]:
+		c.draw_circle(Vector2(x + 3, 64), 6.5, Color8(56, 38, 22))
+	# Base: duas vigas compridas e as travessas
+	shaded(PackedVector2Array([Vector2(8, 54), Vector2(72, 54), Vector2(72, 60), Vector2(8, 60)]), WOOD, 0.4)
+	for x in [14.0, 40.0, 64.0]:
+		shaded(PackedVector2Array([Vector2(x, 51), Vector2(x + 5, 51), Vector2(x + 5, 61), Vector2(x, 61)]), WOOD_D, 0.3)
+	# Cavalete em A e o batente acolchoado
+	tube([Vector2(46, 55), Vector2(52, 30)], [1.8, 1.6], WOOD)
+	tube([Vector2(60, 55), Vector2(53, 30)], [1.8, 1.6], WOOD)
+	tube([Vector2(48, 31), Vector2(58, 31)], [2.2, 2.2], WOOD_D)
+	sphere(Vector2(53, 29.5), Vector2(4.5, 2.6), LEATHER)
+	# Feixe de cordas torcidas na base do braço
+	sphere(Vector2(30, 53), Vector2(6.5, 4.2), Color8(170, 150, 110))
+	for k in 5:
+		line(Vector2(25 + k * 2.4, 50), Vector2(26 + k * 2.4, 56.5), Color8(120, 100, 70), 0.5)
+	# Braço inclinado com a concha e a pedra
+	tube([Vector2(30, 52), Vector2(41, 38), Vector2(50, 26)], [2.0, 1.7, 1.5], WOOD)
+	sphere(Vector2(51.5, 23.5), Vector2(5.0, 3.0), WOOD_D)
+	sphere(Vector2(51.5, 20.5), Vector2(3.6, 3.4), STONE, 0.2)
+	# Rodas da frente, com raios
+	for x in [20.0, 58.0]:
+		var hub := Vector2(x, 63)
+		c.draw_circle(hub, 7.0, Color8(70, 48, 28))
+		stroke(ell(hub, Vector2(6.2, 6.2), 0, TAU, 32), WOOD, 1.5)
+		for k in 6:
+			var a := k * TAU / 6.0
+			line(hub, hub + Vector2(cos(a), sin(a)) * 5.8, WOOD_D, 0.7)
+		sphere(hub, Vector2(1.6, 1.6), BRONZE, 0.3)
+	# Mastro com a flâmula do time
+	line(Vector2(12, 54), Vector2(12, 22), WOOD_D, 1.2)
+	shaded(PackedVector2Array([Vector2(12.5, 22), Vector2(26, 25.5), Vector2(20, 28), Vector2(26, 30.5), Vector2(12.5, 33)]), team, 0.4)

@@ -5,7 +5,11 @@ extends RefCounted
 ## Movimento em 8 direções (diagonais incluídas). Entrar numa casa custa 1
 ## movimento, ou mais em terrenos difíceis (ver Terrain.move_cost: a floresta
 ## custa 2 para unidades com mais de 1 de movimento) e ao atravessar um rio
-## (+1 para essas unidades; ver step_cost).
+## (+1 para essas unidades; ver step_cost). Andar de uma casa com estrada para
+## outra com estrada (a cidade conta como estrada; GameMap.has_road) custa meio
+## movimento.
+## Os custos são em PONTOS de movimento: POINTS por movimento (Unit.moves_left
+## também é em pontos), para caber o meio movimento da estrada.
 
 const DIRECTIONS: Array[Vector2i] = [
 	Vector2i(-1, -1), Vector2i(0, -1), Vector2i(1, -1),
@@ -15,15 +19,19 @@ const DIRECTIONS: Array[Vector2i] = [
 
 ## Sem limite de movimentos (busca de caminho da ordem "Mover").
 const NO_LIMIT := 1 << 30
+## Pontos de movimento por movimento (unit.movement) e o custo de um passo de
+## estrada para estrada (meio movimento).
+const POINTS := 2
+const ROAD_STEP_POINTS := 1
 
 
 ## Retorna {casa: casa_anterior} com tudo que a unidade alcança com os
 ## movimentos restantes (inclui a casa da própria unidade e casas com aliados,
 ## que podem ser atravessadas). [param occupants] é {casa: Unit}.
-## [param moves] substitui os movimentos restantes da unidade (ex.: para prever
-## o próximo turno de um inimigo).
+## [param moves] substitui os movimentos restantes da unidade, em movimentos
+## inteiros (ex.: para prever o próximo turno de um inimigo).
 static func find_reachable(map: GameMap, unit: Unit, occupants: Dictionary, moves := -1) -> Dictionary:
-	return _search(map, unit, occupants, unit.moves_left if moves < 0 else moves)
+	return _search(map, unit, occupants, unit.moves_left if moves < 0 else moves * POINTS)
 
 
 ## Casas onde a unidade pode terminar o movimento: alcançáveis e vazias.
@@ -36,8 +44,8 @@ static func destinations(reachable: Dictionary, occupants: Dictionary) -> Array[
 
 
 ## Inimigos que a unidade pode atacar: {casa_do_inimigo: casa_de_onde_ataca}.
-## Atacar custa 1 movimento, então a unidade precisa chegar a uma casa vizinha
-## ao inimigo com pelo menos 1 movimento sobrando. Usa a casa de ataque mais próxima.
+## Atacar encerra os movimentos, então a unidade precisa chegar a uma casa
+## vizinha ao inimigo com algum movimento sobrando (meio movimento basta). Usa a casa de ataque mais próxima.
 ## Unidades com Ataque 0 não atacam.
 static func attack_targets(map: GameMap, unit: Unit, reachable: Dictionary, occupants: Dictionary) -> Dictionary:
 	if unit.attack <= 0:
@@ -83,19 +91,23 @@ static func build_path(reachable: Dictionary, target: Vector2i) -> Array[Vector2
 	return path
 
 
-## Movimentos gastos para andar da casa [param from] para a vizinha
-## [param cell]: o terreno de destino (floresta) mais Terrain.RIVER_MOVE_PENALTY
-## se o passo atravessa um rio, os dois só para unidades com mais de 1 de
-## movimento. Nunca passa do movimento cheio da unidade: com todos os
-## movimentos ela sempre consegue entrar (Cavaleiro: floresta + rio = turno todo).
+## Pontos de movimento gastos para andar da casa [param from] para a vizinha
+## [param cell]: de estrada para estrada, ROAD_STEP_POINTS (meio movimento, sem
+## as penalidades); senão, o terreno de destino (floresta, colinas) mais
+## Terrain.RIVER_MOVE_PENALTY se o passo atravessa um rio, os dois só para
+## unidades com mais de 1 de movimento. Nunca passa do movimento cheio da
+## unidade: com todos os movimentos ela sempre consegue entrar (Cavaleiro:
+## floresta + rio = turno todo).
 static func step_cost(map: GameMap, unit: Unit, from: Vector2i, cell: Vector2i) -> int:
+	if map.has_road(from) and map.has_road(cell):
+		return ROAD_STEP_POINTS
 	var cost := Terrain.move_cost(map.get_terrain(cell), unit.movement)
 	if unit.movement > 1 and map.crosses_river(from, cell):
 		cost += Terrain.RIVER_MOVE_PENALTY
-	return mini(cost, unit.movement)
+	return mini(cost, unit.movement) * POINTS
 
 
-## Movimentos gastos para andar o caminho inteiro, saindo de [param from]
+## Pontos de movimento gastos para andar o caminho inteiro, saindo de [param from]
 ## (a casa da unidade, se não for dada).
 static func path_cost(map: GameMap, unit: Unit, path: Array[Vector2i], from := Unit.NO_TARGET) -> int:
 	var total := 0
@@ -123,7 +135,7 @@ static func is_enemy_city(map: GameMap, unit: Unit, cell: Vector2i) -> bool:
 
 
 ## Busca pelo menor custo (Dijkstra com "baldes": buckets[c] = casas
-## alcançadas gastando c movimentos). Para em [param target], se houver.
+## alcançadas gastando c pontos de movimento). Para em [param target], se houver.
 ## Retorna {casa: casa_anterior}.
 static func _search(map: GameMap, unit: Unit, occupants: Dictionary, budget: int,
 		target := Vector2i(-1, -1)) -> Dictionary:

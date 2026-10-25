@@ -176,7 +176,8 @@ C:\ProjetoGame
     |   `-- mapa_teste_recursos.json  Recursos estratégicos do mapa
     |                              (casas com ferro)
     `-- units/
-        |-- guerreiro.tres         Tipos de unidade
+        |-- guerreiro.tres         Tipos de unidade (também catapulta,
+        |                          cavalaria_leve, bigas)
         |-- lanceiro.tres
         |-- arqueiro.tres
         |-- cavaleiro.tres
@@ -456,6 +457,18 @@ UNIDADES (scripts/units/)
     Cavaleiro   C        1       1       2          100
     Colono      S        0       0       1          100
     Trabalhador T        0       0       1          100
+    Catapulta   K        4       1       1          100  (Matemática)
+    Cav. Leve   V        1       1       4          100  (Montaria; cavalaria)
+    Bigas       B        2       1       3          100  (Guerra de movimento;
+                                                         cavalaria)
+- UNIDADES DA ERA ANTIGA (desde 25/10/2026, árvore do usuário; feitas
+  no Quartel General): Catapulta (20 de produção + 1 de população +
+  10 de madeira), Cavalaria Leve (15 + 1 de população + 1 Lança) e
+  Bigas (20 + 1 de população + 5 de madeira + 1 Espada Curta). A
+  Cavalaria Leve e as Bigas são cavalaria (o Lanceiro tem +1 contra
+  elas). Desenhos PROVISÓRIOS feitos por código
+  ("tools/art/gen_art.gd -- unidades", com a cor do time); os prompts
+  15 a 17 de tools/art/PROMPTS-CHATGPT.txt pedem os definitivos.
 - LANCEIRO (desde 25/10/2026, pedido do usuário; exige a
   tecnologia Trabalho em Bronze): +1 de ataque e +1 de defesa
   quando luta contra cavalaria (campo "Anti Cavalry Bonus" do
@@ -735,7 +748,9 @@ RECURSOS ESTRATÉGICOS E MADEIRA
   mensagem avisa no topo da tela.
 
 FERRO E MINA (desde 25/10/2026, pedido do usuário)
-- FERRO: recurso estratégico que só aparece em COLINAS. As casas
+- FERRO: recurso estratégico que só aparece em COLINAS, e só depois
+  que o jogador pesquisa TRABALHO EM FERRO (desde a árvore da era
+  antiga; antes disso a bigorna não aparece e a Mina é recusada). As casas
   com ferro ficam marcadas com uma BIGORNA sobre um fundo escuro
   redondo, no canto de cima à esquerda da casa (visível também com
   uma unidade em cima; Icons.draw_iron_marker; desenho em
@@ -1021,7 +1036,16 @@ CIDADES (scripts/cities/city.gd)
                                             dele)
     Muralha     20 de produção + 20 de      prédio da cidade
                 madeira                     (exige Construção)
-  Todos custam 50 de ouro para comprar na hora.
+    Escola      20 + 15 de madeira          prédio (Escrita)
+    Biblioteca  30 + 20 de madeira          prédio (Literatura)
+    Mercado     25 + 15 de madeira          prédio (Moeda)
+    Forja       25 + 15 de madeira          prédio (Trabalho em Ferro)
+    Arena       40 + 30 de madeira          prédio (Pão e Circo)
+    Espada      6 de produção + 2 de        Forja (vai para o arsenal)
+    Curta       ferro
+    Catapulta, Cavalaria Leve, Bigas: ver UNIDADES.
+  Todos custam 50 de ouro para comprar na hora (os novos também, por
+  enquanto; ver BACKLOG).
 
 CONSTRUÇÕES QUE GASTAM RECURSOS (campos "wood" e "weapons" em City.BUILDS)
 - Algumas construções gastam madeira do estoque do jogador:
@@ -1108,6 +1132,23 @@ PRÉDIOS (City.buildings)
                      com torres e portão. A máquina a constrói na
                      capital e nas cidades com inimigo por perto,
                      depois do Quartel General.
+    Escola           +1 de ciência por turno, sem cidadãos (campo
+                     "science", como a Prefeitura). Exige Escrita.
+    Biblioteca       até 2 cidadãos estudam nela: +1 de ciência cada
+                     (linha "Estudo" na janela da cidade). Exige
+                     Literatura.
+    Mercado          até 2 cidadãos comerciam: +1 de ouro cada (linha
+                     "Comércio"). Exige Moeda.
+    Forja            faz Espadas Curtas (arma do arsenal, 2 de ferro
+                     cada; as Bigas levam 1). Parada (sem espadas na
+                     fila), até 2 cidadãos: +1 de ouro e +1 de alegria
+                     cada. Exige Trabalho em Ferro.
+    Arena            dobra a alegria das festividades (+4 por cidadão
+                     em vez de +2; campo "festival_multiplier"). Exige
+                     Pão e Circo.
+  Os prédios parados com vagas (Prefeitura, Biblioteca, Mercado,
+  Forja) usam "idle_max_workers": a realocação automática e a fila
+  que acaba respeitam o limite (quem sobra fica livre).
 - UNIDADES E ARMAS SÃO PRODUZIDAS NOS PRÉDIOS: cada uma só pode
   ser feita se a cidade tiver o prédio dela (campo "requires" em
   City.BUILDS). Sem ele, a linha fica desabilitada com "Precisa de
@@ -1136,6 +1177,9 @@ ARSENAL (scripts/players/arsenal.gd, Player.arsenal)
   depois as armas (Lança, na Marcenaria) e, por fim, a tropa
   (Lanceiro, no Quartel General, levando 1 Lança). O Guerreiro
   rústico não precisa de armas.
+- Espada Curta (desde 25/10/2026): feita na Forja, 6 de produção + 2
+  de FERRO (pago ao pedir, devolvido se cancelar, como a madeira;
+  City.iron_error). As Bigas levam 1.
 - Lança: classe "Armas" da lista Construir. 5 de produção + 2 de
   madeira (ou 50 de ouro + 2 de madeira). Entra na fila da
   Marcenaria; pronta, vai direto para o arsenal (mensagem "Lança
@@ -1283,6 +1327,8 @@ MARCENARIA E IMPOSTOS (campo "idle_gold" em City.BUILDS)
 BEM-ESTAR SOCIAL (felicidade; City.mood, constantes no topo de city.gd)
 - Cada cidadão da cidade fica FELIZ, CONTENTE ou INFELIZ (modelo
   do Civilization I e II).
+- DIREITO (tecnologia): +1 contente de base em todas as cidades
+  (City.LAW_CONTENT): 5 em vez de 4.
 - BASE: os primeiros 4 cidadãos são contentes (BASE_CONTENT); a
   partir do 5º, cada um nasce infeliz. Tamanho do império: a cada
   4 cidades, −1 contente de base em todas (EMPIRE_SIZE_STEP: com
@@ -1302,7 +1348,9 @@ BEM-ESTAR SOCIAL (felicidade; City.mood, constantes no topo de city.gd)
                                  até 2 (MARTIAL_LAW_MAX)
 - ALEGRIA (pontos que sobem um cidadão um degrau: primeiro
   infeliz -> contente; sem infelizes, contente -> feliz):
-    Festividades       +2 por cidadão alocado (FESTIVAL_JOY)
+    Festividades       +2 por cidadão alocado (FESTIVAL_JOY); +4 com a
+                       Arena
+    Bens da Forja      +1 por cidadão na Forja parada
     Bens da Marcenaria +1 a cada 2 trabalhadores nos impostos
                        (Marcenaria parada, campo "idle_goods")
 - Ordem do cálculo: base -> agitação -> Templo e guarnição ->
@@ -1618,6 +1666,11 @@ IA: ECONOMIA, EXPANSÃO E DEFESA (scripts/ai/ai_economy.gd)
     spears_per_city por cidade) e Guerreiros para o exército (até
     army_to_attack fora das cidades).
   * Templo (com Misticismo) a partir de 4 de população.
+  * Prédios da era antiga (com as tecnologias), um de cada vez, na
+    capital e em cidades de 4+, depois do Quartel General: Escola,
+    Mercado, Biblioteca, Forja, Arena. Quem sobra vai para o Mercado,
+    a Biblioteca e a Forja paradas antes dos impostos da Marcenaria.
+    Ela ainda não faz as unidades novas nem estradas.
   * Cidadãos redistribuídos do zero (City.clear_workers), nesta
     ordem (desde 25/10/2026): fazendas e casas sem melhoria até a
     cidade não passar fome; festividades até sair da desordem civil;
@@ -1756,6 +1809,27 @@ MOVER PARA UM DESTINO (tecla G)
 - Ainda não ataca no caminho, e a máquina não usa essa ordem.
 
 MOVIMENTO (scripts/map/movement.gd)
+- PONTOS DE MOVIMENTO (desde 25/10/2026, para a estrada): cada
+  movimento vale 2 pontos (Movement.POINTS); Unit.moves_left é em
+  pontos, e o painel mostra "Movimento 0,5/1". Um passo de estrada
+  para estrada custa 1 ponto (meio movimento); os outros custam o
+  mesmo de antes, em dobro. Ações de 1 movimento (pilhar) gastam 2
+  pontos; atacar encerra os movimentos e basta ter meio movimento.
+  Save antigo: o "moves_left" em movimentos vira pontos ao carregar.
+- ESTRADA (desde 25/10/2026; exige Engenharia Civil): o Trabalhador
+  constrói com a tecla E ou o botão "Construir estrada [E]", em
+  qualquer casa andável que não seja território de outro jogador
+  nem tenha obra ou ruína de uma cidade (dá para pôr estrada numa
+  fazenda ou mina). Ele fica 2 turnos na casa (GameMap.ROAD_COST);
+  sair interrompe, e "Continuar estrada [E]" retoma. A estrada é do
+  mapa, não da cidade (GameMap.roads, road_progress; vai no save).
+  A cidade conta como estrada. Andar de estrada para estrada custa
+  meio movimento (o Guerreiro anda 2 casas, o Cavaleiro 4) e ignora
+  floresta, colinas e rio nesse passo. Desenho: faixa de terra
+  batida ligando o centro das casas com estrada (8 direções) e as
+  cidades vizinhas; em obra, transparente (camada RoadLayer, por
+  baixo dos rios). O painel mostra "com estrada" ou "estrada em
+  obra N/2". A máquina ainda não faz estradas.
 - 8 direções (diagonais incluídas), custo 1 por casa, como no
   Civilization 1. Exceções, para unidades com mais de 1 de
   movimento: entrar na floresta ou nas colinas custa 2 (ver FLORESTA
@@ -1951,16 +2025,40 @@ CIÊNCIA E PESQUISA (scripts/science/technology.gd, Player.research)
   primeiras, sem exigências:
       Construção  30 pontos
       Misticismo  20 pontos
-      Alfabeto    40 pontos
-      Trabalho em Bronze  35 pontos (desde 25/10/2026)
-  O que libera: Misticismo -> Templo; Construção -> Muralha;
-  Trabalho em Bronze -> Lanceiro (campo "tech" em City.BUILDS).
+      Escrita     40 pontos (era o Alfabeto; mesmo número no save)
+      Trabalho em Bronze  35 pontos
+      Montaria    35 pontos
+  ERA ANTIGA (árvore desenhada pelo usuário em 25/10/2026,
+  OneDrive/Documents/techtree.drawio; custos sugeridos):
+    Tecnologia (custo)        Exige                  Libera
+    Escrita (40)              -                      Escola
+    Construção (30)           -                      Muralha
+    Misticismo (20)           -                      Templo
+    Trabalho em Bronze (35)   -                      Lanceiro
+    Montaria (35)             -                      Cavalaria Leve
+    Literatura (70)           Escrita                Biblioteca
+    Matemática (60)           Construção             Catapulta
+    Trabalho em Ferro (70)    Bronze                 ferro no mapa,
+                                                     Mina, Forja
+    Moeda (70)                Escrita, Bronze        Mercado
+    Guerra de movimento (80)  Montaria, Bronze       Bigas
+    Direito (100)             Literatura             +1 contente de base
+    Engenharia Civil (100)    Matemática             Estrada
+    República (150)           Direito                (governo
+                                                     representativo:
+                                                     ainda não existe)
+    Pão e Circo (140)         Eng. Civil, Ferro      Arena
+  ("Código de Cavalaria", no diagrama, fica para a Idade Média.)
+  O que libera está no campo "tech" de City.BUILDS (prédios e
+  unidades) e nas regras (Direito, Trabalho em Ferro, Engenharia
+  Civil). O FERRO só aparece no mapa (e a Mina só pode ser feita)
+  depois de Trabalho em Ferro (GameMap.iron_visible, pelo jogador
+  humano).
   Desde 24/10/2026, o que depende de uma tecnologia NÃO aparece na
   lista "Construir" enquanto ela não for pesquisada
   (City.has_tech_for); antes aparecia desabilitado com "Precisa da
   tecnologia Misticismo.", motivo que City.build_error ainda
-  devolve (proteção para a máquina e para compras). O Alfabeto
-  ainda não libera nada.
+  devolve (proteção para a máquina e para compras).
 - JANELA DE PESQUISA (scripts/ui/research_dialog.gd): as
   tecnologias disponíveis, cada uma com o custo, os pontos já
   feitos, a estimativa de turnos e o botão "Pesquisar"; embaixo, a
@@ -1984,9 +2082,14 @@ CIÊNCIA E PESQUISA (scripts/science/technology.gd, Player.research)
   a imagem é recortada para preencher 560x315):
       Construção  assets/tech/construcao.png  (muro de pedra)
       Misticismo  assets/tech/misticismo.png  (gravura dos deuses)
-      Alfabeto    assets/tech/alfabeto.png    (inscrição romana)
+      Escrita     assets/tech/alfabeto.png    (inscrição romana)
       Trabalho em Bronze  assets/tech/bronze.png  (ferramentas e
                   vaso de bronze; imagem trazida pelo usuário)
+      As 10 novas (25/10/2026, imagens do usuário em
+      OneDrive/Desktop/Imagens, reduzidas a até 1120 de largura):
+      montaria, literatura, matematica, trabalho_em_ferro, moeda,
+      guerra_de_movimento, direito, engenharia_civil, republica,
+      pao_e_circo (.png em assets/tech/).
   Para trocar, basta substituir o arquivo. Tecnologia sem imagem
   mostra a janela sem a ilustração. Atenção: são imagens de
   exemplo trazidas pelo usuário; antes de distribuir o jogo,
@@ -2061,6 +2164,8 @@ CÂMERA E CONTROLES
 - G: mover a unidade selecionada até um destino (ver MOVER PARA
   UM DESTINO).
 - B: o Colono selecionado constrói uma nova cidade.
+- E: o Trabalhador selecionado constrói uma estrada (Engenharia
+  Civil).
 - C: o Trabalhador selecionado constrói uma fazenda (no
   território de uma cidade sua).
 - M: o Trabalhador selecionado constrói uma madeireira na
@@ -3264,6 +3369,36 @@ Screenshots também confirmaram o visual.
   passaram; partida de 100 rodadas máquina x máquina sem erros (7 e
   8 de 9 marcos, como antes; ninguém chegou ao ferro, que fica fora
   dos territórios iniciais).
+- ÁRVORE DA ERA ANTIGA (pedido do usuário, diagrama techtree.drawio e
+  imagens das tecnologias): 14 tecnologias com as exigências das
+  setas do diagrama (duas setas soltas foram lidas pelas
+  coordenadas: Literatura -> Direito e Bronze -> Moeda, confirmadas
+  pela imagem). O Alfabeto virou a Escrita. Custos de pesquisa,
+  produção e recursos sugeridos por mim (tabela em CIÊNCIA E
+  PESQUISA). Novos prédios: Escola, Biblioteca, Mercado, Forja e
+  Arena (com ícones desenhados por código); nova arma: Espada Curta
+  (gasta ferro); novas unidades: Catapulta, Cavalaria Leve (leva
+  Lança) e Bigas (levam Espada Curta), com desenhos provisórios por
+  código e prompts para o ChatGPT. Direito: +1 contente de base.
+  Trabalho em Ferro passou a ser exigido para ver o ferro e fazer
+  minas. Engenharia Civil: Estrada (decisão do usuário: de estrada
+  para estrada custa meio movimento), o que levou o movimento a ser
+  contado em pontos (2 por movimento). República: só a tecnologia
+  (decisão do usuário; governos depois).
+- Validação: teste novo com 44 verificações (árvore: 14 tecnologias,
+  5 raízes, as setas, ilustrações; Escola, Biblioteca, Mercado, Forja
+  e Arena com os limites e efeitos; Direito; Espada Curta com ferro
+  pago e devolvido; as três unidades e as armas que levam; ferro e
+  mina só com Trabalho em Ferro; estrada: tecnologia, botão, 2
+  turnos, meio movimento, Guerreiro anda 2 casas e Cavaleiro 4,
+  "0,5" de movimento, painel; save com estradas, prédios, meio
+  movimento e save antigo), mais screenshots (estrada no mapa,
+  janela da cidade, lista Construir, tecnologia descoberta, janela de
+  pesquisa). Os testes antigos de custos de movimento foram
+  ajustados para pontos (cópias no scratchpad da sessão 98cc255d,
+  pasta pontos/) e passaram; os do ferro, relevo, Bronze, Muralha,
+  rios, ataque pelo modo Mover, lista e carregamento também. Partida
+  de 100 rodadas máquina x máquina sem erros (7 e 8 de 9 marcos).
 
 --------------------------------------------------------------
 7. BACKLOG (ideias para depois)
@@ -3337,9 +3472,16 @@ histórico):
     científica e cultural
 [x] Ciência: pontos das Prefeituras, árvore de conhecimentos,
     janela de pesquisa e painel no HUD (22/10/2026)
-[ ] Ciência: o que cada tecnologia libera (prédios, unidades,
-    melhorias) e mais tecnologias na árvore (o Misticismo já
-    libera o Templo)
+[x] Ciência: o que cada tecnologia libera e a árvore da era antiga
+    (14 tecnologias, 25/10/2026)
+[ ] Governos (Despotismo, República...): a República já existe
+    como tecnologia, sem efeito
+[ ] Preço em ouro proporcional ao custo (hoje tudo custa 50, até a
+    Arena)
+[ ] IA: fazer as unidades novas (Catapulta, Cavalaria Leve, Bigas) e
+    estradas
+[ ] Ritmo da ciência: em 100 rodadas a máquina só pesquisa as
+    tecnologias de 20 a 35 pontos (cada cidade gera 1-3 por turno)
 [x] Bem-estar social (23/10/2026). Ideias para depois:
     - a orientação de prioridades da cidade poderia ter o foco
       "Bem-estar" (os livres vão para as festividades);

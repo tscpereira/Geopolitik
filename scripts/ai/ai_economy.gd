@@ -23,6 +23,8 @@ extends RefCounted
 ##                 cidades grandes), guardando a madeira para eles;
 ##        muralha  Muralha (com Construção e o Quartel) na capital e nas
 ##                 cidades com inimigo por perto;
+##        era antiga Escola, Mercado, Biblioteca, Forja e Arena (com as
+##                 tecnologias), um de cada vez, na capital e em cidades de 4+;
 ##        armas    Lanças até spears_per_city por cidade (só com o Lanceiro);
 ##        exército Guerreiros até army_to_attack fora das cidades;
 ##   3. cidadãos, do zero (_distribute_workers): fazendas e casas sem
@@ -44,6 +46,8 @@ extends RefCounted
 ## entrando por turno): a máquina não faz mais Trabalhadores e madeireiras só por
 ## ela (cada Trabalhador custa 1 de população).
 const WOOD_RESERVE := 40
+## Prédios da era antiga, na ordem em que a máquina os pede.
+const ANCIENT_BUILDINGS: Array[int] = [City.Build.SCHOOL, City.Build.MARKET, City.Build.LIBRARY, City.Build.FORGE, City.Build.ARENA]
 
 var _game: Game
 var _player: Player
@@ -112,6 +116,15 @@ func _plan(city: City) -> void:
 			and (city == _player.cities[0] or _enemy_near(city.cell, _p.threat_radius)):
 		_try_order(city, City.Build.WALLS)
 
+	# Prédios da era antiga: um de cada vez, depois do Quartel General
+	if city.has_building(City.Build.HEADQUARTERS) and (city == _player.cities[0] or city.population >= 4) \
+			and not city.constructions.any(func(c: City.Construction) -> bool: return c.build in ANCIENT_BUILDINGS):
+		for building: int in ANCIENT_BUILDINGS:
+			if not city.has_building(building) and city.build_error(building).is_empty() \
+					and _player.wood - City.BUILDS[building].get("wood", 0) >= reserve:
+				city.order_build(building)
+				break
+
 	# Armas (só para o soldado que leva Lança: o Guerreiro não leva)
 	var spears: int = _player.arsenal[Arsenal.Weapon.SPEAR] + _player.weapons_in_production(Arsenal.Weapon.SPEAR)
 	if _soldier_needs_spear() and city.has_building(City.Build.CARPENTRY) and spears < _p.spears_per_city * _player.cities.size() \
@@ -170,6 +183,10 @@ func _distribute_workers(city: City) -> void:
 	# O que sobrar: madeireiras cheias, depois a Marcenaria parada (impostos)
 	for mill_cell: Vector2i in city.lumber_mills:
 		city.set_mill_workers(mill_cell, LumberMill.MAX_WORKERS)
+	# Prédios parados com vagas (Mercado: ouro; Biblioteca: ciência; Forja), antes dos impostos da Marcenaria
+	for building: int in [City.Build.MARKET, City.Build.LIBRARY, City.Build.FORGE]:
+		if city.has_building(building) and city.active_unit(building) == null and city.free_citizens() > 0:
+			city.set_building_workers(building, city.building_workers.get(building, 0) + city.free_citizens())
 	if _p.collect_taxes and city.has_building(City.Build.CARPENTRY) and city.active_unit(City.Build.CARPENTRY) == null:
 		city.set_building_workers(City.Build.CARPENTRY,
 				city.building_workers.get(City.Build.CARPENTRY, 0) + city.free_citizens())
@@ -258,6 +275,8 @@ func _job_priority(city: City, job: City.Construction) -> int:
 			return 1 if _enemy_near(city.cell, _p.threat_radius) else 4
 		City.Build.SETTLER:
 			return 3
+		City.Build.SCHOOL, City.Build.MARKET, City.Build.LIBRARY, City.Build.FORGE, City.Build.ARENA:
+			return 5
 	return 8
 
 
@@ -459,6 +478,8 @@ func _city_forest_cells() -> Array[Vector2i]:
 ## paradas).
 func _mine_cells() -> Array[Vector2i]:
 	var cells: Array[Vector2i] = []
+	if not _player.researched.has(Technology.Tech.IRON_WORKING):
+		return cells
 	for city in _player.cities:
 		for site_cell: Vector2i in city.sites:
 			if city.sites[site_cell]["build"] == City.Build.MINE and not _is_worked_site(site_cell):

@@ -377,11 +377,11 @@ func _summary_text() -> String:
 			Icons.IRON_COLOR.to_html(false), _city.iron_per_turn(), _city.mine_workers(),
 		])
 	if _city.gold_per_turn() > 0:
-		lines.append("Ouro: [color=#%s]+%d[/color] por turno   (impostos da Marcenaria)" % [
+		lines.append("Ouro: [color=#%s]+%d[/color] por turno   (impostos e comércio)" % [
 			Icons.GOLD_COLOR.to_html(false), _city.gold_per_turn(),
 		])
 	if _city.science_per_turn() > 0:
-		lines.append("Ciência: [color=#%s]+%d[/color] por turno   (Prefeitura)" % [
+		lines.append("Ciência: [color=#%s]+%d[/color] por turno   (Prefeitura, Escola e Biblioteca)" % [
 			Icons.SCIENCE_COLOR.to_html(false), _city.science_per_turn(),
 		])
 	lines.append("Produção (força de trabalho): %d por turno   (%d em obras e prédios)" % [
@@ -546,6 +546,8 @@ func _make_build_row(build: int) -> HBoxContainer:
 		cost.text += " + %d pop." % info["population"]
 	if info.get("wood", 0) > 0:
 		cost.text += " + %d madeira" % info["wood"]
+	if info.get("iron", 0) > 0:
+		cost.text += " + %d ferro" % info["iron"]
 	var weapons: Dictionary = info.get("weapons", {})
 	for weapon: Arsenal.Weapon in weapons:
 		cost.text += " + %s" % Arsenal.amount_text(weapon, weapons[weapon])
@@ -605,7 +607,7 @@ func _choose_build(build: int) -> void:
 func _warn_if_needs_workers(construction: City.Construction) -> void:
 	if _city.needs_workers(construction):
 		_game.hud.show_message("%s sem mão de obra: aloque cidadãos (botão +) para %s avançar." % [
-			construction.display_name(), "ela" if City.BUILDS[construction.build]["article"] == "a" else "ele"], NEGATIVE_COLOR)
+			construction.display_name(), {"a": "ela", "o": "ele", "as": "elas", "os": "eles"}[City.BUILDS[construction.build]["article"]]], NEGATIVE_COLOR)
 
 
 ## Botão da moeda: compra na hora com ouro (ver Game.buy_build).
@@ -669,17 +671,21 @@ func _rebuild_buildings() -> void:
 			_add_construction_row(_buildings_box, construction, construction == active)
 
 
-## Prédio que rende ouro parado (Marcenaria sem armas na fila): os
-## trabalhadores dele recolhem impostos, +idle_gold de ouro cada por turno.
+## Prédio que rende ouro parado (Marcenaria e Forja sem armas na fila,
+## Mercado): os trabalhadores dele recolhem impostos ou comerciam, +idle_gold de
+## ouro cada por turno (até idle_max_workers, se houver limite).
 func _add_idle_gold_row(building: int) -> void:
 	var gold_each: int = City.BUILDS[building]["idle_gold"]
 	var workers: int = _city.building_workers.get(building, 0)
+	var limit := City.idle_max_workers(building)
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override("separation", 6)
 	row.mouse_filter = Control.MOUSE_FILTER_STOP
 	var goods_every: int = City.BUILDS[building].get("idle_goods", 0)
-	row.tooltip_text = wrap_tooltip("Sem armas na fila: os trabalhadores produzem bens para a população e recolhem impostos (+%d de ouro cada por turno)." % gold_each
-			+ (" A cada %d trabalhadores, os bens duráveis dão +1 de alegria (bem-estar social)." % goods_every if goods_every > 0 else ""))
+	var produces := City.BUILDS.values().any(func(other: Dictionary) -> bool: return other.get("requires", -1) == building)
+	row.tooltip_text = wrap_tooltip(("Sem nada na fila: " if produces else "") + "os trabalhadores rendem +%d de ouro cada por turno" % gold_each
+			+ (" (até %d)" % limit if limit >= 0 else "") + "."
+			+ (" A cada %d trabalhador%s, +1 de alegria (bem-estar social)." % [goods_every, "es" if goods_every > 1 else ""] if goods_every > 0 else ""))
 	_buildings_box.add_child(row)
 	var indent := Control.new()
 	indent.custom_minimum_size.x = UNIT_INDENT
@@ -689,7 +695,7 @@ func _add_idle_gold_row(building: int) -> void:
 	coin.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	row.add_child(coin)
 	var label := Label.new()
-	label.text = "Impostos e bens (sem armas na fila)"
+	label.text = City.BUILDS[building].get("idle_label", "Impostos")
 	label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	row.add_child(label)
 	var status := Label.new()
@@ -699,24 +705,27 @@ func _add_idle_gold_row(building: int) -> void:
 	status.custom_minimum_size.x = 120
 	status.add_theme_color_override("font_color", Icons.GOLD_COLOR if workers > 0 else MUTED_COLOR)
 	row.add_child(status)
-	_add_worker_controls(row, workers, workers + _city.free_citizens(),
+	var most := workers + _city.free_citizens()
+	_add_worker_controls(row, workers, most if limit < 0 else mini(limit, most),
 			func(value: int) -> void: _city.set_building_workers(building, value))
 	var x_space := Control.new()
 	x_space.custom_minimum_size.x = 30 # alinha com o X das outras linhas
 	row.add_child(x_space)
 
 
-## Prédio que gera ciência parado (Prefeitura sem unidades na fila): até
-## idle_max_workers cidadãos, +idle_science de ciência cada por turno, além da
-## ciência que o prédio gera sozinho.
+## Prédio que gera ciência parado (Prefeitura sem unidades na fila, Biblioteca):
+## até idle_max_workers cidadãos, +idle_science de ciência cada por turno, além
+## da ciência que o prédio gera sozinho.
 func _add_idle_science_row(building: int) -> void:
 	var info: Dictionary = City.BUILDS[building]
 	var workers: int = _city.building_workers.get(building, 0)
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override("separation", 6)
 	row.mouse_filter = Control.MOUSE_FILTER_STOP
-	row.tooltip_text = wrap_tooltip("Sem unidades na fila: até %d cidadãos estudam e pesquisam (+%d de ciência cada por turno). A %s já gera +%d sozinha." % [
-		City.idle_max_workers(building), info["idle_science"], String(info["name"]).to_lower(), info.get("science", 0)])
+	var produces := City.BUILDS.values().any(func(other: Dictionary) -> bool: return other.get("requires", -1) == building)
+	row.tooltip_text = wrap_tooltip(("Sem unidades na fila: até" if produces else "Até") + " %d cidadãos estudam e pesquisam (+%d de ciência cada por turno)." % [
+		City.idle_max_workers(building), info["idle_science"]]
+		+ (" %s %s já gera +%d sozinha." % [info["article"].capitalize(), String(info["name"]).to_lower(), info["science"]] if info.get("science", 0) > 0 else ""))
 	_buildings_box.add_child(row)
 	var indent := Control.new()
 	indent.custom_minimum_size.x = UNIT_INDENT
@@ -727,7 +736,7 @@ func _add_idle_science_row(building: int) -> void:
 	icon.draw.connect(func() -> void: Icons.draw_science(icon, Rect2(Vector2.ZERO, icon.size)))
 	row.add_child(icon)
 	var label := Label.new()
-	label.text = "Pesquisa (sem unidades na fila)"
+	label.text = info.get("idle_label", "Pesquisa")
 	label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	row.add_child(label)
 	var status := Label.new()
@@ -811,6 +820,8 @@ func _add_construction_row(box: VBoxContainer, construction: City.Construction, 
 	cancel.tooltip_text = "Cancelar a obra (o progresso é perdido)."
 	if construction.wood_paid > 0:
 		cancel.tooltip_text += "\nOs %d de madeira voltam para o estoque." % construction.wood_paid
+	if construction.iron_paid > 0:
+		cancel.tooltip_text += "\nOs %d de ferro voltam para o estoque." % construction.iron_paid
 	cancel.disabled = _read_only
 	row.add_child(cancel)
 

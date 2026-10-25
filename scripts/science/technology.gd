@@ -10,11 +10,23 @@ extends RefCounted
 ## turno, na pesquisa escolhida (Player.research). Os pontos não se acumulam:
 ## sem pesquisa escolhida, eles se perdem.
 ##
-## Para uma tecnologia nova: entre no enum e em DATA. O que cada uma libera no
-## jogo ainda vai ser definido ("unlocks" fica só como texto por enquanto).
+## Era antiga (árvore desenhada pelo usuário em 25/10/2026, techtree.drawio):
+##   Escrita -> Literatura -> Direito -> República
+##   Escrita + Trabalho em Bronze -> Moeda
+##   Construção -> Matemática -> Engenharia Civil -> Pão e Circo
+##   Trabalho em Bronze -> Trabalho em Ferro -> Pão e Circo
+##   Montaria + Trabalho em Bronze -> Guerra de movimento
+##   Misticismo (sem sucessora por enquanto)
+## O que cada uma libera fica onde é usado: o campo "tech" de City.BUILDS
+## (prédios, unidades), has_tech nas regras (Direito, Trabalho em Ferro,
+## Engenharia Civil). Para uma tecnologia nova: entre no fim do enum e em DATA.
 
 ## Novas tecnologias entram no fim: o save guarda o número de cada uma.
-enum Tech { CONSTRUCTION, MYSTICISM, ALPHABET, BRONZE_WORKING }
+## WRITING era ALPHABET ("Alfabeto") até 25/10/2026: o número é o mesmo.
+enum Tech {
+	CONSTRUCTION, MYSTICISM, WRITING, BRONZE_WORKING, HORSEBACK_RIDING, LITERATURE, MATHEMATICS,
+	IRON_WORKING, CURRENCY, MOBILE_WARFARE, LAW, CIVIL_ENGINEERING, REPUBLIC, BREAD_AND_CIRCUSES,
+}
 
 ##   name      nome mostrado
 ##   cost      pontos de ciência para pesquisar
@@ -33,15 +45,65 @@ const DATA := {
 		"description": "Crenças e rituais que unem o povo. Libera o Templo, que acalma os cidadãos infelizes.",
 		"image": "res://assets/tech/misticismo.png",
 	},
-	Tech.ALPHABET: {
-		"name": "Alfabeto", "cost": 40, "requires": [],
-		"description": "A escrita: base para registrar e transmitir o conhecimento.",
+	Tech.WRITING: {
+		"name": "Escrita", "cost": 40, "requires": [],
+		"description": "Registrar e transmitir o conhecimento. Libera a Escola (+1 de ciência por turno).",
 		"image": "res://assets/tech/alfabeto.png",
 	},
 	Tech.BRONZE_WORKING: {
 		"name": "Trabalho em Bronze", "cost": 35, "requires": [],
 		"description": "Cobre e estanho fundidos em bronze: armas e armaduras melhores. Libera o Lanceiro, forte contra a cavalaria.",
 		"image": "res://assets/tech/bronze.png",
+	},
+	Tech.HORSEBACK_RIDING: {
+		"name": "Montaria", "cost": 35, "requires": [],
+		"description": "Domar e montar cavalos. Libera a Cavalaria Leve (Movimento 4; leva 1 Lança).",
+		"image": "res://assets/tech/montaria.png",
+	},
+	Tech.LITERATURE: {
+		"name": "Literatura", "cost": 70, "requires": [Tech.WRITING],
+		"description": "Obras escritas e copiadas. Libera a Biblioteca (até 2 cidadãos, +1 de ciência cada).",
+		"image": "res://assets/tech/literatura.png",
+	},
+	Tech.MATHEMATICS: {
+		"name": "Matemática", "cost": 60, "requires": [Tech.CONSTRUCTION],
+		"description": "Números e geometria aplicados às máquinas. Libera a Catapulta (Ataque 4).",
+		"image": "res://assets/tech/matematica.png",
+	},
+	Tech.IRON_WORKING: {
+		"name": "Trabalho em Ferro", "cost": 70, "requires": [Tech.BRONZE_WORKING],
+		"description": "Fundir e forjar o ferro. Mostra o ferro no mapa, libera a Mina (+1 de ferro por cidadão) e a Forja (Espadas Curtas; parada, impostos e bem-estar).",
+		"image": "res://assets/tech/trabalho_em_ferro.png",
+	},
+	Tech.CURRENCY: {
+		"name": "Moeda", "cost": 70, "requires": [Tech.WRITING, Tech.BRONZE_WORKING],
+		"description": "Moedas de metal cunhadas para o comércio. Libera o Mercado (até 2 cidadãos, +1 de ouro cada).",
+		"image": "res://assets/tech/moeda.png",
+	},
+	Tech.MOBILE_WARFARE: {
+		"name": "Guerra de movimento", "cost": 80, "requires": [Tech.HORSEBACK_RIDING, Tech.BRONZE_WORKING],
+		"description": "Carros de guerra puxados por cavalos. Libera as Bigas (Ataque 2, Movimento 3; levam 1 Espada Curta).",
+		"image": "res://assets/tech/guerra_de_movimento.png",
+	},
+	Tech.LAW: {
+		"name": "Direito", "cost": 100, "requires": [Tech.LITERATURE],
+		"description": "Leis escritas e iguais para todos. Todas as cidades ganham +1 cidadão contente de base.",
+		"image": "res://assets/tech/direito.png",
+	},
+	Tech.CIVIL_ENGINEERING: {
+		"name": "Engenharia Civil", "cost": 100, "requires": [Tech.MATHEMATICS],
+		"description": "Pontes, aquedutos e vias pavimentadas. Os Trabalhadores passam a construir Estradas (andar de estrada para estrada custa meio movimento).",
+		"image": "res://assets/tech/engenharia_civil.png",
+	},
+	Tech.REPUBLIC: {
+		"name": "República", "cost": 150, "requires": [Tech.LAW],
+		"description": "O povo escolhe os seus representantes. Vai habilitar o governo representativo (os governos ainda não existem no jogo).",
+		"image": "res://assets/tech/republica.png",
+	},
+	Tech.BREAD_AND_CIRCUSES: {
+		"name": "Pão e Circo", "cost": 140, "requires": [Tech.CIVIL_ENGINEERING, Tech.IRON_WORKING],
+		"description": "Espetáculos para o povo. Libera a Arena, que dobra a alegria das festividades.",
+		"image": "res://assets/tech/pao_e_circo.png",
 	},
 }
 

@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="UnitType" load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scripts/units/unit_type.gd" id="1"]
+[ext_resource type="Texture2D" path="res://assets/sprites/units/bigas.png" id="2"]
+
+[resource]
+script = ExtResource("1")
+display_name = "Bigas"
+symbol = "B"
+attack = 2
+defense = 1
+movement = 3
+is_mounted = true
+sprite = ExtResource("2")

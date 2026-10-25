@@ -156,6 +156,8 @@ func _unhandled_input(event: InputEvent) -> void:
 				_mine_or_lumber_mill_with_selected()
 			KEY_C:
 				_build_farm_with_selected()
+			KEY_E:
+				_build_road_with_selected()
 			KEY_P:
 				_pillage_with_selected()
 			KEY_R:
@@ -224,6 +226,7 @@ func refresh_territories() -> void:
 		for cell in city.territory:
 			_territory[cell] = city
 	territory_overlay.set_territories(_territory)
+	game_map.redraw_roads() # a cidade liga as estradas vizinhas
 
 
 ## Território inicial da cidade (City.territory_offsets: 21 casas na capital,
@@ -383,6 +386,8 @@ func improvement_error(unit: Unit, build: int) -> String:
 	var info: Dictionary = City.BUILDS[build]
 	if not (unit.type.can_build_farm if build == City.Build.FARM else unit.type.can_build_lumber_mill):
 		return "Só trabalhadores constroem %ss." % String(info["name"]).to_lower()
+	if build == City.Build.MINE and not unit.owner_player.researched.has(Technology.Tech.IRON_WORKING):
+		return "Minas exigem a tecnologia Trabalho em Ferro."
 	if unit.rebuilding:
 		return "O trabalhador já está construindo."
 	var city := territory_owner(unit.cell)
@@ -406,6 +411,41 @@ func improvement_error(unit: Unit, build: int) -> String:
 	if unit.moves_left <= 0:
 		return "O trabalhador não tem mais movimentos neste turno."
 	return ""
+
+
+## Motivo pelo qual o trabalhador não pode construir (ou continuar) uma estrada
+## na casa em que está ("" = pode): exige Engenharia Civil; não na cidade, numa
+## casa que já tem estrada, no território de outro jogador nem numa casa com
+## obra ou ruína de uma cidade (termine-a antes).
+func road_error(unit: Unit) -> String:
+	if not unit.type.can_build_lumber_mill:
+		return "Só trabalhadores constroem estradas."
+	if not unit.owner_player.researched.has(Technology.Tech.CIVIL_ENGINEERING):
+		return "Estradas exigem a tecnologia Engenharia Civil."
+	if unit.rebuilding:
+		return "O trabalhador já está construindo."
+	if get_city_at(unit.cell):
+		return "A cidade já funciona como estrada."
+	if game_map.roads.has(unit.cell):
+		return "Esta casa já tem uma estrada."
+	var owner_city := territory_owner(unit.cell)
+	if owner_city and owner_city.owner_player != unit.owner_player:
+		return "Esta casa é território de %s (%s)." % [owner_city.city_name, owner_city.owner_player.display_name]
+	var city := claiming_city(unit.cell)
+	if city and (city.sites.has(unit.cell) or city.ruins.has(unit.cell)):
+		return "Termine primeiro a obra desta casa."
+	if unit.moves_left <= 0:
+		return "O trabalhador não tem mais movimentos neste turno."
+	return ""
+
+
+## O trabalhador começa (ou continua) a estrada na casa em que está (use
+## road_error antes). Ele fica na casa e faz REBUILD_PER_TURN por turno até
+## GameMap.ROAD_COST (_process_rebuilds); mover a unidade interrompe (o
+## progresso fica na obra).
+func build_road(unit: Unit) -> void:
+	game_map.start_road(unit.cell)
+	_start_tile_work(unit)
 
 
 ## O trabalhador começa (ou continua) a fazer a fazenda ou madeireira da cidade
@@ -502,7 +542,7 @@ func pillage_error(unit: Unit) -> String:
 		return "Não dá para pilhar as próprias melhorias."
 	if not is_pillageable_by(unit.owner_player, unit.cell):
 		return "Não dá para pilhar no próprio território."
-	if unit.moves_left < PILLAGE_COST:
+	if unit.moves_left < PILLAGE_COST * Movement.POINTS:
 		return "A unidade não tem mais movimentos neste turno."
 	return ""
 
@@ -1026,14 +1066,14 @@ func _show_goto_path(unit: Unit, target: Vector2i) -> void:
 ## turno seguinte (ex.: Cavaleiro com 1 movimento diante de uma floresta).
 func _turns_for_path(unit: Unit, path: Array[Vector2i]) -> int:
 	var turns := 1
-	var moves := unit.moves_left if unit.moves_left > 0 else unit.movement
+	var moves := unit.moves_left if unit.moves_left > 0 else unit.max_points()
 	var previous := unit.cell
 	for cell in path:
 		var cost := Movement.step_cost(game_map, unit, previous, cell)
 		previous = cell
 		if cost > moves:
 			turns += 1
-			moves = unit.movement
+			moves = unit.max_points()
 		moves -= cost
 	return turns
 
@@ -1150,6 +1190,8 @@ func _on_unit_action(action_id: String) -> void:
 			_work_lumber_mill_with_selected()
 		"mine":
 			_build_mine_with_selected()
+		"road":
+			_build_road_with_selected()
 		"farm":
 			_build_farm_with_selected()
 		"release_worker":
@@ -1225,6 +1267,22 @@ func _build_mine_with_selected() -> void:
 		hud.show_message(error, Color(1, 0.6, 0.4))
 		return
 	_build_improvement_with(worker, City.Build.MINE)
+
+
+## Tecla E / botão "Construir estrada": o trabalhador selecionado faz uma
+## estrada onde está.
+func _build_road_with_selected() -> void:
+	var worker := selected_unit
+	if worker == null or not worker.type.can_build_lumber_mill:
+		return
+	var error := road_error(worker)
+	if not error.is_empty():
+		hud.show_message(error, Color(1, 0.6, 0.4))
+		return
+	build_road(worker)
+	hud.show_message("Trabalhador construindo a estrada (%d/%d, 1 por turno)." % [
+			game_map.road_progress[worker.cell], GameMap.ROAD_COST], Color(0.75, 1, 0.75))
+	_select_next_unit()
 
 
 ## Tecla C / botão "Construir fazenda": o trabalhador selecionado faz uma
@@ -1545,6 +1603,13 @@ func _process_rebuilds(player: Player) -> void:
 	for unit in player.units:
 		if not unit.rebuilding:
 			continue
+		if game_map.road_progress.has(unit.cell):
+			if game_map.add_road_progress(unit.cell, REBUILD_PER_TURN):
+				unit.rebuilding = false
+				messages.append("Estrada concluída em (%d, %d)" % [unit.cell.x, unit.cell.y])
+				if not player.is_ai:
+					_finished_workers.append(unit)
+			continue
 		var city := claiming_city(unit.cell)
 		if city == null or city.owner_player != player or not (city.ruins.has(unit.cell) or city.sites.has(unit.cell)):
 			unit.rebuilding = false
@@ -1853,7 +1918,8 @@ func _update_unit_actions() -> void:
 						site_city.city_name, City.BUILDS[City.Build.FARM]["cost"] - site.get("progress", 0),
 						site_city.farm_food(unit.cell), site_city.tile_food(unit.cell)]})
 	var on_hill := game_map.get_terrain(unit.cell) == Terrain.Type.HILLS
-	if unit.type.can_build_lumber_mill and on_hill and ruin_at(unit.cell) < 0: # destruída: botão Reconstruir
+	if unit.type.can_build_lumber_mill and on_hill and ruin_at(unit.cell) < 0 \
+			and unit.owner_player.researched.has(Technology.Tech.IRON_WORKING): # destruída: botão Reconstruir
 		var error := improvement_error(unit, City.Build.MINE)
 		actions.append({"id": "mine",
 				"label": "Continuar mina [M]" if site.get("build", -1) == City.Build.MINE else "Construir mina [M]",
@@ -1875,6 +1941,15 @@ func _update_unit_actions() -> void:
 					"Madeireira de %s: %d turnos (o trabalhador fica na casa). Pronta, até %d cidadãos tiram 1 de madeira por turno cada." % [
 						site_city.city_name, City.BUILDS[City.Build.LUMBER_MILL]["cost"] - site.get("progress", 0), LumberMill.MAX_WORKERS] if city_mill else
 					"Madeireira remota nesta floresta (%d de produção, 1 por trabalhador por turno). Pronta, cada trabalhador tira 1 de madeira por turno." % LumberMill.cost()})
+	if unit.type.can_build_lumber_mill and unit.owner_player.researched.has(Technology.Tech.CIVIL_ENGINEERING) \
+			and not game_map.roads.has(unit.cell) and get_city_at(unit.cell) == null:
+		var error := road_error(unit)
+		actions.append({"id": "road",
+				"label": "Continuar estrada [E]" if game_map.road_progress.has(unit.cell) else "Construir estrada [E]",
+				"disabled": not error.is_empty(),
+				"tooltip": error if not error.is_empty() else
+					"Estrada: %d turnos (o trabalhador fica na casa). De estrada para estrada (ou cidade), andar custa meio movimento." % [
+						GameMap.ROAD_COST - game_map.road_progress.get(unit.cell, 0)]})
 	if unit.type.can_rebuild and ruin_at(unit.cell) >= 0:
 		var error := rebuild_error(unit)
 		var build := ruin_at(unit.cell)
@@ -1978,16 +2053,17 @@ func _update_info() -> void:
 			defense_notes.append("+%d %s" % [unit.terrain_defense_bonus(), Terrain.NAMES[game_map.get_terrain(unit.cell)].to_lower()])
 		if unit.walls_defense_bonus() > 0:
 			defense_notes.append("+%d muralha" % unit.walls_defense_bonus())
-		lines.append("%s (%s) - Ataque %d | Defesa %d%s | Movimento %d/%d | Energia %d/%d" % [
+		lines.append("%s (%s) - Ataque %d | Defesa %d%s | Movimento %s/%d | Energia %d/%d" % [
 			unit.type.display_name, unit.owner_player.display_name,
 			unit.attack, unit.defense, " (%s)" % ", ".join(defense_notes) if not defense_notes.is_empty() else "",
-			unit.moves_left, unit.movement, unit.energy, unit.max_energy,
+			unit.moves_text(), unit.movement, unit.energy, unit.max_energy,
 		])
 		if unit.has_goto():
 			lines[-1] += " | Indo para (%d, %d)" % [unit.goto_target.x, unit.goto_target.y]
 		if unit.rebuilding:
 			var building_city := claiming_city(unit.cell)
-			lines[-1] += " | Construindo" if building_city and building_city.sites.has(unit.cell) else " | Reconstruindo"
+			lines[-1] += " | Construindo estrada" if game_map.road_progress.has(unit.cell) else \
+					" | Construindo" if building_city and building_city.sites.has(unit.cell) else " | Reconstruindo"
 	if selected_unit and _attack_targets.has(_hover_cell):
 		var defender := get_unit_at(_hover_cell)
 		var from_cell: Vector2i = _attack_targets[_hover_cell] # de onde a unidade vai atacar
@@ -2020,7 +2096,11 @@ func _terrain_text(cell: Vector2i) -> String:
 			Terrain.DEFENSE_BONUS[type], Terrain.MOVE_PENALTY[type]]
 	elif type == Terrain.Type.MOUNTAINS:
 		text += " (intransponível)"
-	if game_map.has_iron(cell):
+	if game_map.roads.has(cell):
+		text += ", com estrada"
+	elif game_map.road_progress.has(cell):
+		text += ", estrada em obra %d/%d" % [game_map.road_progress[cell], GameMap.ROAD_COST]
+	if game_map.has_iron(cell) and game_map.iron_visible:
 		text += ", com FERRO (um Trabalhador pode fazer uma mina [M])"
 	if game_map.has_river(cell):
 		text += " à beira do rio (+%d de alimento)" % Terrain.RIVER_FOOD
@@ -2046,12 +2126,14 @@ func _city_improvement_text(city: City, cell: Vector2i) -> String:
 			"+%d alimento" % city.farm_food(cell) if city.farms[cell] > 0 else "sem trabalhador"]
 
 
-## Painéis do topo (jogador humano): arsenal, ouro, madeira e ferro com o saldo por turno.
+## Painéis do topo (jogador humano): arsenal, ouro, madeira e ferro com o saldo
+## por turno. O ferro só aparece no mapa depois que ele pesquisa Trabalho em Ferro.
 func _update_resources() -> void:
 	var player := TurnManager.current_player() if not TurnManager.current_player().is_ai else null
 	for other in players:
 		if player == null and not other.is_ai:
 			player = other
+	game_map.iron_visible = player != null and player.researched.has(Technology.Tech.IRON_WORKING)
 	if player:
 		hud.set_resources(player.gold, player.gold_per_turn(), player.wood, player.wood_per_turn(), player.iron, player.iron_per_turn())
 		hud.set_science(player)

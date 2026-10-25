@@ -17,6 +17,15 @@ const DRAW_GRID := true
 ## Escurecimento da borda de cada casa, para formar a grade.
 const GRID_LINE_DARKEN := 0.15
 const TERRAIN_SHADER: Shader = preload("res://scripts/map/terrain.gdshader")
+## Pontos de obra de uma estrada (o Trabalhador faz Game.REBUILD_PER_TURN por turno).
+const ROAD_COST := 2
+## Desenho da estrada: terra batida com a borda mais escura (larguras em casas).
+const ROAD_EDGE_COLOR := Color8(96, 74, 46)
+const ROAD_COLOR := Color8(176, 148, 100)
+const ROAD_EDGE_WIDTH := 0.2
+const ROAD_WIDTH := 0.13
+## Estrada em obra: mais transparente.
+const ROAD_IN_PROGRESS_ALPHA := 0.4
 
 ## Melhoria desenhada pelo shader numa casa (ver set_improvement).
 enum Improvement { NONE, FARM, FARM_IN_PROGRESS }
@@ -42,9 +51,24 @@ var cities := {}
 ## Casas com ferro (recurso estratégico; só em colinas): {casa: true}. Vêm do
 ## arquivo de recursos do mapa (load_resources) e do save. A bigorna aparece
 ## no canto delas (ResourceLayer; onde há mina, a cidade a desenha de novo por
-## cima da mina).
+## cima da mina), só quando iron_visible (o jogador humano tem Trabalho em
+## Ferro; o Game atualiza).
 var iron := {}
+var iron_visible := false:
+	set(value):
+		if value != iron_visible:
+			iron_visible = value
+			if _resource_layer:
+				_resource_layer.queue_redraw()
 var _resource_layer: Node2D
+
+## Estradas prontas: {casa: true}. Obras de estrada: {casa: pontos feitos}
+## (ROAD_COST). Feitas pelo Trabalhador (Game.build_road); a cidade também
+## conta como estrada (has_road). De estrada para estrada, o passo custa meio
+## movimento (Movement.step_cost).
+var roads := {}
+var road_progress := {}
+var _road_layer: Node2D
 
 var _terrain := PackedByteArray()
 ## Rios: cada um é a lista dos cantos da grade por onde passa (ver Rivers).
@@ -99,12 +123,18 @@ func _ready() -> void:
 	_river_layer.draw.connect(func() -> void: Rivers.draw(_river_layer, self, rivers, TILE_SIZE))
 	add_child(_river_layer)
 	move_child(_river_layer, 1)
+	# Estradas por cima do terreno e por baixo dos rios
+	_road_layer = Node2D.new()
+	_road_layer.name = "RoadLayer"
+	_road_layer.draw.connect(_draw_roads)
+	add_child(_road_layer)
+	move_child(_road_layer, 1)
 	# Bigornas das casas com ferro, por cima dos rios
 	_resource_layer = Node2D.new()
 	_resource_layer.name = "ResourceLayer"
 	_resource_layer.draw.connect(_draw_resources)
 	add_child(_resource_layer)
-	move_child(_resource_layer, 2)
+	move_child(_resource_layer, 3)
 
 
 ## Monta o mapa a partir de uma imagem: cada pixel vira uma casa.
@@ -160,8 +190,63 @@ func iron_cells() -> Array[Vector2i]:
 	return cells
 
 
+## Se a casa tem estrada pronta (ou é uma cidade).
+func has_road(cell: Vector2i) -> bool:
+	return roads.has(cell) or cities.has(cell)
+
+
+## Começa (ou continua) a obra da estrada na casa.
+func start_road(cell: Vector2i) -> void:
+	if not road_progress.has(cell):
+		road_progress[cell] = 0
+	redraw_roads()
+
+
+## +[param points] na obra da estrada. Retorna true se ela ficou pronta.
+func add_road_progress(cell: Vector2i, points: int) -> bool:
+	road_progress[cell] += points
+	if road_progress[cell] < ROAD_COST:
+		redraw_roads()
+		return false
+	road_progress.erase(cell)
+	roads[cell] = true
+	redraw_roads()
+	return true
+
+
+## Redesenha as estradas (também quando uma cidade nasce ou some: ela liga as
+## estradas vizinhas).
+func redraw_roads() -> void:
+	_road_layer.queue_redraw()
+
+
+## Estradas: de cada casa com estrada (pronta ou em obra) um trecho até o
+## centro de cada vizinha com estrada ou cidade, nas 8 direções; casa sem
+## vizinha, um trecho curto de terra. Em obra, mais transparente.
+func _draw_roads() -> void:
+	for layer in 2: # primeiro as bordas escuras, depois o miolo
+		var color := ROAD_EDGE_COLOR if layer == 0 else ROAD_COLOR
+		var width := (ROAD_EDGE_WIDTH if layer == 0 else ROAD_WIDTH) * TILE_SIZE
+		for cell: Vector2i in roads.keys() + road_progress.keys():
+			var alpha := 1.0 if roads.has(cell) else ROAD_IN_PROGRESS_ALPHA
+			var center := (Vector2(cell) + Vector2(0.5, 0.5)) * TILE_SIZE
+			var tint := Color(color, alpha)
+			var linked := false
+			for direction: Vector2i in Movement.DIRECTIONS:
+				var other := cell + direction
+				if roads.has(other) or road_progress.has(other) or cities.has(other):
+					var other_alpha := alpha if roads.has(other) or cities.has(other) else ROAD_IN_PROGRESS_ALPHA
+					_road_layer.draw_line(center, center + Vector2(direction) * TILE_SIZE * 0.5, Color(color, minf(alpha, other_alpha)), width, true)
+					linked = true
+			if not linked:
+				_road_layer.draw_line(center - Vector2(TILE_SIZE * 0.3, 0), center + Vector2(TILE_SIZE * 0.3, 0), tint, width, true)
+			_road_layer.draw_circle(center, width * 0.5, tint)
+
+
 ## Bigorna no canto de cada casa com ferro (Icons.draw_iron_marker).
 func _draw_resources() -> void:
+	if not iron_visible:
+		return
 	for cell: Vector2i in iron:
 		Icons.draw_iron_marker(_resource_layer, Rect2(Vector2(cell) * TILE_SIZE, Vector2.ONE * TILE_SIZE))
 
@@ -227,6 +312,7 @@ func set_terrain(cell: Vector2i, type: Terrain.Type) -> void:
 func to_dict() -> Dictionary:
 	return {"width": width, "height": height, "terrain": Marshalls.raw_to_base64(_terrain),
 			"wood": SaveGame.cell_map_to_json(_wood), "iron": SaveGame.cells_to_json(iron_cells()),
+			"roads": SaveGame.cell_map_to_json(roads), "road_progress": SaveGame.cell_map_to_json(road_progress),
 			"rivers": rivers.map(func(river: Array) -> Array: return SaveGame.cells_to_json(river))}
 
 
@@ -247,6 +333,11 @@ func from_dict(data: Dictionary) -> void:
 	# Save antigo (sem rios): ficam os rios gerados ao montar o mapa
 	if data.has("rivers"):
 		set_rivers(data["rivers"].map(func(river: Array) -> Array: return SaveGame.json_to_cells(river)))
+	roads = {}
+	for road_cell: Vector2i in SaveGame.json_to_cell_map(data.get("roads", [])):
+		roads[road_cell] = true
+	road_progress = SaveGame.json_to_cell_map(data.get("road_progress", []))
+	redraw_roads()
 	# Save antigo (sem ferro): fica o ferro do arquivo de recursos do mapa
 	if data.has("iron"):
 		iron = {}
