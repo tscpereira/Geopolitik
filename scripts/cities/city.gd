@@ -74,7 +74,7 @@ extends Node2D
 signal changed
 
 ## Novos itens entram no fim: o save guarda o número de cada um.
-enum Build { FARM, LUMBER_MILL, WARRIOR, WORKER, SETTLER, CITY_HALL, HEADQUARTERS, CARPENTRY, SPEAR, TEMPLE, WALLS }
+enum Build { FARM, LUMBER_MILL, WARRIOR, WORKER, SETTLER, CITY_HALL, HEADQUARTERS, CARPENTRY, SPEAR, TEMPLE, WALLS, SPEARMAN }
 
 ## Humor de um cidadão (bem-estar social).
 enum Mood { UNHAPPY, CONTENT, HAPPY }
@@ -155,7 +155,14 @@ const BUILDS := {
 		"cost": 10, "gold": 50, "weapons": {Arsenal.Weapon.SPEAR: 1}, "on_tile": false,
 		"unit": preload("res://data/units/guerreiro.tres"), "population": 1,
 		"requires": Build.HEADQUARTERS,
-		"description": "Unidade militar (Ataque 1, Defesa 1, Movimento 1). Feita no Quartel General; leva 1 Lança do arsenal.",
+		"description": "Unidade militar rústica (Ataque 1, Defesa 1, Movimento 1). Feita no Quartel General; leva 1 Lança do arsenal.",
+	},
+	Build.SPEARMAN: {
+		"name": "Lanceiro", "article": "o", "category": Category.UNIT,
+		"cost": 12, "gold": 50, "weapons": {Arsenal.Weapon.SPEAR: 1}, "on_tile": false,
+		"unit": preload("res://data/units/lanceiro.tres"), "population": 1,
+		"requires": Build.HEADQUARTERS, "tech": Technology.Tech.BRONZE_WORKING,
+		"description": "Hoplita (Ataque 1, Defesa 2, Movimento 1); +1 de ataque e de defesa contra cavalaria. Exige Trabalho em Bronze; leva 1 Lança.",
 	},
 	Build.SETTLER: {
 		"name": "Colono", "article": "o", "category": Category.UNIT,

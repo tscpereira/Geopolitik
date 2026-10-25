@@ -4,8 +4,10 @@ extends RefCounted
 ## Batalha por desgaste de energia (inspirada no Civilization V/VI):
 ## cada ataque tira energia dos dois lados e a unidade é destruída ao chegar a 0.
 ##
-##   força de ataque = Ataque × fator de energia × bônus de ataque
-##   força de defesa = (Defesa + rio) × fator de energia × bônus de defesa
+##   força de ataque = (Ataque + anticavalaria) × fator de energia × bônus de ataque
+##   força de defesa = (Defesa + rio + anticavalaria) × fator de energia × bônus de defesa
+## Anticavalaria: unidade com anti_cavalry_bonus (Lanceiro: +1) ganha o bônus no
+## ataque e na defesa quando o adversário é cavalaria (is_mounted: Cavaleiro).
 ## Rio: o defensor ganha +1 se o ataque vem do outro lado de um rio
 ## (Unit.river_defense_bonus). Por isso as funções recebem a casa de onde o
 ## atacante ataca ([param from_cell]); sem ela, vale a casa em que ele está.
@@ -47,13 +49,19 @@ static func defense_bonus(_attacker: Unit, _defender: Unit) -> float:
 
 
 static func attack_strength(attacker: Unit, defender: Unit) -> float:
-	return attacker.attack * energy_factor(attacker) * attack_bonus(attacker, defender)
+	return (attacker.attack + anti_cavalry(attacker, defender)) * energy_factor(attacker) * attack_bonus(attacker, defender)
 
 
 static func defense_strength(attacker: Unit, defender: Unit, from_cell := Unit.NO_TARGET) -> float:
 	var origin := attacker.cell if from_cell == Unit.NO_TARGET else from_cell
-	return (defender.defense + defender.river_defense_bonus(origin)) * energy_factor(defender) \
-			* defense_bonus(attacker, defender)
+	return (defender.defense + defender.river_defense_bonus(origin) + anti_cavalry(defender, attacker)) \
+			* energy_factor(defender) * defense_bonus(attacker, defender)
+
+
+## Bônus de [param unit] por lutar contra [param enemy] de cavalaria
+## (UnitType.anti_cavalry_bonus; 0 se o inimigo não for cavalaria).
+static func anti_cavalry(unit: Unit, enemy: Unit) -> int:
+	return unit.type.anti_cavalry_bonus if enemy.type.is_mounted else 0
 
 
 ## Dano médio esperado, sem a sorte: {"to_defender": float, "to_attacker": float}.

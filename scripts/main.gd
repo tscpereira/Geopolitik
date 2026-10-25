@@ -1943,10 +1943,17 @@ func _update_info() -> void:
 		var defender := get_unit_at(_hover_cell)
 		var from_cell: Vector2i = _attack_targets[_hover_cell] # de onde a unidade vai atacar
 		var expected := Combat.expected_damage(selected_unit, defender, from_cell)
-		lines.append("Atacar: %s (força %.2f) x %s (força %.2f%s) - dano estimado: causa ~%d | recebe ~%d" % [
-			selected_unit.type.display_name, Combat.attack_strength(selected_unit, defender),
+		var attack_note := ", +%d contra cavalaria" % Combat.anti_cavalry(selected_unit, defender) \
+				if Combat.anti_cavalry(selected_unit, defender) > 0 else ""
+		var target_notes := []
+		if defender.river_defense_bonus(from_cell) > 0:
+			target_notes.append("+%d atrás do rio" % Terrain.RIVER_DEFENSE_BONUS)
+		if Combat.anti_cavalry(defender, selected_unit) > 0:
+			target_notes.append("+%d contra cavalaria" % Combat.anti_cavalry(defender, selected_unit))
+		lines.append("Atacar: %s (força %.2f%s) x %s (força %.2f%s) - dano estimado: causa ~%d | recebe ~%d" % [
+			selected_unit.type.display_name, Combat.attack_strength(selected_unit, defender), attack_note,
 			defender.type.display_name, Combat.defense_strength(selected_unit, defender, from_cell),
-			", +%d atrás do rio" % Terrain.RIVER_DEFENSE_BONUS if defender.river_defense_bonus(from_cell) > 0 else "",
+			", " + ", ".join(target_notes) if not target_notes.is_empty() else "",
 			roundi(expected["to_defender"]), roundi(expected["to_attacker"]),
 		])
 	hud.set_info("\n".join(lines))

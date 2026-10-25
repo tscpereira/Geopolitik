@@ -13,7 +13,8 @@ extends RefCounted
 ## Para uma tecnologia nova: entre no enum e em DATA. O que cada uma libera no
 ## jogo ainda vai ser definido ("unlocks" fica só como texto por enquanto).
 
-enum Tech { CONSTRUCTION, MYSTICISM, ALPHABET }
+## Novas tecnologias entram no fim: o save guarda o número de cada uma.
+enum Tech { CONSTRUCTION, MYSTICISM, ALPHABET, BRONZE_WORKING }
 
 ##   name      nome mostrado
 ##   cost      pontos de ciência para pesquisar
@@ -36,6 +37,11 @@ const DATA := {
 		"name": "Alfabeto", "cost": 40, "requires": [],
 		"description": "A escrita: base para registrar e transmitir o conhecimento.",
 		"image": "res://assets/tech/alfabeto.png",
+	},
+	Tech.BRONZE_WORKING: {
+		"name": "Trabalho em Bronze", "cost": 35, "requires": [],
+		"description": "Cobre e estanho fundidos em bronze: armas e armaduras melhores. Libera o Lanceiro, forte contra a cavalaria.",
+		"image": "res://assets/tech/bronze.png",
 	},
 }
 

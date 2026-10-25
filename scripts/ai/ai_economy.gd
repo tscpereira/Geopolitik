@@ -14,7 +14,8 @@ extends RefCounted
 ##        Trabalhador para as tarefas dele (_worker_jobs): fazendas que faltam,
 ##                 madeireira (se falta madeira), ruínas (melhorias pilhadas)
 ##                 e cidades vazias para repovoar;
-##        defesa   Guerreiro (e a Lança dele) para a guarnição da cidade;
+##        defesa   soldado (Lanceiro com Trabalho em Bronze, senão Guerreiro; e a
+##                 Lança dele) para a guarnição da cidade;
 ##        expansão Colono (população >= settler_population);
 ##        bem-estar Templo (com Misticismo) quando a população chega aos
 ##                 contentes de base (City.base_content);
@@ -78,11 +79,11 @@ func _plan(city: City) -> void:
 			< mini(_worker_jobs(), _p.workers_per_city * _player.cities.size() + 1):
 		_try_order(city, City.Build.WORKER)
 
-	# Defesa: Guerreiro para a guarnição (e a Lança dele, se faltar)
+	# Defesa: soldado para a guarnição (e a Lança dele, se faltar)
 	if _garrison_needed(city) > 0:
-		if not city.weapons_error(City.Build.WARRIOR).is_empty() and _player.weapons_in_production(Arsenal.Weapon.SPEAR) == 0:
+		if not city.weapons_error(_soldier()).is_empty() and _player.weapons_in_production(Arsenal.Weapon.SPEAR) == 0:
 			_try_order(city, City.Build.SPEAR)
-		_try_order(city, City.Build.WARRIOR)
+		_try_order(city, _soldier())
 
 	# Expansão
 	if city.population >= _p.settler_population \
@@ -119,8 +120,8 @@ func _plan(city: City) -> void:
 
 	# Exército (fora das cidades)
 	if _p.army_to_attack > 0 and city.population >= 3 \
-			and _count_units(_is_field_soldier) + _count_queued(City.Build.WARRIOR) < _p.army_to_attack:
-		_try_order(city, City.Build.WARRIOR)
+			and _count_units(_is_field_soldier) + _count_queued(City.Build.WARRIOR) + _count_queued(City.Build.SPEARMAN) < _p.army_to_attack:
+		_try_order(city, _soldier())
 
 
 ## Pede a obra se as regras deixarem e se ainda não houver uma igual na fila.
@@ -235,12 +236,12 @@ func _workable_tiles(city: City) -> Array[Vector2i]:
 ## defesa se falta guarnição, madeira se falta, expansão, prédios, armas e
 ## exército.
 func _job_priority(city: City, job: City.Construction) -> int:
-	var defense_short := _garrison_needed(city) + _queued_in(city, City.Build.WARRIOR) > 0
+	var defense_short := _garrison_needed(city) + _queued_in(city, City.Build.WARRIOR) + _queued_in(city, City.Build.SPEARMAN) > 0
 	var wood_short := _wood_short()
 	match job.build:
 		City.Build.FARM:
 			return 0 if city.food_per_turn() < _p.food_surplus else 5
-		City.Build.SPEAR, City.Build.WARRIOR:
+		City.Build.SPEAR, City.Build.WARRIOR, City.Build.SPEARMAN:
 			return 1 if defense_short else 6
 		City.Build.WORKER:
 			return 0 if _farm_jobs() > 0 else 1 if _rebuild_jobs() > 0 else 2 if wood_short else 7
@@ -261,15 +262,16 @@ func _queued_in(city: City, build: int) -> int:
 	return city.constructions.filter(func(c: City.Construction) -> bool: return c.build == build).size()
 
 
-## Inimigo perto e cidade sem guarnição: compra um Guerreiro (e a Lança, se faltar).
+## Inimigo perto e cidade sem guarnição: compra um soldado (e a Lança, se faltar).
 func _buy_defense(city: City) -> void:
 	if not _p.buy_defense or _garrison_count(city) > 0 or not _enemy_near(city.cell, _p.threat_radius):
 		return
 	if _player.arsenal[Arsenal.Weapon.SPEAR] == 0 and _game.buy_error(city, City.Build.SPEAR).is_empty():
 		_game.buy_build(city, City.Build.SPEAR)
-	if _game.buy_error(city, City.Build.WARRIOR).is_empty():
-		_game.buy_build(city, City.Build.WARRIOR)
-		print("%s comprou um Guerreiro para defender %s" % [_player.display_name, city.city_name])
+	if _game.buy_error(city, _soldier()).is_empty():
+		var bought := _soldier()
+		_game.buy_build(city, bought)
+		print("%s comprou um %s para defender %s" % [_player.display_name, City.BUILDS[bought]["name"], city.city_name])
 
 
 # --- Colonos e Trabalhadores -----------------------------------------------
@@ -633,12 +635,18 @@ func _garrison_count(city: City) -> int:
 	return total
 
 
-## Quantos Guerreiros faltam na guarnição da cidade (contando os que já estão
+## Soldado que a máquina faz: o Lanceiro (Defesa 2, forte contra cavalaria)
+## quando já tem Trabalho em Bronze; senão, o Guerreiro.
+func _soldier() -> int:
+	return City.Build.SPEARMAN if _player.researched.has(Technology.Tech.BRONZE_WORKING) else City.Build.WARRIOR
+
+
+## Quantos soldados faltam na guarnição da cidade (contando os que já estão
 ## na fila e os soldados livres que podem ir para lá).
 func _garrison_needed(city: City) -> int:
 	var queued := 0
 	for construction in city.constructions:
-		if construction.build == City.Build.WARRIOR:
+		if construction.build in [City.Build.WARRIOR, City.Build.SPEARMAN]:
 			queued += 1
 	return _p.garrison_per_city - _garrison_count(city) - queued - _count_units(_is_field_soldier)
 

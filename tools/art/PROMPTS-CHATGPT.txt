@@ -242,6 +242,19 @@ angle, size and framing. Ruined acropolis with fallen columns, breached
 walls, broken towers, collapsed roofs, rubble, ash, embers, thin smoke. No
 banners, no people. Transparent background around the plateau.
 
+PROMPT 14  ->  salvar como: guerreiro.png   (desde 25/10/2026)
+O hoplita da folha virou o Lanceiro; o Guerreiro de hoje é uma montagem
+feita por código (tools/art/guerreiro_rustico.gd: o Trabalhador com túnica
+de couro e escudo de tábuas). Para trocar por um desenho original:
+Following all the rules above: a rustic early warrior, a tribal fighter
+from before the bronze age. Same body proportions and painting style as the
+worker and the hoplite. Rough leather tunic and fur over one shoulder, bare
+arms, leather wraps on the legs, simple sandals. A wooden club or a stone
+axe in the right hand, resting on the shoulder. A round shield made of wood
+planks with a leather rim on the left arm; the painted band on the shield
+and the headband are in the team color. No metal armor, no helmet. Full
+body, standing, facing three-quarter to the right. Transparent background.
+
 
 ------------------------------------------------------------------------
 O QUE EU FAÇO DEPOIS (para referência)

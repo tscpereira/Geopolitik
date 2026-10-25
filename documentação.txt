@@ -155,6 +155,8 @@ C:\ProjetoGame
 |       |-- import_sheet.gd        Importa a folha do ChatGPT
 |       |-- variantes_cidade.gd    Monta as variantes das cidades
 |       |                          (capital/normal, com/sem muralha)
+|       |-- guerreiro_rustico.gd   Monta o Guerreiro rústico (a partir
+|       |                          do Trabalhador do ChatGPT)
 |       |-- PROMPTS-CHATGPT.txt    Prompts para gerar os desenhos
 |       `-- chatgpt/               Referência, folha gerada, recortes
 |                                  grandes (grandes/) e os desenhos
@@ -166,6 +168,7 @@ C:\ProjetoGame
     |                              TemplateMapaTeste.png)
     `-- units/
         |-- guerreiro.tres         Tipos de unidade
+        |-- lanceiro.tres
         |-- arqueiro.tres
         |-- cavaleiro.tres
         |-- colono.tres
@@ -431,10 +434,17 @@ UNIDADES (scripts/units/)
   data/units/ e podem ser editados no Inspector do Godot:
     Tipo        Símbolo  Ataque  Defesa  Movimento  Energia
     Guerreiro   G        1       1       1          100
+    Lanceiro    L        1       2       1          100
     Arqueiro    A        2       1       1          100
     Cavaleiro   C        1       1       2          100
     Colono      S        0       0       1          100
     Trabalhador T        0       0       1          100
+- LANCEIRO (desde 25/10/2026, pedido do usuário; exige a
+  tecnologia Trabalho em Bronze): +1 de ataque e +1 de defesa
+  quando luta contra cavalaria (campo "Anti Cavalry Bonus" do
+  .tres; a cavalaria tem "Is Mounted", hoje só o Cavaleiro).
+  Lanceiro atacando Cavaleiro: força 2; defendendo do Cavaleiro: 3.
+  A prévia do ataque mostra "+1 contra cavalaria".
 - Cada unidade no mapa guarda o dono, a casa em que está e os
   movimentos restantes no turno.
 - Visual (desde 22/10/2026, estilo Civilization II): o sprite da
@@ -443,7 +453,18 @@ UNIDADES (scripts/units/)
   jogador nos pés (Unit._draw_base).
 - Sprites: PNG de 80x80 pixels no estilo pintado (ver MAPA;
   desde 23/10/2026), com fundo transparente, em
-    assets/sprites/units/guerreiro.png    hoplita (Antiguidade):
+    assets/sprites/units/guerreiro.png    guerreiro rústico (desde
+                                           25/10/2026): o corpo do
+                                           Trabalhador do ChatGPT com
+                                           túnica de couro, machado e
+                                           escudo redondo de tábuas com
+                                           aro e umbo de ferro e um anel
+                                           pintado na cor do time
+                                           (tools/art/guerreiro_rustico.gd;
+                                           prompt 14 para um desenho
+                                           original no ChatGPT)
+    assets/sprites/units/lanceiro.png     hoplita (Antiguidade; era o
+                                           Guerreiro até 25/10/2026):
                                            elmo coríntio de bronze
                                            com crista de crina,
                                            couraça de bronze,
@@ -867,6 +888,9 @@ CIDADES (scripts/cities/city.gd)
     Construção  Custo                       Onde
     Guerreiro  10 de produção + 1 de       Quartel General
                 população + 1 Lança
+    Lanceiro    12 de produção + 1 de       Quartel General
+                população + 1 Lança         (exige Trabalho em
+                                            Bronze)
     Colono      10 de produção + 1 de       Prefeitura
                 população
     Trabalhador 5 de produção + 1 de        Prefeitura
@@ -1462,7 +1486,10 @@ IA: ECONOMIA, EXPANSÃO E DEFESA (scripts/ai/ai_economy.gd)
 - Economia, a cada turno:
   * Compra de defesa (primeiro, em todas as cidades): inimigo
     militar a até threat_radius casas e cidade sem guarnição ->
-    compra um Guerreiro com ouro (e a Lança, se der).
+    compra um soldado com ouro (e a Lança, se der). O soldado da
+    máquina é o Lanceiro quando ela já tem Trabalho em Bronze
+    (Defesa 2); senão, o Guerreiro (AIEconomy._soldier). Vale também
+    para a guarnição e o exército.
   * Pedidos de cada cidade, um de cada tipo por vez: Trabalhador,
     se há tarefas para ele (fazendas que faltam: uma por
     habitante; uma madeireira se falta madeira; ruínas e cidades
@@ -1657,8 +1684,12 @@ Fórmula:
   fator de energia = 0,5 + 0,5 x (energia / energia máxima)
       (com energia cheia, a unidade luta com 100% da força; quase
       sem energia, luta com 50%)
-  força de ataque  = Ataque x fator de energia x bônus de ataque
-  força de defesa  = Defesa x fator de energia x bônus de defesa
+  força de ataque  = (Ataque + anticavalaria) x fator de energia
+                     x bônus de ataque
+  força de defesa  = (Defesa + rio + anticavalaria) x fator de
+                     energia x bônus de defesa
+  anticavalaria    = +1 para o Lanceiro quando o adversário é
+                     cavalaria (Combat.anti_cavalry)
   razão            = força de ataque / força de defesa
   dano ao defensor = 30 x raiz(razão) x sorte
   dano ao atacante = 30 / raiz(razão) x sorte
@@ -1798,8 +1829,9 @@ CIÊNCIA E PESQUISA (scripts/science/technology.gd, Player.research)
       Construção  30 pontos
       Misticismo  20 pontos
       Alfabeto    40 pontos
-  O que libera: Misticismo -> Templo; Construção -> Muralha (campo
-  "tech" em City.BUILDS).
+      Trabalho em Bronze  35 pontos (desde 25/10/2026)
+  O que libera: Misticismo -> Templo; Construção -> Muralha;
+  Trabalho em Bronze -> Lanceiro (campo "tech" em City.BUILDS).
   Desde 24/10/2026, o que depende de uma tecnologia NÃO aparece na
   lista "Construir" enquanto ela não for pesquisada
   (City.has_tech_for); antes aparecia desabilitado com "Precisa da
@@ -1830,6 +1862,8 @@ CIÊNCIA E PESQUISA (scripts/science/technology.gd, Player.research)
       Construção  assets/tech/construcao.png  (muro de pedra)
       Misticismo  assets/tech/misticismo.png  (gravura dos deuses)
       Alfabeto    assets/tech/alfabeto.png    (inscrição romana)
+      Trabalho em Bronze  assets/tech/bronze.png  (ferramentas e
+                  vaso de bronze; imagem trazida pelo usuário)
   Para trocar, basta substituir o arquivo. Tecnologia sem imagem
   mostra a janela sem a ilustração. Atenção: são imagens de
   exemplo trazidas pelo usuário; antes de distribuir o jogo,
@@ -2105,6 +2139,12 @@ Screenshots também confirmaram o visual.
 [x] Roda do mouse não dá zoom no mapa com a janela da cidade aberta
 [x] Arsenal (Lança) e Marcenaria; Guerreiro leva 1 Lança
 [x] Primeira fonte de ouro: impostos da Marcenaria parada
+[x] Lanceiro (1/2/1, +1 de ataque e defesa contra cavalaria) com a
+    tecnologia Trabalho em Bronze; o Guerreiro ganhou um desenho
+    rústico e o hoplita virou o Lanceiro (25/10/2026)
+[ ] Guerreiro rústico: hoje ele leva 1 Lança do arsenal, como o
+    Lanceiro; decidir se continua (ou outra arma, ex.: machado)
+[ ] Desenho original do Guerreiro rústico pelo ChatGPT (prompt 14)
 [ ] Mais armas (ex.: arco, espada) e tropas que usem cada uma
 [ ] Economia: outras formas de ganhar ouro (comércio...)
 [x] Prédios na cidade: Prefeitura (nativa) e Quartel General,
@@ -2991,6 +3031,30 @@ Screenshots também confirmaram o visual.
   "+2 muralha"; save; a máquina pede a Muralha; ruína com muralha),
   mais screenshots (lista Construir com o ícone, cidade murada ao
   lado de uma sem muralha, janela da cidade, ruínas).
+- TRABALHO EM BRONZE E LANCEIRO (pedido do usuário): nova
+  tecnologia Trabalho em Bronze (35 pontos, sem exigências), com a
+  ilustração trazida pelo usuário (assets/tech/bronze.png). Libera o
+  Lanceiro (1/2/1; 12 de produção + 1 de população + 1 Lança, no
+  Quartel General), que ganha +1 de ataque e +1 de defesa contra
+  cavalaria (novos campos is_mounted e anti_cavalry_bonus no tipo de
+  unidade; o Cavaleiro é cavalaria). A prévia do ataque mostra o
+  bônus. A máquina passa a fazer Lanceiros quando tem a tecnologia.
+- ARTE: o hoplita (o Guerreiro de antes) virou o desenho do
+  Lanceiro, e o Guerreiro ganhou um desenho rústico no mesmo estilo,
+  montado por tools/art/guerreiro_rustico.gd a partir do Trabalhador
+  do ChatGPT: túnica de couro, machado e escudo redondo de tábuas
+  com aro e umbo de ferro e um anel na cor do time. Prompt 14 em
+  PROMPTS-CHATGPT.txt para trocar por um desenho original.
+- Validação: teste com 20 verificações (tecnologia, ilustração e
+  descrição; Lanceiro 1/2/1, bônus e cavalaria; desenhos diferentes;
+  lista sem e com a tecnologia; forças 2 e 3 contra o Cavaleiro e
+  sem bônus contra o Guerreiro; dano menor; prévia; a máquina faz
+  Lanceiros com a tecnologia e Guerreiros sem), mais screenshots
+  (unidades lado a lado nas duas cores em zoom 1,4 e 0,75, janela
+  de tecnologia descoberta, lista Construir). Testes da muralha, dos
+  rios, das melhorias, do ataque, da lista e da conquista passaram, e
+  a partida de 100 rodadas máquina x máquina rodou sem erros (as duas
+  pesquisaram Trabalho em Bronze).
 
 --------------------------------------------------------------
 7. BACKLOG (ideias para depois)

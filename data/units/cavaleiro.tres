@@ -10,4 +10,5 @@ symbol = "C"
 attack = 1
 defense = 1
 movement = 2
+is_mounted = true
 sprite = ExtResource("2")
