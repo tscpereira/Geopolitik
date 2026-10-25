@@ -521,11 +521,22 @@ RIOS (scripts/map/rivers.gd; desde 25/10/2026, pedido do usuário)
   ou ao encontrar outro rio (afluente). No mapa de teste saem 8 rios
   de 8 a 19 trechos, com 108+ casas à beira de rio.
 - DESENHO (Rivers.draw, nó RiverLayer do GameMap, por cima do
-  terreno e das fazendas): curva suavizada (Chaikin, 4 passadas) que
-  ondula um pouco em volta das bordas (sinuosa), com margem de terra,
-  água azul acinzentada e um reflexo claro no meio; estreita na
-  nascente (0,09 casa) e mais larga na foz (0,22), entrando um pouco
-  no mar. A janela da cidade desenha os mesmos rios no mapa dela.
+  terreno e das fazendas), no estilo do rio do Civilization do SNES
+  (referência trazida pelo usuário): curva suavizada (Chaikin, 4
+  passadas) que ondula em volta das bordas (sinuosa), em três
+  camadas: margem de areia (a cor da praia da costa), faixa azul mais
+  escura nas bordas da água e água azul mais clara no meio. Cada
+  camada tem a borda esmaecida (sem serrilhado); é desenhada como uma
+  malha de triângulos com cor por vértice (Rivers._strip).
+    * nascente: afina até uma ponta e aparece aos poucos;
+    * largura da água: 0,11 casa na nascente até 0,24 perto da foz;
+    * FOZ: no último 1,4 casa o rio se abre em leque (até 3,6x mais
+      largo), a água vai tomando a cor do mar e some no último meio
+      casa; a areia da margem some antes, junto da praia. Assim o rio
+      se integra ao oceano (até 25/10/2026 ele entrava no mar com a
+      ponta redonda, "como uma cobra").
+  Ajustes no topo de rivers.gd (larguras, leque, cores). A janela da
+  cidade desenha os mesmos rios no mapa dela.
 - O painel de informações e o tooltip do mapa da cidade mostram "à
   beira do rio (+1 de alimento)".
 - A realocação automática põe os cidadãos primeiro nas casas sem
@@ -2866,6 +2877,15 @@ Screenshots também confirmaram o visual.
   Equilibrada chegou a 4 cidades e 27 de população (20 sem rios); as
   prioridades da máquina continuam sem fazer prédios (ver PRÓXIMOS
   PASSOS).
+- Arte dos rios refeita (pedido do usuário, com o rio do
+  Civilization do SNES como referência): três camadas (areia da
+  margem, azul escuro nas bordas, azul claro no meio), bordas suaves,
+  nascente em ponta e foz em leque que se mistura ao mar, em vez da
+  ponta redonda entrando na água. Validação: screenshots de duas
+  fozes (zoom 1,3 e 0,75), do meio de um rio, da nascente e da
+  janela da cidade, revisados e ajustados (leque começando ainda na
+  terra, cor do mar mais escura, nascente afinando); teste dos rios
+  passou.
 
 --------------------------------------------------------------
 7. BACKLOG (ideias para depois)

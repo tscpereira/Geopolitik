@@ -14,8 +14,12 @@ extends RefCounted
 ## chegar à costa ou ao encontrar outro rio (afluente). Só corre entre casas de
 ## terra; o save guarda os rios.
 ##
-## DESENHO (draw): curva suavizada que ondula um pouco em volta das bordas,
-## estreita na nascente e mais larga na foz, entrando um pouco no mar.
+## DESENHO (draw), no estilo do rio do Civilization do SNES: três camadas ao
+## longo de uma curva suavizada que ondula em volta das bordas: a margem de
+## areia (a mesma cor da praia da costa), uma faixa azul mais escura nas bordas
+## da água e a água mais clara no meio. Ponta fina na nascente. Na foz, o rio
+## se abre em leque e a cor se mistura à do mar até sumir (a areia some
+## antes, junto da praia): ele se integra ao oceano em vez de entrar nele.
 
 ## Quantos rios o gerador tenta criar e o tamanho mínimo de cada um (trechos).
 const RIVER_COUNT := 8
@@ -32,15 +36,37 @@ const SEED := 20261024
 ## andar de lado faz as curvas, subir é raro.
 const STEP_WEIGHTS := {-1: 3.0, 0: 1.4, 1: 0.2}
 
-## Desenho, em frações do tamanho da casa.
-const WIDTH_SOURCE := 0.09
-const WIDTH_MOUTH := 0.22
-const BANK_EXTRA := 0.05
+## Desenho, em frações do tamanho da casa. Meia largura da água na nascente e
+## na foz (antes do leque).
+const HALF_WIDTH_SOURCE := 0.055
+const HALF_WIDTH_MOUTH := 0.12
+## Margem de areia além da água, e a borda suave (esmaecida) de cada camada.
+const SAND_EXTRA := 0.05
+const FEATHER := 0.03
+const SAND_FEATHER := 0.05
+## Água clara do meio, em fração da largura da água.
+const LIGHT_SHARE := 0.55
 const WOBBLE := 0.15
-const MOUTH_REACH := 0.4
-const WATER_COLOR := Color(0.27, 0.43, 0.49)
-const BANK_COLOR := Color(0.35, 0.36, 0.23)
-const SHINE_COLOR := Color(0.72, 0.84, 0.86, 0.25)
+## Até onde o desenho avança mar adentro, em fração do caminho do último canto
+## até o centro das casas de água em volta dele.
+const MOUTH_REACH := 0.55
+## Trecho final (em casas) em que o rio se abre em leque, e quanto ele alarga.
+const ESTUARY_LENGTH := 1.4
+const ESTUARY_WIDEN := 2.6
+## Trecho inicial (em casas) em que a nascente afina até uma ponta, e em que
+## ela aparece aos poucos.
+const SOURCE_TAPER := 0.9
+const SOURCE_FADE := 0.3
+## Trecho final em que a água some no mar e em que a areia some na praia.
+const WATER_FADE := 0.5
+const SAND_FADE_START := 0.35
+const SAND_FADE := 0.4
+## Cores: areia da margem (a da praia do shader do terreno, um pouco mais
+## escura), azul escuro das bordas, azul claro do meio e o azul do mar raso.
+const SAND_COLOR := Color(0.72, 0.65, 0.45)
+const DARK_WATER_COLOR := Color(0.18, 0.33, 0.46)
+const LIGHT_WATER_COLOR := Color(0.36, 0.57, 0.68)
+const SEA_COLOR := Color(0.23, 0.38, 0.49)
 
 const STEPS: Array[Vector2i] = [Vector2i(1, 0), Vector2i(-1, 0), Vector2i(0, 1), Vector2i(0, -1)]
 
@@ -198,30 +224,77 @@ static func _weighted(options: Array[Vector2i], weights: Array[float], rng: Rand
 ## GameMap) e pela janela da cidade.
 static func draw(canvas: CanvasItem, map: GameMap, rivers: Array, cell_size: float, origin := Vector2.ZERO) -> void:
 	for index in rivers.size():
-		var points := _curve(map, rivers[index], cell_size, origin, index)
+		var river: Array = rivers[index]
+		var points := _curve(map, river, cell_size, origin, index)
 		if points.size() < 2:
 			continue
-		# Margem e água; a largura cresce até a foz
-		for layer in 2:
-			var chunk := PackedVector2Array()
-			var steps := 6
-			for i in points.size():
-				chunk.append(points[i])
-				if (chunk.size() > steps or i == points.size() - 1) and chunk.size() >= 2:
-					var t := float(i) / (points.size() - 1)
-					var width := lerpf(WIDTH_SOURCE, WIDTH_MOUTH, t) * cell_size
-					# Os pedaços têm larguras diferentes: um círculo no começo de cada
-					# um tapa a emenda nas curvas
-					match layer:
-						0:
-							canvas.draw_circle(chunk[0], (width + BANK_EXTRA * cell_size) / 2.0, BANK_COLOR)
-							canvas.draw_polyline(chunk, BANK_COLOR, width + BANK_EXTRA * cell_size, true)
-						1:
-							canvas.draw_circle(chunk[0], width / 2.0, WATER_COLOR)
-							canvas.draw_polyline(chunk, WATER_COLOR, width, true)
-					chunk = PackedVector2Array([points[i]])
-		# Reflexo claro no meio, numa linha só (transparente: emendas apareceriam)
-		canvas.draw_polyline(points, SHINE_COLOR, (WIDTH_SOURCE + WIDTH_MOUTH) / 2.0 * cell_size * 0.3, true)
+		var is_mouth := not _all_land_around(map, river[-1]) # termina no mar (não noutro rio)
+		# Comprimento acumulado (em casas) e a direção para os lados em cada ponto
+		var along := PackedFloat32Array([0.0])
+		for i in range(1, points.size()):
+			along.append(along[i - 1] + points[i].distance_to(points[i - 1]) / cell_size)
+		var total := along[along.size() - 1]
+		var normals := PackedVector2Array()
+		var water := PackedFloat32Array() # meia largura da água em cada ponto
+		var water_alpha := PackedFloat32Array()
+		var sand_alpha := PackedFloat32Array()
+		var sea_mix := PackedFloat32Array()
+		for i in points.size():
+			var before := points[maxi(i - 1, 0)]
+			var after := points[mini(i + 1, points.size() - 1)]
+			normals.append((after - before).orthogonal().normalized())
+			var half := lerpf(HALF_WIDTH_SOURCE, HALF_WIDTH_MOUTH, along[i] / total)
+			var taper := smoothstep(0.0, SOURCE_TAPER, along[i]) # nascente: afina até uma ponta
+			half *= lerpf(0.15, 1.0, taper)
+			var appear := clampf(along[i] / SOURCE_FADE, 0.0, 1.0)
+			var tail := total - along[i] # quanto falta até o fim (em casas)
+			var estuary := clampf(1.0 - tail / ESTUARY_LENGTH, 0.0, 1.0) if is_mouth else 0.0
+			water.append(half * (1.0 + ESTUARY_WIDEN * estuary * estuary) * cell_size)
+			water_alpha.append(appear * (clampf(tail / WATER_FADE, 0.0, 1.0) if is_mouth else 1.0))
+			sand_alpha.append(appear * (clampf((tail - SAND_FADE_START) / SAND_FADE, 0.0, 1.0) if is_mouth else 1.0))
+			sea_mix.append(estuary)
+		# Três camadas, de fora para dentro: areia, água escura e água clara
+		var sand_sizes := PackedFloat32Array()
+		var light_sizes := PackedFloat32Array()
+		var sand_colors := PackedColorArray()
+		var dark_colors := PackedColorArray()
+		var light_colors := PackedColorArray()
+		for i in points.size():
+			# A margem também afina na nascente (senão a areia fica com a ponta grossa)
+			sand_sizes.append(water[i] + SAND_EXTRA * cell_size * lerpf(0.3, 1.0, smoothstep(0.0, SOURCE_TAPER, along[i])))
+			light_sizes.append(water[i] * LIGHT_SHARE)
+			sand_colors.append(Color(SAND_COLOR, sand_alpha[i]))
+			dark_colors.append(Color(DARK_WATER_COLOR.lerp(SEA_COLOR, sea_mix[i]), water_alpha[i]))
+			light_colors.append(Color(LIGHT_WATER_COLOR.lerp(SEA_COLOR, sea_mix[i]), water_alpha[i]))
+		_strip(canvas, points, normals, sand_sizes, sand_colors, SAND_FEATHER * cell_size)
+		_strip(canvas, points, normals, water, dark_colors, FEATHER * cell_size)
+		_strip(canvas, points, normals, light_sizes, light_colors, FEATHER * cell_size * 1.5)
+
+
+## Uma faixa ao longo da curva: meia largura [param sizes] e cor [param colors]
+## em cada ponto, com a borda esmaecendo até transparente em [param feather]
+## pixels (fica suave, sem serrilhado). Desenhada como uma malha de triângulos
+## com cor por vértice (degradê na foz).
+static func _strip(canvas: CanvasItem, points: PackedVector2Array, normals: PackedVector2Array,
+		sizes: PackedFloat32Array, colors: PackedColorArray, feather: float) -> void:
+	var vertices := PackedVector2Array()
+	var vertex_colors := PackedColorArray()
+	for i in points.size():
+		var clear := Color(colors[i], 0.0)
+		var side := normals[i]
+		# 4 vértices por ponto: borda de fora, borda de dentro (dos dois lados)
+		vertices.append(points[i] - side * (sizes[i] + feather))
+		vertices.append(points[i] - side * sizes[i])
+		vertices.append(points[i] + side * sizes[i])
+		vertices.append(points[i] + side * (sizes[i] + feather))
+		vertex_colors.append_array([clear, colors[i], colors[i], clear])
+	var indices := PackedInt32Array()
+	for i in points.size() - 1:
+		var a := i * 4
+		var b := a + 4
+		for k in 3: # as três tiras: borda esquerda, miolo, borda direita
+			indices.append_array([a + k, a + k + 1, b + k, a + k + 1, b + k + 1, b + k])
+	RenderingServer.canvas_item_add_triangle_array(canvas.get_canvas_item(), indices, vertices, vertex_colors)
 
 
 ## Pontos da curva do rio: os cantos (a foz avança um pouco para o mar),
@@ -240,7 +313,7 @@ static func _curve(map: GameMap, river: Array, cell_size: float, origin: Vector2
 			count += 1
 	if count > 0:
 		var mouth := corners[corners.size() - 1]
-		corners.append(mouth.lerp(water / count, MOUTH_REACH * 2.0))
+		corners.append(mouth.lerp(water / count, MOUTH_REACH))
 	var points := corners
 	for i in 4:
 		points = _chaikin(points)
