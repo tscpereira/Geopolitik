@@ -1826,10 +1826,15 @@ MOVIMENTO (scripts/map/movement.gd)
   mapa, não da cidade (GameMap.roads, road_progress; vai no save).
   A cidade conta como estrada. Andar de estrada para estrada custa
   meio movimento (o Guerreiro anda 2 casas, o Cavaleiro 4) e ignora
-  floresta, colinas e rio nesse passo. Desenho: faixa de terra
-  batida ligando o centro das casas com estrada (8 direções) e as
-  cidades vizinhas; em obra, transparente (camada RoadLayer, por
-  baixo dos rios). O painel mostra "com estrada" ou "estrada em
+  floresta, colinas e rio nesse passo. Desenho (curvas desde
+  25/10/2026, pedido do usuário): faixa de terra batida que passa por
+  um ponto um pouco fora do centro de cada casa (sorteado pela casa,
+  sempre igual: a estrada serpenteia) e faz curvas suaves (Bézier)
+  de uma vizinha à outra, sem quinas; na diagonal só liga quando não
+  há caminho pelas casas do lado (um L vira uma curva, não um
+  triângulo); encruzilhada com uma curva para cada par; até a
+  cidade, reta para o centro. Em obra, transparente (camada
+  RoadLayer, por baixo dos rios; GameMap.ROAD_JITTER). O painel mostra "com estrada" ou "estrada em
   obra N/2". A máquina ainda não faz estradas.
 - 8 direções (diagonais incluídas), custo 1 por casa, como no
   Civilization 1. Exceções, para unidades com mais de 1 de
@@ -3404,6 +3409,13 @@ Screenshots também confirmaram o visual.
   de armas ("Precisa de Forja.") antes de Trabalho em Ferro; agora
   ela exige a tecnologia e só aparece depois dela. Teste da era
   antiga com a verificação nova (45), todas passando.
+- Estradas em curvas (pedido do usuário): em vez de traços retos
+  entre os centros das casas, curvas suaves por um ponto deslocado
+  em cada casa, sem atalhos diagonais nos L. Validação: screenshots
+  de uma reta, um L, uma diagonal, um caminho sinuoso, uma
+  encruzilhada, a chegada à cidade e um trecho em obra (zoom 1,1 e
+  0,6), revisados e ajustados (sem manchas nas emendas da estrada
+  em obra); teste da era antiga passou.
 
 --------------------------------------------------------------
 7. BACKLOG (ideias para depois)

@@ -26,6 +26,11 @@ const ROAD_EDGE_WIDTH := 0.2
 const ROAD_WIDTH := 0.13
 ## Estrada em obra: mais transparente.
 const ROAD_IN_PROGRESS_ALPHA := 0.4
+## Quanto o ponto da estrada em cada casa sai do centro (em casas; sorteado
+## pela casa, sempre igual): a estrada serpenteia em vez de seguir a grade.
+const ROAD_JITTER := 0.14
+## Segmentos de cada curva da estrada.
+const ROAD_CURVE_STEPS := 12
 
 ## Melhoria desenhada pelo shader numa casa (ver set_improvement).
 enum Improvement { NONE, FARM, FARM_IN_PROGRESS }
@@ -220,27 +225,91 @@ func redraw_roads() -> void:
 	_road_layer.queue_redraw()
 
 
-## Estradas: de cada casa com estrada (pronta ou em obra) um trecho até o
-## centro de cada vizinha com estrada ou cidade, nas 8 direções; casa sem
-## vizinha, um trecho curto de terra. Em obra, mais transparente.
+## Estradas em curvas. Cada casa com estrada tem um ponto um pouco fora do
+## centro (_road_point). O caminho passa pelo meio da reta entre os pontos de
+## duas casas ligadas (_road_links), e dentro de cada casa ele faz uma curva
+## (Bézier quadrática) de uma ligação à outra, usando o ponto da casa como
+## apoio: as curvas de casas vizinhas se encontram nesse meio, na mesma
+## direção, então emendam sem quina. Casa com uma ligação só: termina no ponto
+## dela; com três ou mais, uma curva para cada par (encruzilhada). Até a cidade,
+## o trecho vai reto até o centro (fica por baixo do desenho dela). Primeiro as
+## bordas escuras, depois o miolo; em obra, mais transparente.
 func _draw_roads() -> void:
-	for layer in 2: # primeiro as bordas escuras, depois o miolo
+	for layer in 2:
 		var color := ROAD_EDGE_COLOR if layer == 0 else ROAD_COLOR
 		var width := (ROAD_EDGE_WIDTH if layer == 0 else ROAD_WIDTH) * TILE_SIZE
 		for cell: Vector2i in roads.keys() + road_progress.keys():
 			var alpha := 1.0 if roads.has(cell) else ROAD_IN_PROGRESS_ALPHA
-			var center := (Vector2(cell) + Vector2(0.5, 0.5)) * TILE_SIZE
-			var tint := Color(color, alpha)
-			var linked := false
-			for direction: Vector2i in Movement.DIRECTIONS:
-				var other := cell + direction
-				if roads.has(other) or road_progress.has(other) or cities.has(other):
-					var other_alpha := alpha if roads.has(other) or cities.has(other) else ROAD_IN_PROGRESS_ALPHA
-					_road_layer.draw_line(center, center + Vector2(direction) * TILE_SIZE * 0.5, Color(color, minf(alpha, other_alpha)), width, true)
-					linked = true
-			if not linked:
-				_road_layer.draw_line(center - Vector2(TILE_SIZE * 0.3, 0), center + Vector2(TILE_SIZE * 0.3, 0), tint, width, true)
-			_road_layer.draw_circle(center, width * 0.5, tint)
+			var point := _road_point(cell)
+			var links := _road_links(cell)
+			var mids: Array[Vector2] = []
+			var tints: Array[Color] = []
+			for other in links:
+				var mid := (point + _road_point(other)) * 0.5
+				var tint := Color(color, alpha if roads.has(other) or cities.has(other) else ROAD_IN_PROGRESS_ALPHA)
+				mids.append(mid)
+				tints.append(tint)
+				if tint.a >= 1.0: # em obra (transparente), o círculo sobreposto viraria uma mancha
+					_road_layer.draw_circle(mid, width * 0.5, tint)
+				if cities.has(other):
+					_road_layer.draw_line(mid, _road_point(other), tint, width, true)
+			if links.is_empty():
+				# Estrada solta: um trecho curto, levemente curvo
+				var side := Vector2(TILE_SIZE * 0.3, 0)
+				_draw_road_curve(point - side, point + Vector2(0, TILE_SIZE * 0.06), point + side, Color(color, alpha), width)
+			elif links.size() == 1:
+				_road_layer.draw_line(point, mids[0], tints[0], width, true)
+				_road_layer.draw_circle(point, width * 0.5, tints[0])
+			else:
+				for i in links.size():
+					for j in range(i + 1, links.size()):
+						var tint: Color = tints[i] if tints[i].a <= tints[j].a else tints[j]
+						_draw_road_curve(mids[i], point, mids[j], tint, width)
+
+
+## Curva da estrada de [param from] a [param to], puxada por [param control].
+func _draw_road_curve(from: Vector2, control: Vector2, to: Vector2, color: Color, width: float) -> void:
+	var points := PackedVector2Array()
+	for k in ROAD_CURVE_STEPS + 1:
+		var t := float(k) / ROAD_CURVE_STEPS
+		points.append(from.lerp(control, t).lerp(control.lerp(to, t), t))
+	_road_layer.draw_polyline(points, color, width, true)
+
+
+## Casas vizinhas ligadas por estrada (com estrada, em obra ou cidade). Na
+## diagonal, só quando não há caminho pelas casas do lado: senão um L de
+## estrada viraria um triângulo.
+func _road_links(cell: Vector2i) -> Array[Vector2i]:
+	var links: Array[Vector2i] = []
+	for direction: Vector2i in Movement.DIRECTIONS:
+		var other := cell + direction
+		if not _is_road_node(other):
+			continue
+		if direction.x != 0 and direction.y != 0 \
+				and (_is_road_node(cell + Vector2i(direction.x, 0)) or _is_road_node(cell + Vector2i(0, direction.y))):
+			continue
+		links.append(other)
+	return links
+
+
+func _is_road_node(cell: Vector2i) -> bool:
+	return roads.has(cell) or road_progress.has(cell) or cities.has(cell)
+
+
+## Ponto por onde a estrada passa na casa: o centro deslocado até ROAD_JITTER
+## (sorteado pela casa, sempre igual). Na cidade, o centro.
+func _road_point(cell: Vector2i) -> Vector2:
+	var center := (Vector2(cell) + Vector2(0.5, 0.5)) * TILE_SIZE
+	if cities.has(cell):
+		return center
+	var offset := Vector2(_cell_noise(cell, 1.7), _cell_noise(cell, 5.3)) * 2.0 - Vector2.ONE
+	return center + offset * ROAD_JITTER * TILE_SIZE
+
+
+## Número de 0 a 1 sorteado pela casa e por [param salt] (sempre o mesmo).
+static func _cell_noise(cell: Vector2i, salt: float) -> float:
+	var value := sin(cell.x * 127.1 + cell.y * 311.7 + salt * 74.7) * 43758.5453
+	return value - floorf(value)
 
 
 ## Bigorna no canto de cada casa com ferro (Icons.draw_iron_marker).
