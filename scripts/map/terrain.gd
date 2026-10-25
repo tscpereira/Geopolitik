@@ -61,7 +61,7 @@ const DEFENSE_BONUS := {
 }
 
 ## Movimento extra para entrar neste terreno, só para unidades com mais de
-## 1 de movimento (Cavaleiro: 2 casas na pradaria, 1 na floresta).
+## 1 de movimento (Cavalaria Leve: 4 casas na pradaria, 2 na floresta).
 const MOVE_PENALTY := {
 	Type.FOREST: 1,
 	Type.HILLS: 1,

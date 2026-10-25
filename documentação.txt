@@ -457,7 +457,6 @@ UNIDADES (scripts/units/)
     Guerreiro   G        1       1       1          100
     Lanceiro    L        1       2       1          100
     Arqueiro    A        2       1       1          100
-    Cavaleiro   C        1       1       2          100
     Colono      S        0       0       1          100
     Trabalhador T        0       0       1          100
     Catapulta   K        4       1       1          100  (Matemática)
@@ -478,8 +477,8 @@ UNIDADES (scripts/units/)
 - LANCEIRO (desde 25/10/2026, pedido do usuário; exige a
   tecnologia Trabalho em Bronze): +1 de ataque e +1 de defesa
   quando luta contra cavalaria (campo "Anti Cavalry Bonus" do
-  .tres; a cavalaria tem "Is Mounted", hoje só o Cavaleiro).
-  Lanceiro atacando Cavaleiro: força 2; defendendo do Cavaleiro: 3.
+  .tres; a cavalaria tem "Is Mounted": a Cavalaria Leve e as Bigas).
+  Lanceiro atacando Cavalaria Leve: força 2; defendendo dela: 3.
   A prévia do ataque mostra "+1 contra cavalaria".
 - Cada unidade no mapa guarda o dono, a casa em que está e os
   movimentos restantes no turno.
@@ -509,10 +508,11 @@ UNIDADES (scripts/units/)
     assets/sprites/units/arqueiro.png     túnica longa, gibão de
                                            couro, chapéu de ferro,
                                            aljava e arco longo
-    assets/sprites/units/cavaleiro.png    cavalo com caparazão,
-                                           cavaleiro de cota de
-                                           malha, elmo de nasal,
-                                           lança com flâmula
+    assets/sprites/units/cavalaria_leve.png  cavaleiro de crista e
+                                           capa (do time), lança;
+                                           desenho do ChatGPT
+                                           (desde 25/10/2026, no
+                                           lugar do Cavaleiro)
     assets/sprites/units/colono.png       capuz de lã, trouxa nas
                                            costas e pá
     assets/sprites/units/trabalhador.png  avental de couro, gorro
@@ -547,7 +547,7 @@ UNIDADES (scripts/units/)
   fazendas), sem tropas e sem guerra, para observar o
   gerenciamento das cidades. Para voltar a ter tropas, use WITH_TROOPS = true no
   topo de scripts/main.gd. Com isso, cada jogador também recebe
-  1 Guerreiro, 1 Arqueiro e 1 Cavaleiro, e os dois lados começam
+  1 Guerreiro, 1 Arqueiro e 1 Cavalaria Leve, e os dois lados começam
   frente a frente no centro da ilha, a 3 casas de distância
   (J1 em x=57-58, J2 em x=61-62).
 - Uma unidade só é criada em casa andável (qualquer terreno menos
@@ -607,8 +607,8 @@ RIOS (scripts/map/rivers.gd; desde 25/10/2026, pedido do usuário)
 - ATRAVESSAR UM RIO (desde 25/10/2026, pedido do usuário;
   GameMap.crosses_river):
     * movimento: +1 para unidades com mais de 1 de movimento
-      (Terrain.RIVER_MOVE_PENALTY; soma com a floresta). O Cavaleiro
-      (2) atravessa e para do outro lado. Um passo nunca custa mais
+      (Terrain.RIVER_MOVE_PENALTY; soma com a floresta). A Cavalaria
+      Leve (4) atravessa (2) e anda mais 2 casas. Um passo nunca custa mais
       que o movimento cheio da unidade: com todos os movimentos ela
       sempre consegue entrar (floresta + rio = turno inteiro);
     * combate: quem é atacado do outro lado do rio ganha +1 de defesa
@@ -633,7 +633,7 @@ FLORESTA (scripts/map/terrain.gd)
       de informações mostra "Defesa 2 (+1 floresta)".
     * Movimento: unidades com mais de 1 de movimento gastam 1 a
       mais para ENTRAR numa casa de floresta (Terrain.MOVE_PENALTY).
-      O Cavaleiro (2) anda 2 casas na pradaria, mas só 1 casa por
+      A Cavalaria Leve (4) anda 4 casas na pradaria, mas só 2 por
       turno na floresta. Unidades com movimento 1 não são afetadas.
       Sair da floresta para a pradaria custa o normal (1).
     * Não aceita fazenda (Terrain.can_farm). Trabalhada sem
@@ -664,7 +664,7 @@ do usuário)
   no pé da montanha).
 - COLINAS: andáveis, com a mesma penalidade da floresta: unidades
   com mais de 1 de movimento gastam 1 a mais para ENTRAR
-  (Terrain.MOVE_PENALTY; o Cavaleiro anda 1 casa por turno nelas;
+  (Terrain.MOVE_PENALTY; a Cavalaria Leve anda 2 casas por turno nelas;
   soma com o rio, limitado ao movimento cheio). NÃO aceitam fazenda
   (Terrain.can_farm), mas aceitam cidade (a casa continua colina).
   Trabalhadas sem melhoria, dão 1 de alimento, como a pradaria (+1
@@ -1841,7 +1841,7 @@ MOVIMENTO (scripts/map/movement.gd)
   sair interrompe, e "Continuar estrada [E]" retoma. A estrada é do
   mapa, não da cidade (GameMap.roads, road_progress; vai no save).
   A cidade conta como estrada. Andar de estrada para estrada custa
-  meio movimento (o Guerreiro anda 2 casas, o Cavaleiro 4) e ignora
+  meio movimento (o Guerreiro anda 2 casas, a Cavalaria Leve 8) e ignora
   floresta, colinas e rio nesse passo. Desenho (curvas desde
   25/10/2026, pedido do usuário): faixa de terra batida que passa por
   um ponto um pouco fora do centro de cada casa (sorteado pela casa,
@@ -1961,8 +1961,8 @@ PILHAGEM (Game.pillage, tecla P)
   madeireira pronta de outro jogador pode pilhá-la: tecla P ou
   botão "Pilhar [P]". Vale para melhorias da cidade e madeireiras
   remotas.
-- Custa 1 movimento (Game.PILLAGE_COST). O Cavaleiro (2 de
-  movimento) pode andar 1 casa e pilhar no mesmo turno.
+- Custa 1 movimento (Game.PILLAGE_COST). A Cavalaria Leve (4 de
+  movimento) pode andar até 3 casas e pilhar no mesmo turno.
 - Recompensa:
     pilhar FAZENDA     a unidade recupera 30 de energia
                        (PILLAGE_FARM_ENERGY), até a energia máxima
@@ -2373,8 +2373,8 @@ Screenshots também confirmaram o visual.
 [x] Observar a cidade do adversário (janela em modo leitura)
 [x] Cidades: produzir unidades (Guerreiro: 10 de produção + 1 de
     população)
-[ ] Cidades: produzir outras unidades (Arqueiro, Cavaleiro,
-    Colono)
+[ ] Cidades: produzir o Arqueiro (a Cavalaria Leve substituiu o
+    Cavaleiro em 25/10/2026)
 [x] IA: produzir unidades nas cidades
 [x] Terreno Floresta (+1 de defesa, movimento mais caro, sem
     fazenda) e Cerrado (floresta esgotada)
@@ -3471,6 +3471,14 @@ Screenshots também confirmaram o visual.
   prévia em tools/art/chatgpt/. O gen_art.gd não gera mais a Cavalaria
   Leve. Validação: prévia nas duas cores e screenshot no jogo (zoom 1,4
   e 0,75) ao lado das outras unidades militares.
+- CAVALARIA LEVE NO LUGAR DO CAVALEIRO (decisão do usuário): o
+  Cavaleiro (1/1/2) saiu do jogo (data/units/cavaleiro.tres e o
+  desenho); a partida com tropas (WITH_TROOPS) usa a Cavalaria Leve, e
+  um save antigo com Cavaleiros os carrega como Cavalaria Leve
+  (Game.REPLACED_UNIT_TYPES). Validação: testes da era antiga (com o
+  save antigo), do relevo, das regras dos rios e do Bronze, ajustados
+  para a Cavalaria Leve (movimento 4), e do ferro, da mina remota, do
+  ataque pelo modo Mover, da Muralha e do carregamento passaram.
 
 --------------------------------------------------------------
 7. BACKLOG (ideias para depois)

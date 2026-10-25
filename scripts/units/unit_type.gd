@@ -16,7 +16,7 @@ extends Resource
 @export_range(0, 99) var movement := 1
 ## Energia com que a unidade começa; ao chegar a 0 ela é destruída.
 @export_range(1, 999) var max_energy := 100
-## Cavalaria (ex.: Cavaleiro): é contra ela que vale o anti_cavalry_bonus.
+## Cavalaria (Cavalaria Leve, Bigas): é contra ela que vale o anti_cavalry_bonus.
 @export var is_mounted := false
 ## Bônus de ataque E de defesa quando luta contra cavalaria (Lanceiro: +1).
 @export_range(0, 9) var anti_cavalry_bonus := 0

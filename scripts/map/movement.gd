@@ -96,8 +96,8 @@ static func build_path(reachable: Dictionary, target: Vector2i) -> Array[Vector2
 ## as penalidades); senão, o terreno de destino (floresta, colinas) mais
 ## Terrain.RIVER_MOVE_PENALTY se o passo atravessa um rio, os dois só para
 ## unidades com mais de 1 de movimento. Nunca passa do movimento cheio da
-## unidade: com todos os movimentos ela sempre consegue entrar (Cavaleiro:
-## floresta + rio = turno todo).
+## unidade: com todos os movimentos ela sempre consegue entrar (Bigas, com 3:
+## colina + rio = 3, o turno todo).
 static func step_cost(map: GameMap, unit: Unit, from: Vector2i, cell: Vector2i) -> int:
 	if map.has_road(from) and map.has_road(cell):
 		return ROAD_STEP_POINTS

@@ -10,7 +10,12 @@ const MAP_TEXTURE: Texture2D = preload("res://data/maps/mapa_teste.png")
 const MAP_RESOURCES_PATH := "res://data/maps/mapa_teste_recursos.json"
 const WARRIOR: UnitType = preload("res://data/units/guerreiro.tres")
 const ARCHER: UnitType = preload("res://data/units/arqueiro.tres")
-const HORSEMAN: UnitType = preload("res://data/units/cavaleiro.tres")
+const LIGHT_CAVALRY: UnitType = preload("res://data/units/cavalaria_leve.tres")
+## Tipos de unidade que saíram do jogo: o save antigo carrega o substituto.
+## (O Cavaleiro virou a Cavalaria Leve em 25/10/2026.)
+const REPLACED_UNIT_TYPES := {
+	"res://data/units/cavaleiro.tres": "res://data/units/cavalaria_leve.tres",
+}
 const SETTLER: UnitType = preload("res://data/units/colono.tres")
 const WORKER: UnitType = preload("res://data/units/trabalhador.tres")
 ## Cursor do modo "Mover" (tecla G). Ponta da seta no canto superior esquerdo.
@@ -18,7 +23,7 @@ const GO_CURSOR: Texture2D = preload("res://assets/sprites/ui/cursor_go.png")
 
 ## Casa onde a câmera começa (centro da ilha do mapa de teste).
 const START_CAMERA_CELL := Vector2i(60, 41)
-## Partida de teste com as tropas (Guerreiro, Arqueiro e Cavaleiro) de cada lado.
+## Partida de teste com as tropas (Guerreiro, Arqueiro e Cavalaria Leve) de cada lado.
 ## Desligado para observar só o gerenciamento das cidades, sem guerra.
 const WITH_TROOPS := false
 
@@ -1098,7 +1103,7 @@ func _show_goto_path(unit: Unit, target: Vector2i) -> void:
 
 ## Turnos para andar o caminho: o que sobra neste turno, depois o movimento
 ## cheio por turno. Uma casa que custa mais do que o que sobra fica para o
-## turno seguinte (ex.: Cavaleiro com 1 movimento diante de uma floresta).
+## turno seguinte (ex.: Cavalaria Leve com 1 movimento diante de uma floresta).
 func _turns_for_path(unit: Unit, path: Array[Vector2i]) -> int:
 	var turns := 1
 	var moves := unit.moves_left if unit.moves_left > 0 else unit.max_points()
@@ -1364,7 +1369,7 @@ func _pillage_with_selected() -> void:
 	if game_over:
 		return
 	if can_move(unit):
-		select_unit(unit) # ainda tem movimento (ex.: Cavaleiro)
+		select_unit(unit) # ainda tem movimento (ex.: Cavalaria Leve)
 	else:
 		_select_next_unit()
 
@@ -1873,7 +1878,8 @@ func restore_state(data: Dictionary) -> void:
 			mills.append(mill)
 		for unit_data: Dictionary in player_data["units"]:
 			var unit := Unit.new()
-			unit.setup(load(unit_data["type"]), player, SaveGame.json_to_cell(unit_data["cell"]), game_map)
+			var type_path: String = REPLACED_UNIT_TYPES.get(unit_data["type"], unit_data["type"])
+			unit.setup(load(type_path), player, SaveGame.json_to_cell(unit_data["cell"]), game_map)
 			unit.position = game_map.cell_to_world(unit.cell)
 			unit.name = "%s_%s_%d" % [unit.type.display_name, player.id, player.units.size() + 1]
 			units_root.add_child(unit)
@@ -1916,10 +1922,10 @@ func _spawn_example_units() -> void:
 	if WITH_TROOPS:
 		_spawn_unit(WARRIOR, players[0], Vector2i(58, 40))
 		_spawn_unit(ARCHER, players[0], Vector2i(58, 42))
-		_spawn_unit(HORSEMAN, players[0], Vector2i(57, 41))
+		_spawn_unit(LIGHT_CAVALRY, players[0], Vector2i(57, 41))
 		_spawn_unit(WARRIOR, players[1], Vector2i(61, 40))
 		_spawn_unit(ARCHER, players[1], Vector2i(61, 42))
-		_spawn_unit(HORSEMAN, players[1], Vector2i(62, 41))
+		_spawn_unit(LIGHT_CAVALRY, players[1], Vector2i(62, 41))
 	# Todo jogador começa com um Colono e um Trabalhador (só o Trabalhador faz
 	# fazendas, e a cidade de 1 habitante sem fazenda não cresce)
 	_spawn_unit(SETTLER, players[0], Vector2i(55, 41))

@@ -7,7 +7,8 @@ extends RefCounted
 ##   força de ataque = (Ataque + anticavalaria) × fator de energia × bônus de ataque
 ##   força de defesa = (Defesa + rio + anticavalaria) × fator de energia × bônus de defesa
 ## Anticavalaria: unidade com anti_cavalry_bonus (Lanceiro: +1) ganha o bônus no
-## ataque e na defesa quando o adversário é cavalaria (is_mounted: Cavaleiro).
+## ataque e na defesa quando o adversário é cavalaria (is_mounted: Cavalaria
+## Leve, Bigas).
 ## Rio: o defensor ganha +1 se o ataque vem do outro lado de um rio
 ## (Unit.river_defense_bonus). Por isso as funções recebem a casa de onde o
 ## atacante ataca ([param from_cell]); sem ela, vale a casa em que ele está.
