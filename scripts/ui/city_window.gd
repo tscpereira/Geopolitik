@@ -2,18 +2,21 @@ class_name CityWindow
 extends Control
 
 ## Janela da cidade, aberta ao clicar numa cidade.
-##   esquerda: mapa da área de trabalho (CityMapView);
+##   esquerda: mapa da área de trabalho (CityMapView). Clicar numa fazenda põe
+##             ou tira o cidadão dela; as setas da madeireira põem ou tiram
+##             cidadãos (até 2);
 ##   direita : resumo (população, alimentos, produção), botão "Construir",
 ##             prédios da cidade (com as unidades que cada um produz e os
-##             trabalhadores dele), obras em andamento (melhorias e prédios,
-##             com barra de progresso + trabalhadores), produção da cidade
-##             (fazendas e madeireiras) e unidades na cidade.
+##             trabalhadores dele), obras em andamento (prédios, com barra de
+##             progresso + trabalhadores), produção da cidade (fazendas,
+##             madeireiras e as que os Trabalhadores estão fazendo) e
+##             unidades na cidade.
 ## "Construir" abre uma lista (modal) com o que a cidade pode construir,
-## dividida em Unidades, Melhorias de terreno e Prédios. O botão da moeda
-## compra na hora com ouro (unidades e prédios). Prédios prontos somem da lista.
-## Melhorias (Fazenda, Madeireira) pedem para escolher a casa no mapa; unidades
-## entram na fila do prédio que as produz; prédios entram nas obras.
-## Esc fecha a lista, cancela a escolha da casa ou fecha a janela, nessa ordem.
+## dividida em Unidades, Armas e Prédios. O botão da moeda compra na hora com
+## ouro. Prédios prontos somem da lista. Unidades entram na fila do prédio que
+## as produz; prédios entram nas obras. Fazendas e madeireiras não estão na
+## lista: quem as faz é o Trabalhador, no mapa.
+## Esc fecha a lista ou a janela, nessa ordem.
 ## A cidade de outro jogador abre só para observar: nenhum botão de ordem funciona.
 
 signal closed
@@ -46,8 +49,6 @@ const TOOLTIP_WIDTH := 50
 
 var _city: City
 var _game: Game
-## Melhoria sendo posicionada no mapa (-1 = nenhuma).
-var _picking := -1
 ## Cidade de outro jogador: só observação.
 var _read_only := false
 var _refresh_queued := false
@@ -81,10 +82,9 @@ func open(city: City, game: Game, read_only := false) -> void:
 	_city = city
 	_game = game
 	_read_only = read_only
-	_picking = -1
 	_build_modal.hide()
 	_city.changed.connect(_queue_refresh)
-	_map_view.allow_transfer = not read_only
+	_map_view.editable = not read_only
 	_map_view.setup(city, game)
 	_refresh()
 	show()
@@ -105,17 +105,32 @@ func _input(event: InputEvent) -> void:
 	if event is InputEventKey and event.pressed and not event.echo and event.keycode == KEY_ESCAPE:
 		if _build_modal.visible:
 			_build_modal.hide()
-		elif _picking >= 0:
-			_cancel_pick()
 		else:
 			close()
 		get_viewport().set_input_as_handled()
 
 
+## Clique numa fazenda ou nas setas de uma madeireira do mapa da cidade: põe
+## ([param delta] = +1) ou tira (-1) um cidadão. Sem ninguém livre para pôr, avisa.
+func _on_workers_requested(cell: Vector2i, delta: int) -> void:
+	if _read_only:
+		return
+	if delta > 0 and _city.free_citizens() <= 0:
+		_game.hud.show_message("Nenhum cidadão livre em %s: tire alguém de outra fazenda, madeireira, obra ou dos impostos." % _city.city_name,
+				WARNING_COLOR)
+		return
+	if _city.farms.has(cell):
+		_city.set_farm_worked(cell, delta > 0)
+	elif _city.lumber_mills.has(cell):
+		_city.set_mill_workers(cell, _city.lumber_mills[cell] + delta)
+	else:
+		_city.set_tile_worked(cell, delta > 0)
+
+
 ## Clique numa casa vermelha do mapa da cidade: ela passa de outra cidade do
 ## jogador para esta (Game.transfer_cell), com a melhoria.
 func _on_cell_claimed(cell: Vector2i) -> void:
-	if _read_only or _picking >= 0:
+	if _read_only:
 		return
 	var previous: City = _game.transfer_cell(_city, cell)
 	_game.hud.show_message("Casa (%d, %d) passou de %s para %s." % [cell.x, cell.y, previous.city_name, _city.city_name],
@@ -168,9 +183,8 @@ func _build_layout() -> void:
 	body.add_child(left)
 	left.add_child(_make_section("Mapa da cidade"))
 	_map_view = CityMapView.new()
-	_map_view.cell_picked.connect(_on_cell_picked)
-	_map_view.pick_cancelled.connect(_cancel_pick)
 	_map_view.cell_claimed.connect(_on_cell_claimed)
+	_map_view.workers_requested.connect(_on_workers_requested)
 	left.add_child(_map_view)
 	_hint = Label.new()
 	_hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -317,9 +331,7 @@ func _refresh() -> void:
 	_rebuild_units()
 	_hint.text = ("Cidade de outro jogador: você pode observar, mas não dar ordens. Passe o mouse sobre uma casa para ver detalhes."
 			if _read_only else
-			"Clique em um terreno destacado para construir. Shift + clique pede várias de uma vez. Esc ou botão direito cancela."
-			if _picking >= 0 else
-			"Passe o mouse sobre uma casa para ver detalhes. Os números brancos indicam os cidadãos trabalhando ali."
+			"Clique numa casa do território para pôr ou tirar o cidadão (sem melhoria: +1 de alimento; fazenda: +2); nas madeireiras, use as setas. Os números brancos indicam os cidadãos trabalhando ali. Fazendas e madeireiras novas são feitas por Trabalhadores, no mapa."
 			+ (" Casas em vermelho são de outra cidade sua: clique para trazê-las." if _has_transferable() else ""))
 	_rebuild_mood()
 	_rebuild_build_button()
@@ -347,8 +359,11 @@ func _summary_text() -> String:
 	])
 	var center_food := City.CENTER_FOOD if _city.population > 0 else 0
 	var party_food := _city.celebration_food()
-	lines.append("    produção %d (cidade %d + fazendas %d%s)  -  consumo %d" % [
-		_city.food_produced(), center_food, _city.food_produced() - center_food - party_food,
+	var tiles_food := 0
+	for tile_cell: Vector2i in _city.worked_tiles:
+		tiles_food += _city.tile_food(tile_cell)
+	lines.append("    produção %d (cidade %d + fazendas %d + casas sem melhoria %d%s)  -  consumo %d" % [
+		_city.food_produced(), center_food, _city.food_produced() - center_food - party_food - tiles_food, tiles_food,
 		" + celebração %d" % party_food if party_food > 0 else "", _city.food_consumed(),
 	])
 	if not _city.lumber_mills.is_empty():
@@ -463,19 +478,12 @@ func _rebuild_mood() -> void:
 	row.add_child(x_space)
 
 
-## Botão "Construir" (ou, durante a escolha da casa, o aviso e o "Cancelar").
+## Botão "Construir".
 func _rebuild_build_button() -> void:
 	_clear(_build_box)
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override("separation", 8)
 	_build_box.add_child(row)
-	if _picking >= 0:
-		var label := Label.new()
-		label.text = "Escolha no mapa a casa da %s." % City.BUILDS[_picking]["name"]
-		label.add_theme_color_override("font_color", CityMapView.HIGHLIGHT_COLOR)
-		row.add_child(label)
-		row.add_child(_make_button("Cancelar", _cancel_pick))
-		return
 	var button := _make_button("Construir...", _open_build_modal)
 	button.custom_minimum_size.x = 160
 	button.disabled = _read_only
@@ -487,18 +495,21 @@ func _open_build_modal() -> void:
 	_build_modal.show()
 
 
-## Lista dividida em classes (Unidades, Melhorias de terreno, Prédios). Cada
-## linha: nome, custo em produção, "Escolher" (vai para as obras) e o botão
-## da moeda (compra na hora com ouro). A descrição aparece no tooltip.
+## Lista dividida em classes (Unidades, Armas, Prédios). Cada linha: nome,
+## custo em produção, "Escolher" (vai para as obras) e o botão da moeda
+## (compra na hora com ouro). A descrição aparece no tooltip.
 func _rebuild_build_list() -> void:
 	_clear(_build_list)
 	_treasury_label.text = "Tesouro: %d" % _city.owner_player.gold
 	for category: int in City.CATEGORY_NAMES:
+		# Melhorias de terreno são feitas pelo Trabalhador: a classe nem aparece
+		if City.BUILDS.values().all(func(info: Dictionary) -> bool: return info["category"] != category or info["on_tile"]):
+			continue
 		_build_list.add_child(_make_section(City.CATEGORY_NAMES[category]))
 		# Prédios prontos (e os que toda cidade já tem) somem da lista, e o que
 		# depende de uma tecnologia ainda não pesquisada nem aparece
 		var builds := City.BUILDS.keys().filter(func(build: int) -> bool:
-			return (City.BUILDS[build]["category"] == category
+			return (City.BUILDS[build]["category"] == category and not City.BUILDS[build]["on_tile"]
 					and not City.BUILDS[build].get("native", false) and not _city.has_building(build)
 					and _city.has_tech_for(build)))
 		if builds.is_empty():
@@ -542,9 +553,6 @@ func _make_build_row(build: int) -> HBoxContainer:
 	choose.custom_minimum_size.x = 100
 	choose.tooltip_text = description
 	var reason := _city.build_error(build)
-	if reason.is_empty() and info["on_tile"] and _game.buildable_cells(_city, build).is_empty():
-		reason = ("Nenhuma floresta livre na área da cidade." if build == City.Build.LUMBER_MILL else
-				"Nenhum terreno livre na área da cidade.")
 	if not reason.is_empty():
 		choose.disabled = true
 		choose.tooltip_text = wrap_tooltip(reason)
@@ -552,12 +560,6 @@ func _make_build_row(build: int) -> HBoxContainer:
 		cost.add_theme_color_override("font_color", WARNING_COLOR)
 	row.add_child(choose)
 
-	# Melhorias de terreno não são compradas: só um espaço, para alinhar as colunas
-	if info["category"] == City.Category.TERRAIN_IMPROVEMENT:
-		var spacer := Control.new()
-		spacer.custom_minimum_size.x = BUY_BUTTON_WIDTH
-		row.add_child(spacer)
-		return row
 	var buy := _make_button(str(info["gold"]), _buy_build.bind(build))
 	buy.icon = Icons.gold_coin(COIN_SIZE)
 	buy.custom_minimum_size.x = BUY_BUTTON_WIDTH
@@ -586,13 +588,10 @@ static func wrap_tooltip(text: String, width := TOOLTIP_WIDTH) -> String:
 	return "\n".join(lines)
 
 
-## Melhoria: vai para a escolha da casa no mapa. Unidade: entra direto nas obras.
+## Unidade, arma ou prédio: entra direto nas obras.
 func _choose_build(build: int) -> void:
 	_build_modal.hide()
-	if City.BUILDS[build]["on_tile"]:
-		_start_pick(build)
-	else:
-		_warn_if_needs_workers(_city.order_build(build))
+	_warn_if_needs_workers(_city.order_build(build))
 
 
 ## Obra recém-pedida que ficou sem ninguém trabalhando: aviso em vermelho no
@@ -752,8 +751,7 @@ func _add_construction_row(box: VBoxContainer, construction: City.Construction, 
 		row.add_child(indent)
 	row.add_child(Icons.build_icon(construction.build, _city.owner_player.color))
 	var name_label := Label.new()
-	name_label.text = (construction.display_name() if not construction.is_on_tile() else
-			"%s (%d, %d)" % [construction.display_name(), construction.cell.x, construction.cell.y])
+	name_label.text = construction.display_name()
 	name_label.custom_minimum_size.x = 130 - (UNIT_INDENT + 6 if construction.is_produced() else 0)
 	row.add_child(name_label)
 
@@ -812,12 +810,30 @@ func _add_construction_row(box: VBoxContainer, construction: City.Construction, 
 
 
 ## Seção "Produção da cidade": o que a cidade tem pronto e produzindo
-## (fazendas e madeireiras).
+## (fazendas e madeireiras), as ruínas e as que os Trabalhadores estão fazendo.
 func _rebuild_farms() -> void:
 	_clear(_farms_box)
-	if _city.farms.is_empty() and _city.lumber_mills.is_empty() and _city.ruins.is_empty():
-		_farms_box.add_child(_make_muted("Nenhuma fazenda ou madeireira pronta."))
+	if (_city.farms.is_empty() and _city.lumber_mills.is_empty() and _city.ruins.is_empty() and _city.sites.is_empty()
+			and _city.worked_tiles.is_empty()):
+		_farms_box.add_child(_make_muted("Nenhuma fazenda ou madeireira. Um Trabalhador no território faz fazendas (C) e madeireiras (M)."))
 		return
+	# Casas trabalhadas sem melhoria (clique no mapa da cidade para pôr ou tirar)
+	for tile_cell: Vector2i in _city.worked_tiles:
+		var row := HBoxContainer.new()
+		row.add_theme_constant_override("separation", 6)
+		_farms_box.add_child(row)
+		var spacer := Control.new()
+		spacer.custom_minimum_size = Vector2.ONE * Icons.ICON_SIZE
+		row.add_child(spacer)
+		var name_label := Label.new()
+		name_label.text = "%s (%d, %d)" % [Terrain.NAMES[_game.game_map.get_terrain(tile_cell)], tile_cell.x, tile_cell.y]
+		name_label.custom_minimum_size.x = 130
+		row.add_child(name_label)
+		var status := Label.new()
+		status.text = "+%d alimento (sem melhoria)" % _city.tile_food(tile_cell)
+		status.custom_minimum_size.x = 176
+		row.add_child(status)
+		_add_worker_controls(row, 1, 1, func(value: int) -> void: _city.set_tile_worked(tile_cell, value > 0))
 	for farm_cell: Vector2i in _city.farms:
 		var row := HBoxContainer.new()
 		row.add_theme_constant_override("separation", 6)
@@ -887,6 +903,27 @@ func _rebuild_farms() -> void:
 		status.tooltip_text = "Pilhada por um inimigo. Um Trabalhador na casa reconstrói (tecla R), 1 ponto por turno."
 		status.mouse_filter = Control.MOUSE_FILTER_PASS
 		row.add_child(status)
+	# Melhorias que os Trabalhadores estão fazendo (ou que ficaram paradas)
+	for site_cell: Vector2i in _city.sites:
+		var site: Dictionary = _city.sites[site_cell]
+		var row := HBoxContainer.new()
+		row.add_theme_constant_override("separation", 6)
+		_farms_box.add_child(row)
+		row.add_child(Icons.build_icon(site["build"], _city.owner_player.color))
+		var name_label := Label.new()
+		name_label.text = "%s (%d, %d)" % [City.BUILDS[site["build"]]["name"], site_cell.x, site_cell.y]
+		name_label.custom_minimum_size.x = 130
+		row.add_child(name_label)
+		var worker := _game.get_unit_at(site_cell)
+		var working: bool = worker != null and worker.rebuilding and worker.owner_player == _city.owner_player
+		var status := Label.new()
+		status.text = "em obra - %d/%d%s" % [site["progress"], City.BUILDS[site["build"]]["cost"],
+				" (Trabalhador na casa)" if working else " (parada: sem Trabalhador)"]
+		if not working:
+			status.add_theme_color_override("font_color", WARNING_COLOR)
+		status.tooltip_text = "Um Trabalhador na casa faz 1 ponto por turno. Se ele sair, a obra para e guarda o progresso."
+		status.mouse_filter = Control.MOUSE_FILTER_PASS
+		row.add_child(status)
 
 
 ## Seção "Unidades na cidade": a unidade que está na casa da cidade (só cabe
@@ -930,40 +967,6 @@ func _add_worker_controls(row: HBoxContainer, value: int, max_value: int, on_cha
 	plus.custom_minimum_size.x = 28
 	plus.tooltip_text = "Nenhum cidadão livre." if not _read_only and value >= max_value else ""
 	row.add_child(plus)
-
-
-# --- Escolha do terreno -----------------------------------------------------
-
-func _start_pick(build: int) -> void:
-	_picking = build
-	_map_view.set_pick_cells(_game.buildable_cells(_city, build))
-	_queue_refresh()
-
-
-func _cancel_pick() -> void:
-	_picking = -1
-	_map_view.set_pick_cells([])
-	_queue_refresh()
-
-
-## Clique numa casa destacada: pede a melhoria ali. Com Shift
-## ([param keep_picking]), continua escolhendo para pedir outras do mesmo
-## tipo, enquanto houver casa possível e as regras deixarem.
-func _on_cell_picked(cell: Vector2i, keep_picking := false) -> void:
-	var build := _picking
-	var construction := _city.order_build(build, cell)
-	var cells := _game.buildable_cells(_city, build)
-	if keep_picking and not cells.is_empty() and _city.build_error(build).is_empty():
-		_map_view.set_pick_cells(cells)
-		var queued := _city.constructions.filter(func(c: City.Construction) -> bool: return c.build == build).size()
-		_game.hud.show_message("%s pedida em (%d, %d) (%d na fila). Shift + clique para mais uma; Esc termina." % [
-			City.BUILDS[build]["name"], cell.x, cell.y, queued], Color(0.75, 1, 0.75))
-		_queue_refresh()
-		return
-	_picking = -1
-	_map_view.set_pick_cells([])
-	_warn_if_needs_workers(construction)
-	_queue_refresh()
 
 
 # --- Auxiliares -------------------------------------------------------------

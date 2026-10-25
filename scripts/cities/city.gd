@@ -13,8 +13,9 @@ extends Node2D
 ##      arsenal do jogador;
 ##   2. cada cidadão numa madeireira tira 1 de madeira da floresta para o
 ##      estoque do jogador. Floresta esgotada vira cerrado e a madeireira some;
-##   3. alimento = CENTER_FOOD + alimento de cada fazenda trabalhada (3 na
-##                 pradaria, 2 no cerrado: farm_food)
+##   3. alimento = CENTER_FOOD + 1 por casa trabalhada sem melhoria
+##                 (Terrain.TILE_FOOD) + 2 por fazenda trabalhada (a casa + o
+##                 FARM_BONUS da fazenda: farm_food)
 ##                 − FOOD_PER_CITIZEN (2) por habitante;
 ##   4. a sobra vai para o estoque (como no Civilization II). Quando o
 ##      estoque enche, a cidade ganha 1 de população e o estoque esvazia.
@@ -22,7 +23,8 @@ extends Node2D
 ##      Com o estoque negativo, passa fome e perde 1 (mínimo 1);
 ##   5. quem ficou livre neste turno (obra pronta, cidadão novo, madeireira
 ##      esgotada) vai para a próxima obra da fila ou, sem obras, para uma
-##      fazenda sem trabalhador e depois para uma madeireira com vaga.
+##      fazenda sem trabalhador, uma madeireira com vaga, os impostos e, por
+##      fim, uma casa do território sem melhoria (worked_tiles).
 ##
 ## TERRITÓRIO: as casas da cidade, marcadas no mapa com a borda na cor do dono
 ## (TerritoryOverlay). A primeira cidade do jogador é a capital e começa com a
@@ -51,14 +53,16 @@ extends Node2D
 ## obras, ouro nem ciência). Nenhum infeliz e pelo menos metade feliz =
 ## CELEBRAÇÃO (+1 de alimento por feliz).
 ##
-## Cada cidadão trabalha em uma coisa só: numa obra (gera produção), numa
-## fazenda (gera alimento), numa madeireira (gera madeira) ou nas festividades
-## (gera alegria). Quem o jogador deixar livre (botão "-") continua livre e não
+## Cada cidadão trabalha em uma coisa só: numa obra (gera produção), numa casa
+## do território (gera alimento: 1 sem melhoria, 2 com fazenda), numa
+## madeireira (gera madeira) ou nas festividades (gera alegria). Quem o jogador deixar livre (botão "-") continua livre e não
 ## produz nada.
 ##
-## Obras podem ser melhorias numa casa (Fazenda, Madeireira), unidades
-## (Guerreiro, Colono, Trabalhador), armas (Lança) ou prédios (Quartel
-## General, Marcenaria).
+## Obras podem ser unidades (Guerreiro, Colono, Trabalhador), armas (Lança) ou
+## prédios (Quartel General, Marcenaria). Melhorias de terreno (Fazenda,
+## Madeireira) não são obras da cidade: um Trabalhador as constrói no
+## território (sites, Game.build_improvement) e, prontas, os cidadãos trabalham
+## nelas.
 ## Unidade pronta sai na cidade e consome população (BUILDS[...]["population"]);
 ## se a cidade não tiver população para isso, a unidade fica esperando.
 ## Cada unidade ou arma é produzida num prédio da cidade ("requires"): Colono
@@ -109,7 +113,8 @@ const CATEGORY_NAMES := {
 ##   gold        preço em ouro para concluir na hora (ver Game.buy_error)
 ##   wood        madeira gasta ao pedir a obra ou ao comprar (Player.wood); volta
 ##               para o estoque se a obra for cancelada
-##   on_tile     true = é feita numa casa da área da cidade (melhoria)
+##   on_tile     true = melhoria de terreno: feita por um Trabalhador numa casa
+##               do território (não aparece na lista "Construir"; ver sites)
 ##   unit        tipo de unidade criada ao terminar (só para unidades)
 ##   population  população consumida quando a unidade fica pronta
 ##   weapons     armas do arsenal gastas ao pedir ou comprar a unidade
@@ -134,12 +139,12 @@ const BUILDS := {
 	Build.FARM: {
 		"name": "Fazenda", "article": "a", "category": Category.TERRAIN_IMPROVEMENT,
 		"cost": 4, "gold": 50, "on_tile": true,
-		"description": "Melhoria em pradaria ou cerrado. Com 1 cidadão, produz +3 de alimento por turno na pradaria e +2 no cerrado.",
+		"description": "Melhoria em pradaria ou cerrado, feita por um Trabalhador. Com 1 cidadão, produz +3 de alimento por turno na pradaria e +2 no cerrado.",
 	},
 	Build.LUMBER_MILL: {
 		"name": "Madeireira", "article": "a", "category": Category.TERRAIN_IMPROVEMENT,
 		"cost": 4, "gold": 50, "on_tile": true,
-		"description": "Melhoria em floresta. Até 2 cidadãos, cada um tira 1 de madeira por turno. Cada floresta tem 100 de madeira e depois vira cerrado.",
+		"description": "Melhoria em floresta, feita por um Trabalhador. Até 2 cidadãos, cada um tira 1 de madeira por turno. Cada floresta tem 100 de madeira e depois vira cerrado.",
 	},
 	Build.WARRIOR: {
 		"name": "Guerreiro", "article": "o", "category": Category.UNIT,
@@ -160,7 +165,7 @@ const BUILDS := {
 		"cost": 5, "gold": 50, "on_tile": false,
 		"unit": preload("res://data/units/trabalhador.tres"), "population": 1,
 		"requires": Build.CITY_HALL,
-		"description": "Sem ataque nem defesa (Movimento 1). Constrói madeireiras na floresta e trabalha nelas. Feito na Prefeitura.",
+		"description": "Sem ataque nem defesa (Movimento 1). Constrói fazendas e madeireiras no território (e madeireiras remotas). Feito na Prefeitura.",
 	},
 	Build.CITY_HALL: {
 		"name": "Prefeitura", "article": "a", "category": Category.BUILDING,
@@ -192,9 +197,9 @@ const BUILDS := {
 	},
 }
 
-## Alimento de uma fazenda trabalhada na pradaria (no cerrado rende menos:
-## ver Terrain.FARM_FOOD e farm_food).
-const FARM_FOOD := 3
+## Alimento que a fazenda soma ao da casa (Terrain.TILE_FOOD) por cidadão que
+## trabalha nela: fazenda trabalhada na pradaria = 1 + 1 = 2 (farm_food).
+const FARM_BONUS := 1
 ## Alimento que a casa da cidade produz sozinha (sem isso, uma cidade nova
 ## passaria fome antes de terminar a primeira fazenda).
 const CENTER_FOOD := 2
@@ -308,7 +313,8 @@ const FARM_NEW_TEXTURE: Texture2D = preload("res://assets/sprites/improvements/f
 ## Uma obra da cidade: melhoria numa casa (com [member cell]) ou unidade.
 class Construction:
 	var build: int
-	## Casa da melhoria; não usada para unidades.
+	## Casa da melhoria (só em saves antigos, quando a cidade fazia fazendas e
+	## madeireiras; apply_dict as converte em sites).
 	var cell: Vector2i
 	var progress := 0
 	var workers := 0
@@ -386,9 +392,17 @@ var food_stock := 0
 var farms := {}
 ## Madeireiras prontas: {casa: cidadãos trabalhando (0 a LumberMill.MAX_WORKERS)}.
 var lumber_mills := {}
+## Casas do território trabalhadas sem melhoria: {casa: 1}. Cada uma dá
+## Terrain.TILE_FOOD de alimento (ver can_work_tile).
+var worked_tiles := {}
 ## Melhorias pilhadas: {casa: {"build": Build.FARM ou LUMBER_MILL, "progress":
 ## pontos de reconstrução}}. A casa continua da cidade, mas não produz.
 var ruins := {}
+## Melhorias em obra, feitas por Trabalhadores no território: {casa: {"build":
+## Build.FARM ou LUMBER_MILL, "progress": pontos}}. O Trabalhador fica na casa
+## e faz Game.REBUILD_PER_TURN por turno (add_site_progress); se ele sair, a
+## obra fica parada com o progresso. Pronta, vira fazenda ou madeireira da cidade.
+var sites := {}
 ## Construções (City.Build) concluídas no último turno: melhorias prontas e
 ## unidades que saíram da cidade. O Game mostra um aviso para cada uma.
 var completed: Array[int] = []
@@ -439,10 +453,13 @@ func to_dict() -> Dictionary:
 		"territory": SaveGame.cells_to_json(territory), "population": population,
 		"food_stock": food_stock, "farms": SaveGame.cell_map_to_json(farms),
 		"lumber_mills": SaveGame.cell_map_to_json(lumber_mills),
+		"worked_tiles": SaveGame.cell_map_to_json(worked_tiles),
 		"constructions": constructions.map(func(construction: Construction) -> Dictionary: return construction.to_dict()),
 		"buildings": buildings.duplicate(), "building_workers": SaveGame.int_map_to_json(building_workers),
 		"ruins": ruins.keys().map(func(ruin_cell: Vector2i) -> Array:
 			return [ruin_cell.x, ruin_cell.y, ruins[ruin_cell]["build"], ruins[ruin_cell]["progress"]]),
+		"sites": sites.keys().map(func(site_cell: Vector2i) -> Array:
+			return [site_cell.x, site_cell.y, sites[site_cell]["build"], sites[site_cell]["progress"]]),
 		"festival_workers": festival_workers, "occupation_unrest_turns": occupation_unrest_turns,
 		"pillage_unrest_turns": pillage_unrest_turns, "disorder_turns": disorder_turns,
 	}
@@ -457,9 +474,19 @@ func apply_dict(data: Dictionary) -> void:
 	food_stock = int(data["food_stock"])
 	farms = SaveGame.json_to_cell_map(data["farms"])
 	lumber_mills = SaveGame.json_to_cell_map(data["lumber_mills"])
+	worked_tiles = SaveGame.json_to_cell_map(data.get("worked_tiles", []))
 	constructions.clear()
+	sites.clear()
+	for entry: Array in data.get("sites", []):
+		sites[Vector2i(int(entry[0]), int(entry[1]))] = {"build": int(entry[2]), "progress": int(entry[3])}
 	for construction_data: Dictionary in data["constructions"]:
-		constructions.append(Construction.from_dict(construction_data))
+		var construction := Construction.from_dict(construction_data)
+		if construction.is_on_tile():
+			# Save antigo (as cidades faziam fazendas e madeireiras): a obra vira uma
+			# obra de Trabalhador com o mesmo progresso, e os cidadãos dela ficam livres
+			sites[construction.cell] = {"build": construction.build, "progress": construction.progress}
+		else:
+			constructions.append(construction)
 	buildings.clear()
 	for build in data["buildings"]:
 		buildings.append(int(build))
@@ -495,11 +522,14 @@ func construction_of(build: int) -> Construction:
 
 ## Motivo pelo qual a cidade não pode fazer [param build] ("" = pode). Não
 ## olha o terreno das melhorias (ver Game.buildable_cells) nem o ouro.
+##   - melhoria de terreno: só o Trabalhador faz (ver sites);
 ##   - prédio: só um por cidade (pronto ou em obra);
 ##   - unidade: precisa do prédio de "requires";
 ##   - madeira: o jogador precisa ter a madeira do item no estoque.
 func build_error(build: int) -> String:
 	var info: Dictionary = BUILDS[build]
+	if info["on_tile"]:
+		return "%s é feita por um Trabalhador, no mapa." % info["name"]
 	if info["category"] == Category.BUILDING:
 		if has_building(build):
 			return "A cidade já tem %s." % info["name"]
@@ -618,16 +648,45 @@ func area_cells() -> Array[Vector2i]:
 	return territory.duplicate()
 
 
-func construction_at(target: Vector2i) -> Construction:
-	for construction in constructions:
-		if construction.is_on_tile() and construction.cell == target:
-			return construction
-	return null
-
-
 ## Se a casa já tem uma fazenda, madeireira, ruína ou obra desta cidade.
 func is_claimed(target: Vector2i) -> bool:
-	return farms.has(target) or lumber_mills.has(target) or ruins.has(target) or construction_at(target) != null
+	return farms.has(target) or lumber_mills.has(target) or ruins.has(target) or sites.has(target)
+
+
+# --- Melhorias feitas por Trabalhadores ------------------------------------------
+
+## Um Trabalhador começa a fazer a melhoria [param build] na casa (obra parada
+## da mesma melhoria continua de onde parou).
+func add_site(build: int, target: Vector2i) -> void:
+	if not sites.has(target):
+		sites[target] = {"build": build, "progress": 0}
+	_notify_changed()
+
+
+## O Trabalhador da obra faz +[param points] pontos. Quando chega ao custo, a
+## melhoria fica pronta e um cidadão já vai trabalhar nela: quem trabalhava a
+## casa, um livre ou (fazenda) quem trabalhava outra casa sem melhoria.
+## Retorna true se ficou pronta.
+func add_site_progress(target: Vector2i, points: int) -> bool:
+	var site: Dictionary = sites[target]
+	site["progress"] += points
+	if site["progress"] < BUILDS[site["build"]]["cost"]:
+		_notify_changed()
+		return false
+	sites.erase(target)
+	_complete_at(site["build"], target)
+	# Quem trabalhava a casa sem melhoria passa para a fazenda ou madeireira nova.
+	# Fazenda sem ninguém livre: vem alguém de outra casa sem melhoria (rende mais)
+	worked_tiles.erase(target)
+	if site["build"] == Build.FARM and free_citizens() <= 0 and not worked_tiles.is_empty():
+		worked_tiles.erase(worked_tiles.keys()[0])
+	if free_citizens() > 0:
+		if site["build"] == Build.FARM:
+			farms[target] = 1
+		else:
+			lumber_mills[target] = 1
+	_notify_changed()
+	return true
 
 
 # --- Pilhagem e reconstrução ---------------------------------------------------
@@ -674,8 +733,8 @@ func add_rebuild_progress(target: Vector2i, points: int) -> bool:
 
 ## A casa sai do território (vai para outra cidade do mesmo jogador, ver
 ## Game.transfer_cell) e leva junto o que a cidade tinha nela: fazenda,
-## madeireira, ruína ou obra. Quem trabalhava ali fica livre nesta cidade.
-## Retorna o que saiu, para receive_cell.
+## madeireira, ruína ou obra do Trabalhador. Quem trabalhava ali fica livre
+## nesta cidade. Retorna o que saiu, para receive_cell.
 func give_up_cell(target: Vector2i) -> Dictionary:
 	var taken := {}
 	if farms.has(target):
@@ -687,11 +746,10 @@ func give_up_cell(target: Vector2i) -> Dictionary:
 	if ruins.has(target):
 		taken["ruin"] = ruins[target]
 		ruins.erase(target)
-	var construction := construction_at(target)
-	if construction:
-		constructions.erase(construction)
-		construction.workers = 0
-		taken["construction"] = construction
+	if sites.has(target):
+		taken["site"] = sites[target]
+		sites.erase(target)
+	worked_tiles.erase(target)
 	territory.erase(target)
 	_notify_changed()
 	return taken
@@ -707,26 +765,35 @@ func receive_cell(target: Vector2i, taken: Dictionary) -> void:
 		lumber_mills[target] = 0
 	if taken.has("ruin"):
 		ruins[target] = taken["ruin"]
-	if taken.has("construction"):
-		constructions.append(taken["construction"])
+	if taken.has("site"):
+		sites[target] = taken["site"]
 	_notify_changed()
 
 
 ## A cidade foi ocupada por [param new_owner] (Game.occupy_city): perde 1 de
 ## população (uma cidade vazia continua vazia; ninguém cai abaixo de 1) e
 ## tudo o que estava em produção (obras, unidades e armas da fila, sem
-## devolver madeira nem armas). Território, fazendas, madeireiras, ruínas e
-## prédios ficam. Os cidadãos são realocados do zero. O povo fica agitado por
-## OCCUPATION_UNREST_TURNS turnos (ver mood).
+## devolver madeira nem armas, e as melhorias que os Trabalhadores faziam).
+## Território, fazendas, madeireiras, ruínas e prédios ficam. Os cidadãos são
+## realocados do zero. O povo fica agitado por OCCUPATION_UNREST_TURNS turnos
+## (ver mood).
 func change_owner(new_owner: Player) -> void:
 	owner_player = new_owner
 	occupation_unrest_turns = OCCUPATION_UNREST_TURNS
 	if population > 1:
 		population -= 1
 	constructions.clear()
+	sites.clear()
 	building_workers.clear()
 	completed.clear()
 	clear_workers()
+	_assign_free_citizens(free_citizens())
+	_notify_changed()
+
+
+## Todos os cidadãos livres vão trabalhar (ver _assign_free_citizens). Usado
+## ao fundar a cidade.
+func assign_idle_citizens() -> void:
 	_assign_free_citizens(free_citizens())
 	_notify_changed()
 
@@ -820,7 +887,21 @@ func mill_workers() -> int:
 
 ## Cidadãos que não estão trabalhando em nada.
 func free_citizens() -> int:
-	return population - construction_workers() - farm_workers() - mill_workers() - festival_workers
+	return population - construction_workers() - farm_workers() - mill_workers() - worked_tiles.size() - festival_workers
+
+
+## Se um cidadão pode trabalhar a casa sem melhoria: do território, fora da casa
+## da cidade, terreno que dá alimento (Terrain.TILE_FOOD) e sem fazenda,
+## madeireira ou ruína (a obra de um Trabalhador não atrapalha: quando ela fica
+## pronta, o cidadão passa para a melhoria).
+func can_work_tile(target: Vector2i) -> bool:
+	return (territory.has(target) and target != cell and Terrain.TILE_FOOD.has(_map.get_terrain(target))
+			and not farms.has(target) and not lumber_mills.has(target) and not ruins.has(target))
+
+
+## Alimento de um cidadão trabalhando a casa sem melhoria (Terrain.TILE_FOOD).
+func tile_food(target: Vector2i) -> int:
+	return Terrain.TILE_FOOD.get(_map.get_terrain(target), 0)
 
 
 ## Madeira que as madeireiras da cidade vão tirar no próximo turno.
@@ -844,6 +925,8 @@ func _base_food_produced() -> int:
 	var total := CENTER_FOOD
 	for farm_cell: Vector2i in farms:
 		total += farm_food(farm_cell) * farms[farm_cell]
+	for tile_cell: Vector2i in worked_tiles:
+		total += tile_food(tile_cell)
 	return total
 
 
@@ -854,10 +937,10 @@ func celebration_food() -> int:
 	return mood()["happy"] * CELEBRATION_FOOD_PER_HAPPY
 
 
-## Alimento por turno da fazenda em [param farm_cell] com 1 cidadão: depende do
-## terreno (pradaria 3, cerrado 2; Terrain.FARM_FOOD).
+## Alimento por turno da fazenda em [param farm_cell] com 1 cidadão: o da casa
+## (Terrain.TILE_FOOD) mais o FARM_BONUS da fazenda (pradaria e cerrado: 2).
 func farm_food(farm_cell: Vector2i) -> int:
-	return Terrain.FARM_FOOD.get(_map.get_terrain(farm_cell), FARM_FOOD)
+	return tile_food(farm_cell) + FARM_BONUS
 
 
 func food_consumed() -> int:
@@ -1066,17 +1149,16 @@ func pay_population(amount: int) -> void:
 	_notify_changed()
 
 
-## Ordena uma obra: melhoria na casa [param target] ou unidade (sem casa).
-## Os cidadãos livres e os que estavam nos impostos (a reserva de mão de obra,
+## Ordena uma obra (unidade, arma ou prédio; melhorias de terreno são do
+## Trabalhador, ver add_site). Os cidadãos livres e os que estavam nos impostos (a reserva de mão de obra,
 ## ver _take_tax_workers) passam a trabalhar nela (dá para mudar depois com
 ## set_construction_workers).
 ## Unidade ou arma: entra na fila do prédio que a produz; esses cidadãos vão
 ## para os trabalhadores do prédio.
 ## A madeira e as armas do item saem do estoque agora (use build_error antes).
-func order_build(build: int, target := Vector2i.ZERO) -> Construction:
+func order_build(build: int) -> Construction:
 	var construction := Construction.new()
 	construction.build = build
-	construction.cell = target
 	var paid := pay_resources(build)
 	construction.wood_paid = paid["wood"]
 	construction.weapons_paid = paid["weapons"]
@@ -1142,6 +1224,7 @@ func clear_workers() -> void:
 		farms[farm_cell] = 0
 	for mill_cell: Vector2i in lumber_mills:
 		lumber_mills[mill_cell] = 0
+	worked_tiles.clear()
 	for construction in constructions:
 		construction.workers = 0
 	for building: int in building_workers:
@@ -1176,6 +1259,16 @@ func set_farm_worked(farm_cell: Vector2i, worked: bool) -> void:
 	if worked and (farms[farm_cell] > 0 or free_citizens() <= 0):
 		return
 	farms[farm_cell] = 1 if worked else 0
+	_notify_changed()
+
+
+## Põe ou tira o cidadão da casa sem melhoria (ver can_work_tile; pôr precisa
+## de um cidadão livre).
+func set_tile_worked(target: Vector2i, worked: bool) -> void:
+	if not worked:
+		worked_tiles.erase(target)
+	elif not worked_tiles.has(target) and free_citizens() > 0 and can_work_tile(target):
+		worked_tiles[target] = 1
 	_notify_changed()
 
 
@@ -1226,12 +1319,7 @@ func process_turn(spawn_unit: Callable) -> Array[String]:
 		if not construction.is_done():
 			continue
 		construction.workers = 0
-		if construction.is_on_tile():
-			constructions.erase(construction)
-			_complete_at(construction.build, construction.cell)
-			completed.append(construction.build)
-			events.append("%s concluída em (%d, %d)" % [construction.display_name(), construction.cell.x, construction.cell.y])
-		elif construction.is_building():
+		if construction.is_building():
 			constructions.erase(construction)
 			buildings.append(construction.build)
 			completed.append(construction.build)
@@ -1291,8 +1379,8 @@ func process_turn(spawn_unit: Callable) -> Array[String]:
 	return events
 
 
-## A melhoria fica pronta, sem trabalhador (obra concluída ou ruína
-## reconstruída; os trabalhadores da obra são realocados no fim do turno).
+## A melhoria fica pronta, sem trabalhador (obra do Trabalhador concluída ou
+## ruína reconstruída).
 func _complete_at(build: int, target: Vector2i) -> void:
 	match build:
 		Build.FARM:
@@ -1317,7 +1405,8 @@ func _take_tax_workers() -> int:
 ##   1. na primeira obra (ou unidade da frente da fila) SEM ninguém trabalhando;
 ##   2. na primeira obra da fila que ainda não terminou;
 ##   3. nas fazendas sem trabalhador, depois nas madeireiras com vaga;
-##   4. num prédio que rende impostos parado (Marcenaria sem armas na fila).
+##   4. num prédio que rende impostos parado (Marcenaria sem armas na fila);
+##   5. nas casas do território sem melhoria (1 de alimento cada).
 ## O que sobrar fica livre.
 func _assign_free_citizens(count: int) -> void:
 	count = mini(count, free_citizens())
@@ -1353,11 +1442,15 @@ func _assign_free_citizens(count: int) -> void:
 		if BUILDS[building].get("idle_gold", 0) > 0 and active_unit(building) == null:
 			building_workers[building] = building_workers.get(building, 0) + count
 			return
+	for tile_cell in territory:
+		if count > 0 and not worked_tiles.has(tile_cell) and can_work_tile(tile_cell):
+			worked_tiles[tile_cell] = 1
+			count -= 1
 
 
 ## Depois de perder população, tira trabalhadores (primeiro das obras, depois
-## das festividades, das madeireiras e por fim das fazendas) até o total caber
-## na população.
+## das festividades, das madeireiras, das casas sem melhoria e por fim das
+## fazendas) até o total caber na população.
 func _release_extra_workers() -> void:
 	for construction in constructions:
 		while free_citizens() < 0 and construction.workers > 0:
@@ -1370,6 +1463,9 @@ func _release_extra_workers() -> void:
 	for mill_cell in lumber_mills:
 		while free_citizens() < 0 and lumber_mills[mill_cell] > 0:
 			lumber_mills[mill_cell] -= 1
+	for tile_cell: Vector2i in worked_tiles.keys():
+		if free_citizens() < 0:
+			worked_tiles.erase(tile_cell)
 	for farm_cell in farms:
 		if free_citizens() < 0 and farms[farm_cell] > 0:
 			farms[farm_cell] = 0
@@ -1389,14 +1485,14 @@ func _notify_changed() -> void:
 
 
 ## Mostra no mapa (GameMap.set_improvement) as fazendas da cidade, prontas ou
-## em obra, e apaga as que deixaram de existir (obra cancelada).
+## em obra, e apaga as que deixaram de existir.
 func _sync_map_improvements() -> void:
 	var current := {}
 	for farm_cell: Vector2i in farms:
 		current[farm_cell] = GameMap.Improvement.FARM
-	for construction in constructions:
-		if construction.is_on_tile() and construction.build == Build.FARM:
-			current[construction.cell] = GameMap.Improvement.FARM_IN_PROGRESS
+	for site_cell: Vector2i in sites:
+		if sites[site_cell]["build"] == Build.FARM:
+			current[site_cell] = GameMap.Improvement.FARM_IN_PROGRESS
 	for painted_cell: Vector2i in _painted_improvements:
 		if not current.has(painted_cell):
 			_map.set_improvement(painted_cell, GameMap.Improvement.NONE)
@@ -1414,9 +1510,12 @@ func _draw() -> void:
 		var mill_rect := Rect2(_local_center(mill_cell) - tile / 2.0, tile)
 		LumberMill.draw_icon(self, mill_rect)
 		LumberMill.draw_wood_bar(self, mill_rect, _map.wood_left(mill_cell))
-	for construction in constructions:
-		if construction.is_on_tile() and construction.build != Build.FARM: # fazendas: no shader do mapa
-			draw_improvement(self, construction.build, Rect2(_local_center(construction.cell) - tile / 2.0, tile), CONSTRUCTION_ALPHA)
+	for site_cell: Vector2i in sites:
+		var site_rect := Rect2(_local_center(site_cell) - tile / 2.0, tile)
+		if sites[site_cell]["build"] != Build.FARM: # fazendas: no shader do mapa
+			draw_improvement(self, sites[site_cell]["build"], site_rect, CONSTRUCTION_ALPHA)
+		LumberMill.draw_bar(self, site_rect, float(sites[site_cell]["progress"]) / BUILDS[sites[site_cell]["build"]]["cost"],
+				LumberMill.PROGRESS_BAR_COLOR)
 	for ruin_cell: Vector2i in ruins:
 		var ruin_rect := Rect2(_local_center(ruin_cell) - tile / 2.0, tile)
 		draw_ruin(self, ruins[ruin_cell]["build"], ruin_rect)

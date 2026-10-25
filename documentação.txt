@@ -191,8 +191,9 @@ COMO JOGAR
    As ações da unidade também aparecem como botões no canto
    inferior direito.
    Com o Colono selecionado, B (ou o botão "Construir nova
-   cidade") funda uma cidade. Clique numa cidade sua para abrir
-   a janela dela (ver CIDADES).
+   cidade") funda uma cidade. Com o Trabalhador, C faz uma
+   fazenda e M uma madeireira no território da cidade. Clique
+   numa cidade sua para abrir a janela dela (ver CIDADES).
 5. Quando nenhuma unidade tiver mais movimento possível, aparece
    "Finalizar turno? [Enter]" ao lado do turno. Enter passa a vez
    para o próximo jogador. Antes disso, Enter não faz nada.
@@ -483,9 +484,10 @@ UNIDADES (scripts/units/)
   perto e sem serrilhado com o zoom afastado).
 - Unidade fortificada: muralha de pedra de cantos arredondados, com
   ameias arredondadas no topo.
-- Partida de teste atual: cada jogador começa só com 1 Colono,
-  sem tropas e sem guerra, para observar o gerenciamento das
-  cidades. Para voltar a ter tropas, use WITH_TROOPS = true no
+- Partida de teste atual: cada jogador começa com 1 Colono e 1
+  Trabalhador (desde 24/10/2026; o Trabalhador é quem faz as
+  fazendas), sem tropas e sem guerra, para observar o
+  gerenciamento das cidades. Para voltar a ter tropas, use WITH_TROOPS = true no
   topo de scripts/main.gd. Com isso, cada jogador também recebe
   1 Guerreiro, 1 Arqueiro e 1 Cavaleiro, e os dois lados começam
   frente a frente no centro da ilha, a 3 casas de distância
@@ -506,7 +508,8 @@ FLORESTA (scripts/map/terrain.gd)
       O Cavaleiro (2) anda 2 casas na pradaria, mas só 1 casa por
       turno na floresta. Unidades com movimento 1 não são afetadas.
       Sair da floresta para a pradaria custa o normal (1).
-    * Não aceita fazenda (Terrain.can_farm).
+    * Não aceita fazenda (Terrain.can_farm). Trabalhada sem
+      melhoria, dá 1 de alimento, como a pradaria e o cerrado.
     * Cidade fundada na floresta: a casa vira Pradaria.
     * A madeira é da FLORESTA, não da madeireira: cada casa de
       floresta tem o seu próprio estoque, 100 de madeira
@@ -515,8 +518,8 @@ FLORESTA (scripts/map/terrain.gd)
       madeira da casa em que está, para o estoque do jogador.
       Quando a madeira da casa acaba, ela vira Cerrado.
 - Cerrado: o que sobra da floresta explorada. Igual à Pradaria em
-  movimento e cidade, mas é um solo menos fértil: a fazenda no
-  cerrado rende +2 de alimento (na pradaria, +3; Terrain.FARM_FOOD).
+  movimento, cidade e alimento (desde 24/10/2026 a fazenda rende o
+  mesmo nos dois; antes o cerrado rendia menos).
 - Passar o mouse sobre uma floresta mostra a madeira que resta
   (ex.: "Floresta (madeira 85/100, defesa +1...)").
 
@@ -534,8 +537,8 @@ OURO (TESOURO)
       Se ele estava em obra, a obra sai da fila (o progresso é
       perdido) e os trabalhadores dela vão para outra obra ou
       fazenda.
-    * Melhorias de terreno (Fazenda, Madeireira) NÃO podem ser
-      compradas: elas não têm o botão da moeda.
+    * Melhorias de terreno (Fazenda, Madeireira) NÃO são da
+      cidade: quem as faz é o Trabalhador (ver TRABALHADOR).
     * A unidade também precisa do prédio dela (ver PRÉDIOS).
 - A compra não acontece (botão desabilitado, com o motivo no
   tooltip) quando: falta ouro, a cidade ficaria sem população
@@ -558,14 +561,16 @@ RECURSOS ESTRATÉGICOS E MADEIRA
   madeira por turno (LumberMill.WOOD_PER_WORKER), no início da
   vez do dono. Cada madeireira tem no máximo 2 trabalhadores
   (LumberMill.MAX_WORKERS). Fazendas continuam com 1.
-- Há dois tipos de madeireira:
-  1. MADEIREIRA DA CIDADE: construída pela janela da cidade
-     ("Construir..." > Madeireira), numa casa de floresta da área
-     da cidade. Custa 4 de produção (o mesmo da fazenda). Pronta,
-     aparece em "Produção da cidade" com a barra azul da madeira
-     restante e os botões - / + (0 a 2 cidadãos).
-  2. MADEIREIRA REMOTA: construída por um Trabalhador em qualquer
-     casa de floresta, longe das cidades (ver TRABALHADOR).
+- Há dois tipos de madeireira, os dois feitos pelo Trabalhador
+  (tecla M; desde 24/10/2026 a cidade não constrói mais
+  madeireiras):
+  1. MADEIREIRA DA CIDADE: M numa floresta do território de uma
+     cidade sua. O Trabalhador fica na casa 4 turnos (ver
+     TRABALHADOR). Pronta, os cidadãos da cidade trabalham nela:
+     setas no mapa da janela da cidade (0 a 2 cidadãos) ou - / +
+     em "Produção da cidade", com a barra azul da madeira restante.
+  2. MADEIREIRA REMOTA: M numa floresta fora dos territórios; o
+     próprio Trabalhador entra nela e trabalha (ver TRABALHADOR).
 - Floresta esgotada (0 de madeira): vira Cerrado, a madeireira
   some, e os trabalhadores ficam livres (cidadãos vão para outra
   obra, fazenda ou madeireira; Trabalhadores voltam ao mapa). Uma
@@ -576,10 +581,32 @@ TRABALHADOR (data/units/trabalhador.tres)
   um machado (assets/sprites/units/trabalhador.png).
 - Feito na cidade: 5 de produção + 1 de população (mesma regra do
   Guerreiro: só sai se a cidade continuar com pelo menos 1).
-- Habilidade (campo "Can Build Lumber Mill" do .tres): tecla M ou
-  botão "Construir madeireira [M]". Precisa estar numa casa de
-  floresta, ter movimento sobrando e a casa não pode ser usada por
-  uma cidade. O Trabalhador entra na madeireira e passa a
+- MELHORIAS DA CIDADE (desde 24/10/2026, decisão do usuário: só o
+  Trabalhador faz fazendas e madeireiras; elas saíram da lista
+  "Construir" da cidade):
+    * Fazenda: tecla C ou botão "Construir fazenda [C]" (campo
+      "Can Build Farm" do .tres), numa pradaria ou cerrado do
+      território de uma cidade sua;
+    * Madeireira da cidade: tecla M ou "Construir madeireira [M]"
+      numa floresta do território de uma cidade sua.
+  O Trabalhador fica na casa (martelo amarelo, como na
+  reconstrução) e faz 1 ponto por turno, no início da sua vez,
+  até o custo (4): 4 turnos. A obra aparece no mapa (terra arada
+  ou a madeireira transparente, com a barra de progresso), na
+  janela da cidade e em "Produção da cidade" ("em obra - 2/4").
+  Mover o Trabalhador para a obra; ela guarda o progresso, e
+  qualquer Trabalhador seu pode continuar ("Continuar fazenda
+  [C]"). Pronta, a melhoria é da cidade, sai o aviso de
+  construção concluída e um cidadão já vai trabalhar nela (quem
+  trabalhava a casa, um livre ou, na fazenda, quem trabalhava
+  outra casa sem melhoria). Não dá: fora do território, na casa
+  da cidade, no terreno errado ou numa casa com outra melhoria.
+  Fica em City.sites ({casa: melhoria e progresso}, salvo no
+  save); Game.improvement_error / build_improvement.
+- MADEIREIRA REMOTA: tecla M numa floresta FORA dos territórios
+  (dentro de um território seu, a madeireira é da cidade). Precisa
+  ter movimento sobrando e a casa não pode ser usada por uma
+  cidade. O Trabalhador entra na madeireira e passa a
   trabalhar nela:
     * ele some do mapa, não ocupa a casa e não é mais selecionado
       sozinho;
@@ -608,9 +635,9 @@ TRABALHADOR (data/units/trabalhador.tres)
 - Floresta esgotada: a madeireira remota é consumida, a casa vira
   Cerrado e os Trabalhadores voltam ao mapa em casas livres
   próximas.
-- Madeireira remota só fora do território de outro jogador
-  (ver TERRITÓRIO). No próprio território ou em terra sem dono,
-  pode.
+- Madeireira remota só em terra sem dono (ver TERRITÓRIO). No
+  próprio território, M faz a madeireira da cidade; no território
+  de outro jogador, não pode.
 - Outras habilidades (campos "Can Rebuild" e "Can Join City" do
   .tres):
     * Reconstruir [R]: numa fazenda ou madeireira sua destruída
@@ -626,7 +653,8 @@ COLONO
 - Ataque 0, Defesa 0, Movimento 1 (data/units/colono.tres).
   Sprite: assets/sprites/units/colono.png (boneco com uma pá).
 - Todo jogador começa com um Colono
-  (J1 em (55, 41), J2 em (64, 41)).
+  (J1 em (55, 41), J2 em (64, 41)) e um Trabalhador logo abaixo
+  dele (55, 42) e (64, 42).
 - Não ataca (unidades com Ataque 0 não atacam) e, com Defesa 0,
   é destruído com um único ataque.
 - Habilidade: construir uma nova cidade na casa em que está
@@ -743,12 +771,17 @@ CIDADES (scripts/cities/city.gd)
   seguintes, sem as 4 pontas (um quadrado 5x5 sem os cantos, 20
   casas além da cidade); nas outras cidades, só as 8 vizinhas.
   Fazendas e madeireiras da cidade só podem ser feitas no
-  território.
+  território, e só por Trabalhadores (ver TRABALHADOR).
 - Cidadãos: cada um trabalha em uma coisa só:
     * numa obra: gera 1 ponto de produção por turno para ela;
-    * numa fazenda pronta: a fazenda gera 3 de alimento por turno
-      na pradaria e 2 no cerrado
-      (no máximo 1 cidadão por fazenda);
+    * numa casa do território SEM melhoria (desde 24/10/2026,
+      decisão do usuário): gera 1 de alimento por turno na
+      pradaria, na floresta e no cerrado (Terrain.TILE_FOOD; água
+      não pode ser trabalhada; 1 cidadão por casa;
+      City.worked_tiles);
+    * numa fazenda pronta: a casa (1) + a fazenda (+1 por
+      trabalhador, City.FARM_BONUS) = 2 de alimento por turno, na
+      pradaria e no cerrado (no máximo 1 cidadão por fazenda);
     * numa madeireira pronta: gera 1 de madeira por turno para o
       estoque do jogador (no máximo 2 cidadãos por madeireira);
     * nas festividades: gera +2 de alegria (ver BEM-ESTAR
@@ -756,13 +789,12 @@ CIDADES (scripts/cities/city.gd)
     * livre: não produz nada.
 - O que a cidade pode construir fica em City.BUILDS. Cada item
   tem nome, custo, descrição e se é feito numa casa ou é uma
-  unidade:
+  unidade. Fazenda e Madeireira continuam em City.BUILDS (nome,
+  custo de 4 pontos, desenho), com "on_tile": true: são feitas
+  pelo Trabalhador e NÃO aparecem na lista "Construir" (desde
+  24/10/2026):
     Construção  Custo                       Onde
-    Fazenda     4 de produção               casa de pradaria ou
-                                            cerrado da área
-    Madeireira  4 de produção               casa de floresta da
-                                            área
-    Guerreiro   10 de produção + 1 de       Quartel General
+    Guerreiro  10 de produção + 1 de       Quartel General
                 população + 1 Lança
     Colono      10 de produção + 1 de       Prefeitura
                 população
@@ -778,8 +810,7 @@ CIDADES (scripts/cities/city.gd)
                 madeira                     (exige Misticismo; só
                                             aparece na lista depois
                                             dele)
-  Todos custam 50 de ouro para comprar na hora (menos as
-  melhorias de terreno, que não podem ser compradas).
+  Todos custam 50 de ouro para comprar na hora.
 
 CONSTRUÇÕES QUE GASTAM RECURSOS (campos "wood" e "weapons" em City.BUILDS)
 - Algumas construções gastam madeira do estoque do jogador:
@@ -808,10 +839,6 @@ CONSTRUÇÕES QUE GASTAM RECURSOS (campos "wood" e "weapons" em City.BUILDS)
     * cada unidade da fila paga a sua madeira ao ser pedida.
 - O painel de recursos do HUD mostra a madeira caindo (pisca em
   vermelho) quando ela é gasta.
-- Fazenda e Madeireira: só na área da cidade, no terreno certo
-  (City.allows_terrain), em casa sem outra melhoria, obra (de
-  nenhuma cidade) ou madeireira remota. Se não houver casa
-  possível, o botão "Escolher" fica desabilitado com o motivo.
 - A lista "Construir" tem rolagem (para quando crescer além da
   tela).
 - Guerreiro (e futuras unidades): quando a produção completa, a
@@ -911,8 +938,10 @@ MARCENARIA E IMPOSTOS (campo "idle_gold" em City.BUILDS)
   cidades.
 - Alimento por turno (regra do Civilization II desde 20/10/2026):
     + 2 da casa da cidade (CENTER_FOOD)
-    + 3 por fazenda com trabalhador na pradaria, 2 no cerrado
-      (Terrain.FARM_FOOD, City.farm_food)
+    + 1 por casa trabalhada sem melhoria (Terrain.TILE_FOOD)
+    + 2 por fazenda com trabalhador (1 da casa + 1 da fazenda,
+      City.FARM_BONUS; City.farm_food) - desde 24/10/2026; antes
+      a fazenda dava 3 na pradaria e 2 no cerrado
     - 2 por habitante (FOOD_PER_CITIZEN)
   A casa da cidade produz alimento sozinha. Sem isso, uma cidade
   nova passaria fome antes de terminar a primeira fazenda. Essa
@@ -928,16 +957,21 @@ MARCENARIA E IMPOSTOS (campo "idle_gold" em City.BUILDS)
   mapa, uma barrinha logo acima da cidade. A barrinha do mapa fica
   verde normalmente e vermelha quando a cidade está passando
   fome.
-- Equilíbrio: cada cidadão numa fazenda de pradaria produz 3 e
-  come 2 (no cerrado, produz 2 e não sobra nada), ou
-  seja, +1 de sobra por fazenda trabalhada, mais +2 da casa da
-  cidade. Cidadãos em obras comem 2 sem produzir alimento. (Com a
-  fazenda dando 2, as cidades quase não cresciam, por isso ela foi
-  para 3.) Próximo passo: melhorias que aumentem o alimento.
+- Equilíbrio (regra de 24/10/2026): o cidadão numa fazenda produz
+  2 e come 2 (não sobra nada); numa casa sem melhoria produz 1
+  (falta 1); numa obra, prédio ou madeireira não produz alimento
+  (faltam 2). A única sobra é o +2 da casa da cidade. Uma cidade
+  com todos nas fazendas cresce +2 por turno; cada cidadão na
+  produção tira 2 disso. Na partida de teste máquina x máquina de
+  100 rodadas, as cidades pararam em 3-4 de população (ver
+  HISTÓRICO). (Com a regra antiga, a fazenda dava 3: +1 de sobra
+  por fazenda.) Próximo passo: decidir o equilíbrio (ver PRÓXIMOS
+  PASSOS).
 - Fome: se o estoque ficaria negativo, ele volta a 0 e a cidade
   perde 1 de população (nunca fica abaixo de 1). Quem perde o
   trabalho primeiro são os cidadãos das obras, depois os das
-  madeireiras e por último os das fazendas.
+  madeireiras, os das casas sem melhoria e por último os das
+  fazendas.
 - OBRA SEM MÃO DE OBRA (City.needs_workers): obra, unidade ou arma
   que não terminou, é a vez dela (unidades: a da frente da fila do
   prédio) e ninguém trabalha nela. Ela fica parada e aparece em
@@ -970,7 +1004,10 @@ MARCENARIA E IMPOSTOS (campo "idle_gold" em City.BUILDS)
   trabalhador (1 por fazenda), depois para madeireiras com vaga
   (até 2 por madeireira) e, por fim, para os IMPOSTOS de um prédio
   parado que rende ouro (Marcenaria sem armas na fila, +1 de ouro
-  por cidadão). Só ficam livres se a cidade não tiver nada disso.
+  por cidadão) e, por fim (desde 24/10/2026), para as casas do
+  território sem melhoria (+1 de alimento cada). Só ficam livres
+  se a cidade não tiver nada disso. O primeiro cidadão de uma
+  cidade nova também já vai para uma casa (City.assign_idle_citizens).
   (As madeireiras vêm antes dos impostos porque têm no máximo 2
   vagas; os impostos aceitam qualquer número.)
   O mesmo vale ao cancelar uma obra (X) e quando a floresta de
@@ -1005,9 +1042,10 @@ MARCENARIA E IMPOSTOS (campo "idle_gold" em City.BUILDS)
   desordem (só no primeiro turno dela), aparece um aviso do mesmo
   tipo, com quantos infelizes e felizes ela tem e o que fazer
   (Game.DISORDER_NOTICE).
-- Fazenda concluída começa sem trabalhador. Se não houver outra
-  obra na fila, os trabalhadores liberados vão para ela.
-- Nova obra (melhoria, prédio, unidade ou arma): todos os cidadãos
+- Fazenda ou madeireira concluída pelo Trabalhador: um cidadão já
+  vai trabalhar nela (quem trabalhava a casa, um livre ou, na
+  fazenda, quem trabalhava outra casa sem melhoria).
+- Nova obra (prédio, unidade ou arma): todos os cidadãos
   livres E os que estavam nos impostos passam a trabalhar nela. Os
   impostos funcionam como a reserva de mão de obra da cidade
   (City._take_tax_workers). Dá para mudar depois.
@@ -1162,15 +1200,27 @@ JANELA DA CIDADE (scripts/ui/city_window.gd e city_map_view.gd)
   Esc ou "Fechar" fecham. Com a janela aberta, o mapa e as
   teclas do jogo ficam bloqueados.
 - Esquerda, MAPA DA CIDADE: as 21 casas com terreno, fazendas,
-  obras (barrinha e "progresso/custo") e um círculo branco com o
-  número de cidadãos trabalhando em cada casa. Passar o mouse
-  sobre uma casa mostra os detalhes dela. Casas usadas por outra
-  cidade aparecem escurecidas.
-  Fazenda trabalhada: uma espiga de milho no centro da casa com o
-  alimento que ela produz por turno no meio (3 na pradaria, 2 no
-  cerrado). Fazenda
+  obras dos Trabalhadores (barrinha e "progresso/custo") e um
+  círculo branco com o número de cidadãos trabalhando em cada
+  casa. Passar o mouse sobre uma casa mostra os detalhes dela.
+  Casas usadas por outra cidade aparecem escurecidas.
+  Casa trabalhada: uma espiga de milho no centro com o alimento
+  que ela produz por turno (2 na fazenda, 1 sem melhoria). Casa
   sem trabalhador não mostra o milho (Icons.draw_corn,
   CityMapView._draw_food).
+  ALOCAÇÃO PELO MAPA (desde 24/10/2026; CityMapView.workers_requested):
+    * clique numa casa do território (fazenda ou sem melhoria, de
+      pradaria, floresta ou cerrado): põe um cidadão livre nela; outro
+      clique tira;
+    * madeireira: seta para cima (põe) e seta para baixo (tira) na
+      coluna da direita da casa, com o número de cidadãos entre
+      elas (0 a 2). A seta fica apagada quando não dá (madeireira
+      cheia ou ninguém livre; vazia). Clicar no resto da madeireira
+      não muda nada;
+    * sem cidadão livre, o clique não aloca e uma mensagem avisa
+      ("Nenhum cidadão livre em Aurora: tire alguém de outra
+      fazenda, madeireira, obra ou dos impostos.");
+    * observando a cidade do adversário: sem setas e sem cliques.
 - Direita:
     * RESUMO: população (e quantos estão livres), estoque de
       alimentos (x/tamanho do estoque, com barra de progresso,
@@ -1179,27 +1229,23 @@ JANELA DA CIDADE (scripts/ui/city_window.gd e city_map_view.gd)
       de alimento por turno aparece em verde quando sobra e em
       vermelho quando falta (com um aviso em vermelho);
     * botão "Construir...": abre uma lista (modal) com o que a
-      cidade pode construir, dividida em três classes
-      (City.Category / campo "category" em City.BUILDS):
+      cidade pode construir, dividida em classes (City.Category /
+      campo "category" em City.BUILDS):
         Unidades             Guerreiro, Colono, Trabalhador
-        Melhorias de terreno Fazenda, Madeireira
-        Prédios              Quartel General
+        Armas                Lança
+        Prédios              Quartel General, Marcenaria, Templo
+      A classe "Melhorias de terreno" (Fazenda, Madeireira) não
+      aparece mais (desde 24/10/2026): quem as faz é o Trabalhador.
       No topo da lista aparece o tesouro ("Tesouro: N", com a
       moeda). Cada linha mostra o nome, o custo em produção (e
       população), o botão "Escolher" e o botão da moeda de ouro
-      com o preço (melhorias de terreno não têm a moeda). Quando
+      com o preço. Quando
       não dá para fazer o item, o motivo aparece em laranja no
       lugar do custo. A descrição do item aparece num TOOLTIP ao
       passar o mouse sobre a linha, em até 3 linhas de 50 letras
-      (CityWindow.wrap_tooltip / TOOLTIP_WIDTH). Ao escolher:
-        - Melhoria de terreno: o mapa destaca em verde as casas
-          possíveis. Clique numa delas para ordenar a obra; Esc,
-          botão direito ou "Cancelar" desistem. SHIFT + clique pede
-          a obra e continua escolhendo, para pedir várias do mesmo
-          tipo de uma vez (a casa escolhida sai do destaque; um
-          clique sem Shift pede a última e termina; Esc termina e
-          mantém as já pedidas). Os cidadãos livres vão para a
-          primeira; as outras ficam em vermelho, sem mão de obra;
+      (CityWindow.wrap_tooltip / TOOLTIP_WIDTH). Ao escolher (a
+      escolha da casa no mapa, com Shift para várias, saiu junto
+      com as melhorias):
         - Unidade: entra na fila do prédio que a produz;
         - Prédio: entra nas obras em andamento.
       Botão da moeda: compra com ouro (ver OURO).
@@ -1230,21 +1276,23 @@ JANELA DA CIDADE (scripts/ui/city_window.gd e city_map_view.gd)
     * Largura: a coluna da direita tem 620 pixels
       (RIGHT_COLUMN_WIDTH), para cada obra caber numa linha só; as
       barras crescem e os botões e o X ficam alinhados à direita.
-    * OBRAS EM ANDAMENTO: melhorias de terreno e prédios em
-      construção, cada um com barra de progresso,
+    * OBRAS EM ANDAMENTO: prédios em construção, cada um com barra
+      de progresso,
       "progresso/custo (N t)" (turnos até terminar), botões
       - / + para alocar cidadãos e X para cancelar (o progresso
       é perdido). Uma unidade pronta esperando população aparece
       como "pronto", em laranja;
-    * PRODUÇÃO DA CIDADE: o que a cidade já tem produzindo. Hoje
-      são as fazendas prontas, com - / + para pôr ou tirar o
-      trabalhador.
+    * PRODUÇÃO DA CIDADE: o que a cidade já tem produzindo: as
+      casas trabalhadas sem melhoria (+1 de alimento), as fazendas
+      e as madeireiras, com - / + (o mesmo que os cliques no mapa),
+      as ruínas e as obras dos Trabalhadores ("em obra - 2/4
+      (Trabalhador na casa)", ou em laranja "parada: sem
+      Trabalhador").
     * UNIDADES NA CIDADE: a unidade que está na casa da cidade
       (só cabe uma), com defesa e energia. "Ativar" tira a
       unidade da fortificação, fecha a janela e a seleciona no
       mapa. Se ela não estiver fortificada, o botão é "Selecionar".
-- Esc fecha, nesta ordem: a lista de construções, a escolha da
-  casa e, por fim, a janela.
+- Esc fecha, nesta ordem: a lista de construções e a janela.
 - Título com a classe da cidade (ex.: "Aurora (Jogador 1, Povoado
   (capital))"). O resumo mostra "Classe: Povoado (1-5 de
   população) - capital   Território: 21 casas". O mapa da cidade
@@ -1327,24 +1375,25 @@ IA: ECONOMIA, EXPANSÃO E DEFESA (scripts/ai/ai_economy.gd)
   * Compra de defesa (primeiro, em todas as cidades): inimigo
     militar a até threat_radius casas e cidade sem guarnição ->
     compra um Guerreiro com ouro (e a Lança, se der).
-  * Pedidos de cada cidade, um de cada tipo por vez: fazenda nova
-    (se o alimento não chega a food_surplus, na casa que rende
-    mais), Guerreiro e Lança para a guarnição, madeireira na
-    floresta da cidade (ou Trabalhador, se não houver floresta),
-    Colono (população >= settler_population, até max_cities),
+  * Pedidos de cada cidade, um de cada tipo por vez: Trabalhador,
+    se há tarefas para ele (fazendas que faltam: uma por
+    habitante; uma madeireira se falta madeira; ruínas e cidades
+    vazias) e Trabalhadores de menos (no máximo workers_per_city
+    por cidade + 1), Guerreiro e Lança para a guarnição, Colono (população >= settler_population, até max_cities),
     Marcenaria e depois Quartel General (na capital e em cidades
     de 4+; a madeira fica guardada para eles), Lanças (até
     spears_per_city por cidade) e Guerreiros para o exército (até
     army_to_attack fora das cidades).
   * Templo (com Misticismo) a partir de 4 de população.
   * Cidadãos redistribuídos do zero (City.clear_workers): fazendas
-    até o alimento bastar (no máximo 2/3 da cidade, se não há
-    fome), festividades até sair da desordem civil, impostos
+    e depois casas sem melhoria até o alimento bastar (no máximo
+    2/3 da cidade no campo), festividades até sair da desordem civil, impostos
     reservados (tax_workers), 1 em cada madeireira
     se falta madeira, obras por prioridade (comida > defesa >
     madeira > prédios > expansão > armas > exército; todos na mais
-    importante, para ela terminar logo), madeireiras cheias e o
-    resto na Marcenaria parada (impostos).
+    importante, para ela terminar logo), madeireiras cheias, a
+    Marcenaria parada (impostos) e o resto nas fazendas e casas sem
+    melhoria.
 - Colonos: procuram, a até settler_search_radius casas e fora de
   qualquer território, o melhor lugar para uma cidade (o
   território que ela teria: pradaria 3, cerrado e floresta 2,
@@ -1353,9 +1402,13 @@ IA: ECONOMIA, EXPANSÃO E DEFESA (scripts/ai/ai_economy.gd)
   pode andar 1-2 casas para achar um lugar melhor.
 - Trabalhadores, nesta ordem: reconstroem a ruína em que estão,
   migram para a cidade vazia ao lado, vão até uma cidade vazia
-  ou uma ruína sua; senão andam até a floresta livre mais
-  próxima (fora do território de outro jogador) ou uma madeireira
-  sua com vaga e trabalham nela.
+  ou uma ruína sua; senão vão até a casa mais perto onde falta
+  uma fazenda (cidades com menos fazendas que habitantes, ou obra
+  de fazenda parada) e a constroem (C); se falta madeira, fazem
+  uma madeireira numa floresta do território (da cidade) ou, sem
+  floresta, andam até a floresta livre mais próxima e trabalham
+  numa madeireira remota (AIEconomy._worker_job). Dois
+  Trabalhadores não vão para a mesma casa.
 - Reconstrução: com ruínas ou cidades vazias, as cidades de 2+
   de população pedem Trabalhadores (1 por ruína ou cidade vazia,
   até 2), com prioridade logo depois da comida. Cidade vazia não
@@ -1739,8 +1792,11 @@ CÂMERA E CONTROLES
 - G: mover a unidade selecionada até um destino (ver MOVER PARA
   UM DESTINO).
 - B: o Colono selecionado constrói uma nova cidade.
+- C: o Trabalhador selecionado constrói uma fazenda (no
+  território de uma cidade sua).
 - M: o Trabalhador selecionado constrói uma madeireira na
-  floresta (ou entra na que já existe ali).
+  floresta: da cidade no território, remota fora dele (ou entra
+  na remota que já existe ali).
 - Clique na sua madeireira remota: seleciona a madeireira
   (botão "Retirar trabalhador").
 - P: a unidade militar selecionada pilha a fazenda ou madeireira
@@ -1772,8 +1828,9 @@ HUD (scripts/ui/hud.gd)
   cidade ou fazenda, mostra também os dados dela.
 - Canto inferior direito: botões de ação da unidade selecionada
   (só na sua vez). Hoje: "Construir nova cidade [B]" (Colono),
+  "Construir fazenda [C]" (Trabalhador em pradaria ou cerrado),
   "Construir madeireira [M]" / "Trabalhar na madeireira [M]"
-  (Trabalhador), "Reconstruir [R]" e "Migrar para <cidade> [J]"
+  (Trabalhador; "Continuar ..." numa obra parada), "Reconstruir [R]" e "Migrar para <cidade> [J]"
   (Trabalhador, quando fazem sentido), "Pilhar [P]" (unidade
   militar numa fazenda ou madeireira pronta), "Mover [G]",
   "Fortificar [F]" e "Pular turno [Espaço]" (todas). Com uma
@@ -1989,6 +2046,21 @@ Screenshots também confirmaram o visual.
 [x] Primeira tecnologia com efeito: Misticismo libera o Templo
 [x] Construções que exigem tecnologia só aparecem na lista
     "Construir" depois de pesquisada (24/10/2026)
+[x] Só o Trabalhador faz fazendas e madeireiras (saíram da lista
+    da cidade); alocação dos cidadãos clicando no mapa da cidade,
+    com setas na madeireira (24/10/2026)
+[x] Casas sem melhoria podem ser trabalhadas (+1 de alimento); a
+    fazenda soma +1 (24/10/2026)
+[ ] EQUILÍBRIO DO ALIMENTO com a regra nova: a fazenda só paga o
+    cidadão que trabalha nela (2 = 2), então a única sobra é o +2
+    da casa da cidade, e na partida máquina x máquina as cidades
+    pararam em 4-5 de população, sem Marcenaria nem segunda cidade
+    em 100 rodadas. Opções: a fazenda somar +2, o cidadão comer
+    menos, a casa da cidade dar mais, ou melhorias (irrigação,
+    celeiro). A decidir com o usuário
+[ ] Começo da partida: hoje cada jogador ganha um Trabalhador com o
+    Colono (sem ele, a primeira fazenda demoraria muito); confirmar
+[ ] Fazenda com mais de 1 cidadão? (hoje no máximo 1)
 [ ] Bem-estar: perda de população depois de muitos turnos de
     desordem (emigração)
 [ ] Bem-estar: mais prédios (ex.: coliseu, mercado) e maravilhas
@@ -2635,6 +2707,41 @@ Screenshots também confirmaram o visual.
   Validação: teste com 7 verificações (sem Misticismo o Templo não
   aparece e os outros prédios sim; build_error continua barrando;
   com Misticismo o Templo aparece), mais screenshots da lista.
+- MELHORIAS PELO TRABALHADOR (decisão do usuário): a cidade não
+  constrói mais fazendas nem madeireiras; o Trabalhador faz as
+  duas no território (C e M), ficando 4 turnos na casa (como na
+  reconstrução); fora do território, M continua fazendo a
+  madeireira remota. A lista "Construir" perdeu a classe
+  Melhorias de terreno, e a escolha da casa no mapa (com Shift)
+  saiu. Os cidadãos são alocados clicando no mapa da cidade
+  (fazenda: clique; madeireira: setas para cima e para baixo).
+  Nova obra da cidade City.sites (salva no save); save antigo com
+  fazenda/madeireira em obra na cidade vira obra de Trabalhador
+  com o mesmo progresso.
+- CASAS SEM MELHORIA (decisão do usuário): qualquer casa de
+  pradaria, floresta ou cerrado do território pode ser trabalhada,
+  dando 1 de alimento (Terrain.TILE_FOOD, City.worked_tiles); a
+  fazenda soma +1 por trabalhador (City.FARM_BONUS): 2 na pradaria
+  e no cerrado (antes 3 e 2). O primeiro cidadão de uma cidade nova
+  já vai para uma casa, e a realocação automática termina nelas.
+- Cada jogador começa com um Trabalhador além do Colono.
+- A máquina pede Trabalhadores quando há fazendas a fazer (uma por
+  habitante), madeira faltando ou ruínas, e os manda construir.
+- Validação: teste com 52 verificações (Colono e Trabalhador no
+  começo; primeiro cidadão numa casa; lista sem melhorias; valores
+  de alimento; fazenda pelo Trabalhador em 4 turnos, terra arada,
+  aviso e cidadão passando para ela; fora do território não;
+  madeireira da cidade, obra parada e continuada; madeireira
+  remota fora do território; cliques no mapa: fazenda, setas da
+  madeireira com limite de 2, casas sem melhoria, sem livres,
+  modo observação; obra na janela; save e save antigo), mais
+  screenshots da janela da cidade. Partida de 100 rodadas máquina
+  x máquina sem erros: as duas fizeram 4-5 fazendas com os
+  Trabalhadores e chegaram a 4-5 de população, mas nenhuma fez
+  Marcenaria ou segunda cidade (o equilíbrio do alimento ficou
+  apertado; ver PRÓXIMOS PASSOS). Os testes antigos que pedem
+  fazendas e madeireiras pela cidade (order_build com casa)
+  deixaram de valer por mudança de regra.
 
 --------------------------------------------------------------
 7. BACKLOG (ideias para depois)

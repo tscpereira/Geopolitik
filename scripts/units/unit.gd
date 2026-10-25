@@ -63,9 +63,10 @@ var working_mill: LumberMill = null:
 ## Destino da ordem "Mover" (tecla G): a unidade anda até lá sozinha, turno
 ## após turno. NO_TARGET = sem ordem.
 var goto_target := NO_TARGET
-## Trabalhador reconstruindo a melhoria pilhada da casa em que está (tecla R):
-## faz 1 ponto por turno, no início da vez do dono (Game._process_rebuilds).
-## Não é selecionado sozinho; mover a unidade interrompe a obra.
+## Trabalhador construindo a fazenda ou madeireira da cidade na casa em que está
+## (teclas C e M) ou reconstruindo a melhoria pilhada (tecla R): faz 1 ponto
+## por turno, no início da vez do dono (Game._process_rebuilds). Não é
+## selecionado sozinho; mover a unidade interrompe a obra.
 var rebuilding := false:
 	set(value):
 		rebuilding = value

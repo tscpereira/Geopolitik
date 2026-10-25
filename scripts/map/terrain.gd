@@ -9,8 +9,9 @@ extends RefCounted
 ##            unidades com mais de 1 de movimento; não aceita fazendas. Cada
 ##            casa tem o seu estoque de madeira (WOOD_PER_FOREST, guardado no
 ##            GameMap); a madeireira só extrai dele. Esgotada, vira Cerrado.
-##   Cerrado  o que sobra da floresta explorada. Igual à Pradaria, mas a
-##            fazenda rende menos (FARM_FOOD: 2 em vez de 3).
+##   Cerrado  o que sobra da floresta explorada. Igual à Pradaria.
+## Um cidadão trabalhando a casa sem melhoria tira TILE_FOOD de alimento por
+## turno (pradaria, floresta e cerrado: 1; água: não dá para trabalhar).
 
 ## A ordem do enum é a ordem das imagens no atlas do mapa (ver GameMap).
 enum Type { WATER, GRASSLAND, FOREST, CERRADO }
@@ -51,11 +52,12 @@ const MOVE_PENALTY := {
 	Type.FOREST: 1,
 }
 
-## Alimento por turno de uma fazenda trabalhada, por terreno. O cerrado é
-## menos fértil que a pradaria.
-const FARM_FOOD := {
-	Type.GRASSLAND: 3,
-	Type.CERRADO: 2,
+## Alimento por turno de um cidadão trabalhando a casa sem melhoria. A fazenda
+## soma City.FARM_BONUS a isso. Terreno fora da lista não pode ser trabalhado.
+const TILE_FOOD := {
+	Type.GRASSLAND: 1,
+	Type.FOREST: 1,
+	Type.CERRADO: 1,
 }
 
 ## Madeira de cada casa de floresta. Quando acaba, a casa vira Cerrado.

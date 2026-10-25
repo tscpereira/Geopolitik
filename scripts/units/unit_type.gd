@@ -18,8 +18,11 @@ extends Resource
 @export_range(1, 999) var max_energy := 100
 ## Pode construir uma nova cidade (tecla B), sendo consumida no processo.
 @export var can_found_city := false
-## Pode construir madeireiras remotas na floresta e trabalhar nelas (tecla M).
+## Pode construir madeireiras (tecla M): no território de uma cidade sua, a
+## madeireira é da cidade; fora dele, remota, e a unidade trabalha nela.
 @export var can_build_lumber_mill := false
+## Pode construir fazendas no território de uma cidade sua (tecla C).
+@export var can_build_farm := false
 ## Pode reconstruir fazendas e madeireiras pilhadas (tecla R).
 @export var can_rebuild := false
 ## Pode migrar para uma cidade (tecla J): vira 1 de população dela.

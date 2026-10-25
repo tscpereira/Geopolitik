@@ -11,13 +11,10 @@ extends RefCounted
 ##   1. em todas as cidades, primeiro: compra de defesa com ouro, se há
 ##      inimigo perto e a cidade está sem guarnição;
 ##   2. em cada cidade (menos as vazias), pedidos (um de cada tipo por vez):
-##        reconst. Trabalhador para as ruínas (melhorias pilhadas) e para
-##                 repovoar cidades vazias (1 por ruína/cidade, até 2);
-##        comida   fazenda nova se o alimento não chega a food_surplus (e
-##                 todas as fazendas já têm trabalhador);
+##        Trabalhador para as tarefas dele (_worker_jobs): fazendas que faltam,
+##                 madeireira (se falta madeira), ruínas (melhorias pilhadas)
+##                 e cidades vazias para repovoar;
 ##        defesa   Guerreiro (e a Lança dele) para a guarnição da cidade;
-##        madeira  madeireira na floresta da cidade ou, sem floresta, um
-##                 Trabalhador para fazer madeireira remota;
 ##        expansão Colono (população >= settler_population);
 ##        bem-estar Templo (com Misticismo) quando a população chega aos
 ##                 contentes de base (City.base_content);
@@ -25,13 +22,18 @@ extends RefCounted
 ##                 cidades grandes), guardando a madeira para eles;
 ##        armas    Lanças até spears_per_city por cidade;
 ##        exército Guerreiros até army_to_attack fora das cidades;
-##   3. cidadãos, do zero: fazendas até o alimento bastar (no máximo 2/3 da
-##      cidade, se não há fome), festividades até sair da desordem civil, os
+##   3. cidadãos, do zero: fazendas e depois casas sem melhoria até o
+##      alimento bastar (no máximo 2/3 da cidade no campo), festividades até
+##      sair da desordem civil, os
 ##      impostos reservados (tax_workers), 1 em
 ##      cada madeireira (se falta madeira), as obras em ordem de prioridade
 ##      (_job_priority: comida > defesa > madeira > expansão > prédios > armas
 ##      > exército; todos na mais importante, o resto na seguinte),
-##      madeireiras cheias e, por fim, a Marcenaria parada (impostos).
+##      madeireiras cheias, a Marcenaria parada (impostos) e, por fim, as
+##      fazendas e casas sem melhoria que sobrarem.
+## Os Trabalhadores (move_civilians) andam até a tarefa e a fazem: fazenda ou
+## madeireira da cidade no território (Game.build_improvement), madeireira
+## remota fora dele, reconstrução e migração para a cidade vazia.
 
 var _game: Game
 var _player: Player
@@ -61,34 +63,17 @@ func _plan(city: City) -> void:
 	if city.population <= 0:
 		return # cidade vazia: espera um Trabalhador migrar para ela
 
-	# Reconstrução: Trabalhadores para as melhorias pilhadas e para repovoar as
-	# cidades vazias
-	if city.population >= 2 and _count_units(_is_free_worker) + _count_queued(City.Build.WORKER) < _rebuild_jobs():
+	# Trabalhadores: fazem as fazendas e madeireiras, reconstroem as melhorias
+	# pilhadas e repovoam as cidades vazias
+	if city.population >= 2 and _count_units(_is_free_worker) + _count_queued(City.Build.WORKER) \
+			< mini(_worker_jobs(), _p.workers_per_city * _player.cities.size() + 1):
 		_try_order(city, City.Build.WORKER)
-
-	# Comida (fazenda nova só quando todas as que existem já têm trabalhador;
-	# senão ela fica pedindo fazendas que ninguém vai trabalhar)
-	if city.food_per_turn() < _p.food_surplus and not _has_queued(city, City.Build.FARM) \
-			and city.farm_workers() >= city.farms.size():
-		var cells := _game.buildable_cells(city, City.Build.FARM)
-		cells.sort_custom(func(a: Vector2i, b: Vector2i) -> bool: return city.farm_food(a) > city.farm_food(b))
-		if not cells.is_empty():
-			city.order_build(City.Build.FARM, cells[0])
 
 	# Defesa: Guerreiro para a guarnição (e a Lança dele, se faltar)
 	if _garrison_needed(city) > 0:
 		if not city.weapons_error(City.Build.WARRIOR).is_empty() and _player.weapons_in_production(Arsenal.Weapon.SPEAR) == 0:
 			_try_order(city, City.Build.SPEAR)
 		_try_order(city, City.Build.WARRIOR)
-
-	# Madeira
-	if _player.wood_per_turn() < _p.wood_per_turn_goal and not _has_queued(city, City.Build.LUMBER_MILL):
-		var forests := _game.buildable_cells(city, City.Build.LUMBER_MILL)
-		if not forests.is_empty():
-			city.order_build(City.Build.LUMBER_MILL, forests[0])
-		elif _count_units(_is_worker) + _count_queued(City.Build.WORKER) < _p.workers_per_city * _player.cities.size() \
-				and city.population >= 2:
-			_try_order(city, City.Build.WORKER)
 
 	# Expansão
 	if city.population >= _p.settler_population \
@@ -143,6 +128,12 @@ func _distribute_workers(city: City) -> void:
 		if city.free_citizens() <= 0 or fed or enough_farmers:
 			break
 		city.set_farm_worked(farm_cell, true)
+	# Casas sem melhoria (+1 de alimento) se ainda falta comida, até 2/3 da cidade no campo
+	for tile_cell: Vector2i in _workable_tiles(city):
+		if city.free_citizens() <= 0 or city.food_per_turn() >= _p.food_surplus \
+				or (city.farm_workers() + city.worked_tiles.size()) * 3 >= city.population * 2:
+			break
+		city.set_tile_worked(tile_cell, true)
 	# Bem-estar: festividades até sair da desordem civil (senão nada avança)
 	while city.is_in_disorder() and city.free_citizens() > 0:
 		city.set_festival_workers(city.festival_workers + 1)
@@ -177,10 +168,25 @@ func _distribute_workers(city: City) -> void:
 	if _p.collect_taxes and city.has_building(City.Build.CARPENTRY) and city.active_unit(City.Build.CARPENTRY) == null:
 		city.set_building_workers(City.Build.CARPENTRY,
 				city.building_workers.get(City.Build.CARPENTRY, 0) + city.free_citizens())
-	# Ainda sobrando: as fazendas que faltam (comida a mais nunca faz mal)
+	# Ainda sobrando: as fazendas que faltam e as casas sem melhoria (comida a
+	# mais nunca faz mal)
 	for farm_cell: Vector2i in farm_cells:
 		if city.free_citizens() > 0 and city.farms[farm_cell] == 0:
 			city.set_farm_worked(farm_cell, true)
+	for tile_cell: Vector2i in _workable_tiles(city):
+		if city.free_citizens() <= 0:
+			break
+		city.set_tile_worked(tile_cell, true)
+
+
+## Casas do território que um cidadão pode trabalhar sem melhoria (sem a
+## madeireira remota de alguém).
+func _workable_tiles(city: City) -> Array[Vector2i]:
+	var cells: Array[Vector2i] = []
+	for tile_cell in city.territory:
+		if city.can_work_tile(tile_cell) and not city.worked_tiles.has(tile_cell) and _game.lumber_mill_at(tile_cell) == null:
+			cells.append(tile_cell)
+	return cells
 
 
 ## Ordem em que as obras recebem cidadãos (menor primeiro): comida abaixo da meta,
@@ -195,7 +201,7 @@ func _job_priority(city: City, job: City.Construction) -> int:
 		City.Build.SPEAR, City.Build.WARRIOR:
 			return 1 if defense_short else 6
 		City.Build.WORKER:
-			return 1 if _rebuild_jobs() > 0 else 2 if wood_short else 7
+			return 0 if _farm_jobs() > 0 else 1 if _rebuild_jobs() > 0 else 2 if wood_short else 7
 		City.Build.LUMBER_MILL:
 			return 2 if wood_short else 7
 		City.Build.CARPENTRY, City.Build.HEADQUARTERS:
@@ -256,8 +262,8 @@ func _move_settler(settler: Unit, focus: Callable) -> void:
 
 
 ## Trabalhador, nesta ordem: reconstrói a ruína em que está; migra para a
-## cidade vazia vizinha; entra na madeireira em que está; senão anda até uma
-## cidade vazia, uma ruína ou, por fim, uma floresta.
+## cidade vazia vizinha; senão vai até a tarefa dele (_worker_job: cidade vazia
+## ou ruína, fazenda que falta, madeireira) e a faz quando chega.
 func _move_worker(worker: Unit, focus: Callable) -> void:
 	if worker.rebuilding:
 		return
@@ -269,17 +275,125 @@ func _move_worker(worker: Unit, focus: Callable) -> void:
 		await focus.call(worker)
 		_game.join_city(worker)
 		return
-	if _game.lumber_mill_error(worker).is_empty() and _rebuild_target(worker) == Unit.NO_TARGET:
-		await focus.call(worker)
-		_game.work_lumber_mill(worker)
+	var job := _worker_job(worker)
+	if job.is_empty():
 		return
-	var target := _rebuild_target(worker)
-	if target == Unit.NO_TARGET:
-		target = worker.goto_target if worker.has_goto() else _best_forest(worker)
-	if target == Unit.NO_TARGET:
-		return
-	worker.goto_target = target
-	await _game.advance_goto(worker)
+	if worker.cell != job["cell"]:
+		worker.goto_target = job["cell"]
+		await _game.advance_goto(worker)
+		if not is_instance_valid(worker) or worker.cell != job["cell"] or worker.moves_left <= 0:
+			return # ainda a caminho
+	worker.goto_target = Unit.NO_TARGET
+	match job["build"]:
+		City.Build.FARM:
+			if _game.improvement_error(worker, City.Build.FARM).is_empty():
+				await focus.call(worker)
+				_game.build_improvement(worker, City.Build.FARM)
+		City.Build.LUMBER_MILL:
+			if _game.lumber_mill_error(worker).is_empty():
+				await focus.call(worker)
+				_game.build_lumber_mill(worker)
+		_:
+			# Cidade vazia ou ruína: migra ou reconstrói no próximo turno
+			if _game.rebuild_error(worker).is_empty():
+				await focus.call(worker)
+				_game.rebuild(worker)
+
+
+## Tarefa do Trabalhador: {"cell": casa, "build": Build.FARM, LUMBER_MILL ou -1
+## (cidade vazia ou ruína)}, ou {} se não houver nada. Primeiro repovoar e
+## reconstruir, depois a fazenda que falta mais perto, depois uma madeireira se
+## falta madeira (da cidade, no território; senão remota). Casas que outro
+## Trabalhador já ocupa ou tem como destino ficam de fora.
+func _worker_job(worker: Unit) -> Dictionary:
+	var rebuild := _rebuild_target(worker)
+	if rebuild != Unit.NO_TARGET:
+		return {"cell": rebuild, "build": -1}
+	var taken := _taken_cells(worker)
+	var farm := _nearest(worker.cell, _farm_cells().filter(func(c: Vector2i) -> bool: return not taken.has(c)))
+	if farm != Unit.NO_TARGET:
+		return {"cell": farm, "build": City.Build.FARM}
+	if _player.wood_per_turn() >= _p.wood_per_turn_goal:
+		return {}
+	var forest := _nearest(worker.cell, _city_forest_cells().filter(func(c: Vector2i) -> bool: return not taken.has(c)))
+	if forest == Unit.NO_TARGET:
+		forest = _best_forest(worker)
+	return {"cell": forest, "build": City.Build.LUMBER_MILL} if forest != Unit.NO_TARGET else {}
+
+
+## Casas ocupadas por outras unidades ou que outro Trabalhador do jogador tem
+## como destino.
+func _taken_cells(worker: Unit) -> Dictionary:
+	var taken := _game.occupants().duplicate()
+	taken.erase(worker.cell)
+	for unit in _player.units:
+		if unit != worker and _is_worker(unit) and unit.has_goto():
+			taken[unit.goto_target] = unit
+	return taken
+
+
+## A casa de [param cells] mais perto (em linha reta) de [param from], ou NO_TARGET.
+func _nearest(from: Vector2i, cells: Array) -> Vector2i:
+	var best := Unit.NO_TARGET
+	var best_distance := 1 << 30
+	for cell: Vector2i in cells:
+		var distance := maxi(absi(cell.x - from.x), absi(cell.y - from.y))
+		if distance < best_distance:
+			best_distance = distance
+			best = cell
+	return best
+
+
+## Se a cidade precisa de mais uma fazenda: uma por habitante (o cidadão na
+## fazenda come o que planta; numa casa sem melhoria, falta 1), sem outra
+## fazenda já em obra nela.
+func _needs_farm(city: City) -> bool:
+	if city.population <= 0 or city.sites.values().any(func(site: Dictionary) -> bool: return site["build"] == City.Build.FARM):
+		return false
+	return city.farms.size() < city.population
+
+
+## Casas onde falta uma fazenda: as obras de fazenda paradas (sem ninguém) e,
+## nas cidades que precisam de fazenda, as casas livres de pradaria e cerrado.
+func _farm_cells() -> Array[Vector2i]:
+	var cells: Array[Vector2i] = []
+	for city in _player.cities:
+		for site_cell: Vector2i in city.sites:
+			if city.sites[site_cell]["build"] == City.Build.FARM and not _is_worked_site(site_cell):
+				cells.append(site_cell)
+		if _needs_farm(city):
+			cells.append_array(_game.buildable_cells(city, City.Build.FARM))
+	return cells
+
+
+## Florestas das cidades onde dá para fazer madeireira (e as obras de
+## madeireira paradas).
+func _city_forest_cells() -> Array[Vector2i]:
+	var cells: Array[Vector2i] = []
+	for city in _player.cities:
+		for site_cell: Vector2i in city.sites:
+			if city.sites[site_cell]["build"] == City.Build.LUMBER_MILL and not _is_worked_site(site_cell):
+				cells.append(site_cell)
+		cells.append_array(_game.buildable_cells(city, City.Build.LUMBER_MILL))
+	return cells
+
+
+## Se um Trabalhador está fazendo a obra da casa.
+func _is_worked_site(cell: Vector2i) -> bool:
+	var unit := _game.get_unit_at(cell)
+	return unit != null and unit.rebuilding
+
+
+## Cidades que precisam de uma fazenda e têm onde fazê-la.
+func _farm_jobs() -> int:
+	return _player.cities.filter(func(city: City) -> bool:
+		return _needs_farm(city) and not _game.buildable_cells(city, City.Build.FARM).is_empty()).size()
+
+
+## Tarefas para Trabalhadores: reconstruir/repovoar, fazendas que faltam e uma
+## madeireira se falta madeira.
+func _worker_jobs() -> int:
+	return _rebuild_jobs() + _farm_jobs() + (1 if _player.wood_per_turn() < _p.wood_per_turn_goal else 0)
 
 
 ## Casa mais perto (em linha reta) aonde o Trabalhador deve ir para reconstruir

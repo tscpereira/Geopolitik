@@ -10,6 +10,7 @@ const WARRIOR: UnitType = preload("res://data/units/guerreiro.tres")
 const ARCHER: UnitType = preload("res://data/units/arqueiro.tres")
 const HORSEMAN: UnitType = preload("res://data/units/cavaleiro.tres")
 const SETTLER: UnitType = preload("res://data/units/colono.tres")
+const WORKER: UnitType = preload("res://data/units/trabalhador.tres")
 ## Cursor do modo "Mover" (tecla G). Ponta da seta no canto superior esquerdo.
 const GO_CURSOR: Texture2D = preload("res://assets/sprites/ui/cursor_go.png")
 
@@ -146,6 +147,8 @@ func _unhandled_input(event: InputEvent) -> void:
 				_found_city_with_selected()
 			KEY_M:
 				_work_lumber_mill_with_selected()
+			KEY_C:
+				_build_farm_with_selected()
 			KEY_P:
 				_pillage_with_selected()
 			KEY_R:
@@ -319,11 +322,11 @@ func city_site_error(unit: Unit) -> String:
 
 
 ## Motivo pelo qual a cidade não pode comprar [param build] com ouro agora
-## ("" = pode). Melhorias de terreno ainda não podem ser compradas.
+## ("" = pode). Melhorias de terreno são feitas por Trabalhadores.
 func buy_error(city: City, build: int) -> String:
 	var info: Dictionary = City.BUILDS[build]
-	if info["category"] == City.Category.TERRAIN_IMPROVEMENT:
-		return "Melhorias de terreno ainda não podem ser compradas."
+	if info["on_tile"]:
+		return city.build_error(build)
 	# Prédio em obra pode ser comprado (a obra sai da fila); o resto segue build_error
 	var error := city.build_error(build)
 	if not error.is_empty() and not (info["category"] == City.Category.BUILDING and city.construction_of(build)):
@@ -360,11 +363,66 @@ func buy_build(city: City, build: int) -> void:
 	print("%s comprou %s em %s por %d de ouro" % [player.display_name, info["name"], city.city_name, info["gold"]])
 
 
+## Motivo pelo qual o trabalhador não pode construir (ou continuar) a fazenda ou
+## madeireira [param build] da cidade na casa em que está ("" = pode): só no
+## território de uma cidade sua, fora da casa dela, no terreno certo e numa casa
+## sem outra melhoria (a obra parada da mesma melhoria pode continuar).
+func improvement_error(unit: Unit, build: int) -> String:
+	var info: Dictionary = City.BUILDS[build]
+	if not (unit.type.can_build_farm if build == City.Build.FARM else unit.type.can_build_lumber_mill):
+		return "Só trabalhadores constroem %ss." % String(info["name"]).to_lower()
+	if unit.rebuilding:
+		return "O trabalhador já está construindo."
+	var city := territory_owner(unit.cell)
+	if city == null or city.owner_player != unit.owner_player:
+		return "%ss só podem ser feitas no território de uma cidade sua." % info["name"]
+	if unit.cell == city.cell:
+		return "Não dá para construir na casa da cidade."
+	if not City.allows_terrain(build, game_map.get_terrain(unit.cell)):
+		return "Fazendas só em pradaria ou cerrado." if build == City.Build.FARM else "Madeireiras só na floresta."
+	var site: Dictionary = city.sites.get(unit.cell, {})
+	if site.is_empty() and (claiming_city(unit.cell) or lumber_mill_at(unit.cell)):
+		return "Esta casa já tem uma melhoria."
+	if not site.is_empty() and site["build"] != build:
+		return "Esta casa já tem uma obra de %s." % String(City.BUILDS[site["build"]]["name"]).to_lower()
+	if unit.moves_left <= 0:
+		return "O trabalhador não tem mais movimentos neste turno."
+	return ""
+
+
+## O trabalhador começa (ou continua) a fazer a fazenda ou madeireira da cidade
+## na casa em que está (use improvement_error antes). Ele fica na casa e faz
+## REBUILD_PER_TURN por turno até terminar (_process_rebuilds); mover a unidade
+## interrompe (o progresso fica na obra).
+func build_improvement(unit: Unit, build: int) -> void:
+	territory_owner(unit.cell).add_site(build, unit.cell)
+	_start_tile_work(unit)
+
+
+## A madeireira que o trabalhador faz na casa é da cidade? Sim no território de
+## uma cidade sua (sem madeireira remota ali); fora dele, é remota.
+func is_city_mill_site(unit: Unit) -> bool:
+	var city := territory_owner(unit.cell)
+	return city != null and city.owner_player == unit.owner_player and lumber_mill_at(unit.cell) == null
+
+
+## Tecla M: madeireira da cidade (no território) ou remota (fora dele, ou entra
+## na remota que já existe ali). Use lumber_mill_error antes.
+func build_lumber_mill(worker: Unit) -> void:
+	if is_city_mill_site(worker):
+		build_improvement(worker, City.Build.LUMBER_MILL)
+	else:
+		work_lumber_mill(worker)
+
+
 ## Motivo pelo qual o trabalhador não pode construir uma madeireira onde está,
-## nem entrar na que já existe ali ("" = pode).
+## nem entrar na que já existe ali ("" = pode). No território de uma cidade
+## sua, a madeireira é da cidade (improvement_error).
 func lumber_mill_error(unit: Unit) -> String:
 	if not unit.type.can_build_lumber_mill:
 		return "Só trabalhadores constroem madeireiras."
+	if is_city_mill_site(unit):
+		return improvement_error(unit, City.Build.LUMBER_MILL)
 	if unit.moves_left <= 0:
 		return "O trabalhador não tem mais movimentos neste turno."
 	var mill := lumber_mill_at(unit.cell)
@@ -535,6 +593,12 @@ func rebuild(unit: Unit) -> void:
 	if mill and mill.pillaged:
 		work_lumber_mill(unit)
 		return
+	_start_tile_work(unit)
+
+
+## O trabalhador passa a trabalhar na casa em que está (obra ou reconstrução):
+## encerra o turno dele e não é mais selecionado sozinho.
+func _start_tile_work(unit: Unit) -> void:
 	if unit == selected_unit:
 		select_unit(null)
 	unit.goto_target = Unit.NO_TARGET
@@ -671,6 +735,7 @@ func raze_city(city: City, raider: Player) -> String:
 	city.farms.clear()
 	city.lumber_mills.clear()
 	city.ruins.clear()
+	city.sites.clear()
 	city.constructions.clear()
 	city._notify_changed()
 	old_owner.cities.erase(city)
@@ -779,6 +844,7 @@ func found_city(settler: Unit, city_name := "") -> City:
 	cities_root.add_child(city)
 	player.cities.append(city)
 	refresh_territories()
+	city.assign_idle_citizens() # o primeiro cidadão já trabalha uma casa (+1 de alimento)
 	print("%s fundou a cidade %s em %s (%s, território de %d casas)" % [
 		player.display_name, city.city_name, city.cell, city.rank_text(), city.territory.size()])
 	FloatingText.spawn(units_root, city.position - Vector2(0, GameMap.TILE_SIZE / 2.0),
@@ -1015,6 +1081,8 @@ func _on_unit_action(action_id: String) -> void:
 				_cancel_goto(selected_unit)
 		"lumber_mill":
 			_work_lumber_mill_with_selected()
+		"farm":
+			_build_farm_with_selected()
 		"release_worker":
 			_release_worker_from_selected_mill()
 		"pillage":
@@ -1047,7 +1115,9 @@ func _found_city_with_selected() -> void:
 
 
 ## Tecla M / botão da madeireira: o trabalhador selecionado constrói uma
-## madeireira onde está (ou entra na que já existe) e passa a trabalhar nela.
+## madeireira onde está. No território de uma cidade sua, ela é da cidade (ele
+## fica na casa até terminar); fora dele, é remota (ele entra nela, ou na que já
+## existe ali, e passa a trabalhar nela).
 func _work_lumber_mill_with_selected() -> void:
 	var worker := selected_unit
 	if worker == null or not worker.type.can_build_lumber_mill:
@@ -1056,10 +1126,36 @@ func _work_lumber_mill_with_selected() -> void:
 	if not error.is_empty():
 		hud.show_message(error, Color(1, 0.6, 0.4))
 		return
+	if is_city_mill_site(worker):
+		_build_improvement_with(worker, City.Build.LUMBER_MILL)
+		return
 	var mill := work_lumber_mill(worker)
 	var status := "em obra %d/%d" % [mill.progress, mill.cost()] if not mill.is_done() else "pronta"
 	hud.show_message("Trabalhador na madeireira (%s, %d/%d trabalhadores)." % [
 			status, mill.workers.size(), LumberMill.MAX_WORKERS], Color(0.75, 1, 0.75))
+	_select_next_unit()
+
+
+## Tecla C / botão "Construir fazenda": o trabalhador selecionado faz uma
+## fazenda da cidade onde está (no território de uma cidade sua).
+func _build_farm_with_selected() -> void:
+	var worker := selected_unit
+	if worker == null or not worker.type.can_build_farm:
+		return
+	var error := improvement_error(worker, City.Build.FARM)
+	if not error.is_empty():
+		hud.show_message(error, Color(1, 0.6, 0.4))
+		return
+	_build_improvement_with(worker, City.Build.FARM)
+
+
+func _build_improvement_with(worker: Unit, build: int) -> void:
+	var city := territory_owner(worker.cell)
+	build_improvement(worker, build)
+	var site: Dictionary = city.sites[worker.cell]
+	hud.show_message("Trabalhador construindo a %s de %s (%d/%d, 1 por turno)." % [
+			String(City.BUILDS[build]["name"]).to_lower(), city.city_name, site["progress"], City.BUILDS[build]["cost"]],
+			Color(0.75, 1, 0.75))
 	_select_next_unit()
 
 
@@ -1343,18 +1439,26 @@ func _process_lumber_mills(player: Player) -> void:
 		hud.show_message("\n".join(messages), Color(0.75, 1, 0.75))
 
 
-## Início da vez do jogador: cada Trabalhador reconstruindo faz
-## REBUILD_PER_TURN na ruína da casa em que está. Pronta, a melhoria volta a
-## funcionar (sem trabalhador) e o humano recebe o aviso de construção
-## concluída. Se a ruína não existe mais, ele para.
+## Início da vez do jogador: cada Trabalhador construindo ou reconstruindo faz
+## REBUILD_PER_TURN na obra ou ruína da casa em que está. Pronta, a melhoria
+## passa a funcionar e o humano recebe o aviso de construção concluída. Se a
+## obra ou a ruína não existe mais, ele para.
 func _process_rebuilds(player: Player) -> void:
 	var messages: Array[String] = []
 	for unit in player.units:
 		if not unit.rebuilding:
 			continue
 		var city := claiming_city(unit.cell)
-		if city == null or city.owner_player != player or not city.ruins.has(unit.cell):
+		if city == null or city.owner_player != player or not (city.ruins.has(unit.cell) or city.sites.has(unit.cell)):
 			unit.rebuilding = false
+			continue
+		if city.sites.has(unit.cell):
+			var site_build: int = city.sites[unit.cell]["build"]
+			if city.add_site_progress(unit.cell, REBUILD_PER_TURN):
+				unit.rebuilding = false
+				messages.append("%s: %s concluída em (%d, %d)" % [city.city_name, City.BUILDS[site_build]["name"], unit.cell.x, unit.cell.y])
+				if not player.is_ai:
+					_completion_notices.append([city, site_build])
 			continue
 		var build: int = city.ruins[unit.cell]["build"]
 		if city.add_rebuild_progress(unit.cell, REBUILD_PER_TURN):
@@ -1609,9 +1713,12 @@ func _spawn_example_units() -> void:
 		_spawn_unit(WARRIOR, players[1], Vector2i(61, 40))
 		_spawn_unit(ARCHER, players[1], Vector2i(61, 42))
 		_spawn_unit(HORSEMAN, players[1], Vector2i(62, 41))
-	# Todo jogador começa com um Colono
+	# Todo jogador começa com um Colono e um Trabalhador (só o Trabalhador faz
+	# fazendas, e a cidade de 1 habitante sem fazenda não cresce)
 	_spawn_unit(SETTLER, players[0], Vector2i(55, 41))
 	_spawn_unit(SETTLER, players[1], Vector2i(64, 41))
+	_spawn_unit(WORKER, players[0], Vector2i(55, 42))
+	_spawn_unit(WORKER, players[1], Vector2i(64, 42))
 
 
 func _next_city_name() -> String:
@@ -1637,15 +1744,30 @@ func _update_unit_actions() -> void:
 		var error := city_site_error(unit)
 		actions.append({"id": "found_city", "label": "Construir nova cidade [B]",
 				"disabled": not error.is_empty(), "tooltip": error})
+	var site_city := territory_owner(unit.cell)
+	var site: Dictionary = site_city.sites.get(unit.cell, {}) if site_city else {}
+	if unit.type.can_build_farm and Terrain.can_farm(game_map.get_terrain(unit.cell)):
+		var error := improvement_error(unit, City.Build.FARM)
+		var resume: bool = site.get("build", -1) == City.Build.FARM
+		actions.append({"id": "farm", "label": "Continuar fazenda [C]" if resume else "Construir fazenda [C]",
+				"disabled": not error.is_empty(),
+				"tooltip": error if not error.is_empty() else
+					"Fazenda de %s: %d turnos (o trabalhador fica na casa). Pronta, o cidadão que trabalha nela tira +%d de alimento (sem fazenda, +%d)." % [
+						site_city.city_name, City.BUILDS[City.Build.FARM]["cost"] - site.get("progress", 0),
+						site_city.farm_food(unit.cell), site_city.tile_food(unit.cell)]})
 	var existing := lumber_mill_at(unit.cell)
 	if unit.type.can_build_lumber_mill and not (existing and existing.pillaged): # destruída: botão Reconstruir
 		var error := lumber_mill_error(unit)
+		var city_mill := is_city_mill_site(unit)
 		actions.append({"id": "lumber_mill",
-				"label": "Trabalhar na madeireira [M]" if existing else "Construir madeireira [M]",
+				"label": "Trabalhar na madeireira [M]" if existing else
+					"Continuar madeireira [M]" if site.get("build", -1) == City.Build.LUMBER_MILL else "Construir madeireira [M]",
 				"disabled": not error.is_empty(),
 				"tooltip": error if not error.is_empty() else
 					"O trabalhador entra na madeireira e trabalha nela (até %d por madeireira)." % LumberMill.MAX_WORKERS if existing else
-					"Madeireira nesta floresta (%d de produção, 1 por trabalhador por turno). Pronta, cada trabalhador tira 1 de madeira por turno." % LumberMill.cost()})
+					"Madeireira de %s: %d turnos (o trabalhador fica na casa). Pronta, até %d cidadãos tiram 1 de madeira por turno cada." % [
+						site_city.city_name, City.BUILDS[City.Build.LUMBER_MILL]["cost"] - site.get("progress", 0), LumberMill.MAX_WORKERS] if city_mill else
+					"Madeireira remota nesta floresta (%d de produção, 1 por trabalhador por turno). Pronta, cada trabalhador tira 1 de madeira por turno." % LumberMill.cost()})
 	if unit.type.can_rebuild and ruin_at(unit.cell) >= 0:
 		var error := rebuild_error(unit)
 		var build := ruin_at(unit.cell)
@@ -1729,6 +1851,8 @@ func _update_info() -> void:
 			lines.append("%s destruída, sem dono (uma cidade fundada perto fica com ela)" % City.BUILDS[ruins_layer.improvements[_hover_cell]["build"]]["name"])
 		elif claiming_city(_hover_cell):
 			lines.append(_city_improvement_text(claiming_city(_hover_cell), _hover_cell))
+		elif owner_city and owner_city.worked_tiles.has(_hover_cell):
+			lines.append("Trabalhada por um cidadão de %s - +%d alimento" % [owner_city.city_name, owner_city.tile_food(_hover_cell)])
 		elif mill:
 			lines.append("Madeireira%s de %s - %s | %d/%d trabalhadores" % [
 				" destruída" if mill.pillaged else "", mill.owner_player.display_name,
@@ -1753,7 +1877,8 @@ func _update_info() -> void:
 		if unit.has_goto():
 			lines[-1] += " | Indo para (%d, %d)" % [unit.goto_target.x, unit.goto_target.y]
 		if unit.rebuilding:
-			lines[-1] += " | Reconstruindo"
+			var building_city := claiming_city(unit.cell)
+			lines[-1] += " | Construindo" if building_city and building_city.sites.has(unit.cell) else " | Reconstruindo"
 	if selected_unit and _attack_targets.has(_hover_cell):
 		var defender := get_unit_at(_hover_cell)
 		var expected := Combat.expected_damage(selected_unit, defender)
@@ -1777,9 +1902,10 @@ func _terrain_text(cell: Vector2i) -> String:
 
 ## Fazenda, madeireira ou obra da cidade na casa.
 func _city_improvement_text(city: City, cell: Vector2i) -> String:
-	var construction := city.construction_at(cell)
-	if construction:
-		return "%s de %s (em obra %d/%d)" % [construction.display_name(), city.city_name, construction.progress, construction.cost()]
+	if city.sites.has(cell):
+		var site: Dictionary = city.sites[cell]
+		return "%s de %s (em obra pelo Trabalhador %d/%d)" % [
+			City.BUILDS[site["build"]]["name"], city.city_name, site["progress"], City.BUILDS[site["build"]]["cost"]]
 	if city.ruins.has(cell):
 		var ruin: Dictionary = city.ruins[cell]
 		return "%s destruída de %s - um Trabalhador pode reconstruir (%d/%d)" % [
