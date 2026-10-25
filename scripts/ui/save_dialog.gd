@@ -1,7 +1,7 @@
 class_name SaveDialog
 extends Control
 
-## Janela de salvar (F5) ou carregar (F9) a partida. Cada linha é um espaço
+## Janela de salvar (F5) ou carregar (L ou F9) a partida. Cada linha é um espaço
 ## (SaveGame): o nome, o que está guardado nele (turno, jogador da vez e data)
 ## e o botão "Salvar" / "Carregar". O salvamento automático só aparece para
 ## carregar. Esc ou "Cancelar" fecham sem fazer nada.

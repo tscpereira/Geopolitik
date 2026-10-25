@@ -111,7 +111,8 @@ func _unhandled_input(event: InputEvent) -> void:
 			or hud.save_dialog.visible or hud.invasion_dialog.visible or hud.research_dialog.visible
 			or hud.tech_dialog.visible):
 		return # as janelas cuidam dos próprios cliques e teclas
-	if key == KEY_F9 and not _is_busy:
+	# Carregar: L (no editor do Godot o F9 pausa o jogo embutido) ou F9
+	if (key == KEY_L or key == KEY_F9) and not _is_busy:
 		_open_save_dialog(false) # carregar também vale na tela de vitória
 		return
 	if game_over:
@@ -1630,7 +1631,7 @@ func _check_victory() -> void:
 
 # --- Salvar e carregar (ver SaveGame) ----------------------------------------
 
-## F5 / F9: janela dos espaços de save. Salvar só na vez do humano, sem nada
+## F5 / L (ou F9): janela dos espaços de save. Salvar só na vez do humano, sem nada
 ## acontecendo; carregar também na tela de vitória.
 func _open_save_dialog(saving: bool) -> void:
 	_set_goto_mode(false)

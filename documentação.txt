@@ -130,7 +130,7 @@ C:\ProjetoGame
 |       |-- city_map_view.gd       Mapa da área da cidade (na janela)
 |       |-- city_name_dialog.gd    Pergunta do nome da nova cidade
 |       |-- notice_dialog.gd       Aviso "construção concluída"
-|       |-- save_dialog.gd         Janela de salvar (F5) / carregar (F9)
+|       |-- save_dialog.gd         Janela de salvar (F5) / carregar (L ou F9)
 |       |-- invasion_dialog.gd     Ocupar / Saquear e destruir
 |       |-- research_dialog.gd     Escolha da pesquisa
 |       |-- tech_dialog.gd         Tecnologia descoberta (ilustração)
@@ -1748,7 +1748,7 @@ SALVAR E CARREGAR (scripts/save/save_game.gd)
   que está guardado ("Turno 12, vez do Jogador 1 - 22/10/2026
   14:30") e o botão "Salvar" (substitui o que estiver lá). Só na
   sua vez, sem nada acontecendo.
-- F9: janela "Carregar partida", com o espaço "Automático" e os 5
+- L (ou F9): janela "Carregar partida", com o espaço "Automático" e os 5
   espaços. Espaço vazio fica com o botão desabilitado. Também
   funciona na tela de vitória. Esc ou "Cancelar" fecham.
 - Salvamento automático: no início de cada vez do jogador humano
@@ -1819,7 +1819,8 @@ CÂMERA E CONTROLES
   que está.
 - J: o Trabalhador selecionado migra para a cidade (vira 1 de
   população).
-- F5: salvar a partida. F9: carregar (ver SALVAR E CARREGAR).
+- F5: salvar a partida. L: carregar (ver SALVAR E CARREGAR). F9 também carrega,
+  mas no editor do Godot o F9 pausa o jogo embutido na aba Game.
 - F11: alterna entre a janela maximizada e a janela normal, em
   qualquer tela (autoload WindowSettings,
   scripts/autoload/window_settings.gd). A escolha fica gravada em
@@ -2790,6 +2791,12 @@ Screenshots também confirmaram o visual.
   Validação: teste com os dois saves do usuário (8 verificações:
   G + clique ataca quando dá; sem movimento, explica nos dois
   modos e não cria ordem; longe, anda até o lado sem atacar).
+- Carregar partida também pela tecla L (escolha do usuário): rodando
+  o jogo dentro do editor do Godot (aba Game, modo embutido), o F9
+  é do editor e pausa o projeto, e o jogo parecia travar na janela
+  de carregar. F9 continua valendo fora do editor. Linha de ajuda
+  do HUD: "L: carregar". Validação: teste abrindo a janela com L e
+  carregando o save do usuário (turno 91).
 
 --------------------------------------------------------------
 7. BACKLOG (ideias para depois)
