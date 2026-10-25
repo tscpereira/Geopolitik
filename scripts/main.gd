@@ -60,6 +60,9 @@ var _territory := {}
 ## Construções concluídas nas cidades do humano neste início de turno, à espera
 ## do aviso: [[City, City.Build], ...] (DISORDER_NOTICE: entrou em desordem).
 var _completion_notices: Array[Array] = []
+## Trabalhadores do humano que terminaram uma melhoria no início da vez: em vez
+## do aviso de construção concluída, o primeiro deles é selecionado (com a câmera).
+var _finished_workers: Array[Unit] = []
 
 @onready var game_map: GameMap = $GameMap
 @onready var move_overlay: MoveOverlay = $MoveOverlay
@@ -1336,6 +1339,11 @@ func _start_human_turn(player: Player, autosave := true) -> void:
 	_is_busy = false
 	if game_over:
 		return
+	# Trabalhador que acabou de terminar uma melhoria: é ele que fica em foco
+	for worker in _finished_workers:
+		if selected_unit == null and is_instance_valid(worker) and can_move(worker):
+			select_unit(worker)
+	_finished_workers.clear()
 	if selected_unit == null: # pode ter sido ativada pela janela da cidade
 		_select_next_unit()
 	if selected_unit:
@@ -1441,8 +1449,9 @@ func _process_lumber_mills(player: Player) -> void:
 
 ## Início da vez do jogador: cada Trabalhador construindo ou reconstruindo faz
 ## REBUILD_PER_TURN na obra ou ruína da casa em que está. Pronta, a melhoria
-## passa a funcionar e o humano recebe o aviso de construção concluída. Se a
-## obra ou a ruína não existe mais, ele para.
+## passa a funcionar e, para o humano, o Trabalhador é selecionado no começo da
+## vez (_finished_workers; sem o aviso de construção concluída). Se a obra ou a
+## ruína não existe mais, ele para.
 func _process_rebuilds(player: Player) -> void:
 	var messages: Array[String] = []
 	for unit in player.units:
@@ -1458,14 +1467,14 @@ func _process_rebuilds(player: Player) -> void:
 				unit.rebuilding = false
 				messages.append("%s: %s concluída em (%d, %d)" % [city.city_name, City.BUILDS[site_build]["name"], unit.cell.x, unit.cell.y])
 				if not player.is_ai:
-					_completion_notices.append([city, site_build])
+					_finished_workers.append(unit)
 			continue
 		var build: int = city.ruins[unit.cell]["build"]
 		if city.add_rebuild_progress(unit.cell, REBUILD_PER_TURN):
 			unit.rebuilding = false
 			messages.append("%s: %s reconstruída em (%d, %d)" % [city.city_name, City.BUILDS[build]["name"], unit.cell.x, unit.cell.y])
 			if not player.is_ai:
-				_completion_notices.append([city, build])
+				_finished_workers.append(unit)
 	for message in messages:
 		print(message)
 	if not player.is_ai and not messages.is_empty():

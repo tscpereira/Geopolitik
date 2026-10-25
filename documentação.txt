@@ -567,8 +567,8 @@ RECURSOS ESTRATÉGICOS E MADEIRA
   1. MADEIREIRA DA CIDADE: M numa floresta do território de uma
      cidade sua. O Trabalhador fica na casa 4 turnos (ver
      TRABALHADOR). Pronta, os cidadãos da cidade trabalham nela:
-     setas no mapa da janela da cidade (0 a 2 cidadãos) ou - / +
-     em "Produção da cidade", com a barra azul da madeira restante.
+     setas no mapa da janela da cidade (0 a 2 cidadãos), com a
+     barra azul da madeira restante.
   2. MADEIREIRA REMOTA: M numa floresta fora dos territórios; o
      próprio Trabalhador entra nela e trabalha (ver TRABALHADOR).
 - Floresta esgotada (0 de madeira): vira Cerrado, a madeireira
@@ -593,11 +593,15 @@ TRABALHADOR (data/units/trabalhador.tres)
   reconstrução) e faz 1 ponto por turno, no início da sua vez,
   até o custo (4): 4 turnos. A obra aparece no mapa (terra arada
   ou a madeireira transparente, com a barra de progresso), na
-  janela da cidade e em "Produção da cidade" ("em obra - 2/4").
+  janela da cidade e em "Melhorias em obra" ("em obra - 2/4").
   Mover o Trabalhador para a obra; ela guarda o progresso, e
   qualquer Trabalhador seu pode continuar ("Continuar fazenda
-  [C]"). Pronta, a melhoria é da cidade, sai o aviso de
-  construção concluída e um cidadão já vai trabalhar nela (quem
+  [C]"). Pronta, a melhoria é da cidade e um cidadão já vai
+  trabalhar nela. NÃO aparece o aviso de construção concluída
+  (pedido do usuário): no começo da vez, o Trabalhador que
+  terminou fica selecionado e a câmera vai até ele
+  (Game._finished_workers; vale também para a reconstrução de
+  ruínas). Quem vai trabalhar na melhoria pronta é (quem
   trabalhava a casa, um livre ou, na fazenda, quem trabalhava
   outra casa sem melhoria). Não dá: fora do território, na casa
   da cidade, no terreno errado ou numa casa com outra melhoria.
@@ -1019,8 +1023,9 @@ MARCENARIA E IMPOSTOS (campo "idle_gold" em City.BUILDS)
   City._draw_idle_warning). Sem ninguém livre mas com obras
   paradas, o "!" fica vermelho (ver OBRA SEM MÃO DE OBRA).
 - AVISO DE CONSTRUÇÃO CONCLUÍDA: no início da sua vez, para cada
-  construção concluída numa cidade sua (melhoria pronta ou
-  unidade que saiu da cidade), aparece um aviso:
+  construção concluída numa cidade sua (prédio pronto ou unidade
+  que saiu da cidade; melhorias feitas pelo Trabalhador não têm
+  aviso: ele fica selecionado), aparece um aviso:
     título: nome da cidade
     texto : "A construção da fazenda foi concluída." e quantos
             cidadãos ficaram sem tarefa (em azul), ou "Todos os
@@ -1279,12 +1284,12 @@ JANELA DA CIDADE (scripts/ui/city_window.gd e city_map_view.gd)
       - / + para alocar cidadãos e X para cancelar (o progresso
       é perdido). Uma unidade pronta esperando população aparece
       como "pronto", em laranja;
-    * PRODUÇÃO DA CIDADE: o que a cidade já tem produzindo: as
-      casas trabalhadas sem melhoria (+1 de alimento), as fazendas
-      e as madeireiras, com - / + (o mesmo que os cliques no mapa),
-      as ruínas e as obras dos Trabalhadores ("em obra - 2/4
-      (Trabalhador na casa)", ou em laranja "parada: sem
-      Trabalhador").
+    * MELHORIAS EM OBRA (era "Produção da cidade"; desde
+      24/10/2026 as fazendas, madeireiras e casas trabalhadas
+      prontas não aparecem mais aqui, pedido do usuário: ficam só
+      no mapa da cidade, onde os cidadãos são alocados): as obras
+      dos Trabalhadores ("em obra - 2/4 (Trabalhador na casa)", ou
+      em laranja "parada: sem Trabalhador") e as ruínas.
     * UNIDADES NA CIDADE: a unidade que está na casa da cidade
       (só cabe uma), com defesa e energia. "Ativar" tira a
       unidade da fortificação, fecha a janela e a seleciona no
@@ -1297,7 +1302,7 @@ JANELA DA CIDADE (scripts/ui/city_window.gd e city_map_view.gd)
   na cor do dono; as casas fora do território ficam escurecidas
   (o tooltip diz "fora do território").
 - Melhorias destruídas aparecem no mapa da cidade com o desenho
-  de ruína, em "Produção da cidade" ("destruída - reconstrução
+  de ruína, em "Melhorias em obra" ("destruída - reconstrução
   N/4", em laranja) e com um aviso no resumo. Cidade vazia mostra
   o aviso em vermelho.
 
@@ -1626,8 +1631,9 @@ PILHAGEM (Game.pillage, tecla P)
       da melhoria (4). Um martelo amarelo aparece na unidade e
       uma barra de progresso na ruína. Ele não é selecionado
       sozinho; mover a unidade interrompe (o progresso fica
-      guardado). Pronta, a melhoria volta sem trabalhador e
-      aparece o aviso de construção concluída;
+      guardado). Pronta, a melhoria volta a funcionar e, no começo
+      da vez, o Trabalhador fica selecionado (sem o aviso de
+      construção concluída, desde 24/10/2026);
     * madeireira remota destruída: ele entra nela, como numa obra
       nova (até 2 Trabalhadores, 1 ponto cada por turno).
 - Desenhos das ruínas (PNG 80x80 suavizados, provisórios, dá para
@@ -2753,6 +2759,15 @@ Screenshots também confirmaram o visual.
   a Equilibrada também não fez madeireira (as fazendas vêm
   sempre antes da madeira). Ajustar as prioridades da máquina
   (ver PRÓXIMOS PASSOS).
+- Janela da cidade (pedido do usuário): as linhas de fazendas,
+  madeireiras e casas trabalhadas saíram da lista (a alocação é
+  só pelo mapa); a seção virou "Melhorias em obra" (obras dos
+  Trabalhadores e ruínas). Melhoria terminada pelo Trabalhador
+  (nova ou reconstruída) não mostra mais o aviso de construção
+  concluída: no começo da vez, o Trabalhador fica selecionado,
+  com a câmera nele. Validação: o teste das melhorias passou com
+  as verificações novas (sem aviso, foco no Trabalhador, lista sem
+  fazendas e madeireiras prontas), mais screenshot da janela.
 
 --------------------------------------------------------------
 7. BACKLOG (ideias para depois)

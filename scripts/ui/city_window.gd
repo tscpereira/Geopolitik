@@ -8,9 +8,9 @@ extends Control
 ##   direita : resumo (população, alimentos, produção), botão "Construir",
 ##             prédios da cidade (com as unidades que cada um produz e os
 ##             trabalhadores dele), obras em andamento (prédios, com barra de
-##             progresso + trabalhadores), produção da cidade (fazendas,
-##             madeireiras e as que os Trabalhadores estão fazendo) e
-##             unidades na cidade.
+##             progresso + trabalhadores), melhorias em obra (as que os
+##             Trabalhadores estão fazendo e as ruínas) e unidades na
+##             cidade. Fazendas e madeireiras prontas aparecem só no mapa.
 ## "Construir" abre uma lista (modal) com o que a cidade pode construir,
 ## dividida em Unidades, Armas e Prédios. O botão da moeda compra na hora com
 ## ouro. Prédios prontos somem da lista. Unidades entram na fila do prédio que
@@ -29,7 +29,7 @@ const POSITIVE_COLOR := Color(0.45, 1, 0.45)
 const NEGATIVE_COLOR := Color(1, 0.4, 0.35)
 ## Obra parada por falta de mão de obra: fundo da barra e explicação.
 const NEEDS_WORKERS_BAR_COLOR := Color(0.55, 0.15, 0.13)
-const NEEDS_WORKERS_TIP := "Ninguém está trabalhando nesta obra, então ela não avança. Use + para alocar cidadãos livres; se não houver, tire alguns de uma fazenda, madeireira ou dos impostos (botão -)."
+const NEEDS_WORKERS_TIP := "Ninguém está trabalhando nesta obra, então ela não avança. Use + para alocar cidadãos livres; se não houver, tire alguns das fazendas e madeireiras (clique no mapa da cidade) ou dos impostos (botão -)."
 const RIGHT_COLUMN_WIDTH := 620
 ## Largura do controle "- N trab. +" (para alinhar o X das linhas sem ele).
 const WORKER_CONTROLS_WIDTH := 124
@@ -238,7 +238,7 @@ func _build_layout() -> void:
 	right.add_child(_make_section("Obras em andamento"))
 	_constructions_box = VBoxContainer.new()
 	right.add_child(_constructions_box)
-	right.add_child(_make_section("Produção da cidade"))
+	right.add_child(_make_section("Melhorias em obra"))
 	_farms_box = VBoxContainer.new()
 	right.add_child(_farms_box)
 	right.add_child(_make_section("Unidades na cidade"))
@@ -809,77 +809,14 @@ func _add_construction_row(box: VBoxContainer, construction: City.Construction, 
 	row.add_child(cancel)
 
 
-## Seção "Produção da cidade": o que a cidade tem pronto e produzindo
-## (fazendas e madeireiras), as ruínas e as que os Trabalhadores estão fazendo.
+## Seção "Melhorias em obra": as ruínas (melhorias pilhadas) e as melhorias que
+## os Trabalhadores estão fazendo. As fazendas e madeireiras prontas ficam só no
+## mapa da cidade, onde os cidadãos são alocados.
 func _rebuild_farms() -> void:
 	_clear(_farms_box)
-	if (_city.farms.is_empty() and _city.lumber_mills.is_empty() and _city.ruins.is_empty() and _city.sites.is_empty()
-			and _city.worked_tiles.is_empty()):
-		_farms_box.add_child(_make_muted("Nenhuma fazenda ou madeireira. Um Trabalhador no território faz fazendas (C) e madeireiras (M)."))
+	if _city.ruins.is_empty() and _city.sites.is_empty():
+		_farms_box.add_child(_make_muted("Nenhuma. Um Trabalhador no território faz fazendas (C) e madeireiras (M)."))
 		return
-	# Casas trabalhadas sem melhoria (clique no mapa da cidade para pôr ou tirar)
-	for tile_cell: Vector2i in _city.worked_tiles:
-		var row := HBoxContainer.new()
-		row.add_theme_constant_override("separation", 6)
-		_farms_box.add_child(row)
-		var spacer := Control.new()
-		spacer.custom_minimum_size = Vector2.ONE * Icons.ICON_SIZE
-		row.add_child(spacer)
-		var name_label := Label.new()
-		name_label.text = "%s (%d, %d)" % [Terrain.NAMES[_game.game_map.get_terrain(tile_cell)], tile_cell.x, tile_cell.y]
-		name_label.custom_minimum_size.x = 130
-		row.add_child(name_label)
-		var status := Label.new()
-		status.text = "+%d alimento (sem melhoria)" % _city.tile_food(tile_cell)
-		status.custom_minimum_size.x = 176
-		row.add_child(status)
-		_add_worker_controls(row, 1, 1, func(value: int) -> void: _city.set_tile_worked(tile_cell, value > 0))
-	for farm_cell: Vector2i in _city.farms:
-		var row := HBoxContainer.new()
-		row.add_theme_constant_override("separation", 6)
-		_farms_box.add_child(row)
-
-		var worked: bool = _city.farms[farm_cell] > 0
-		row.add_child(Icons.build_icon(City.Build.FARM, _city.owner_player.color))
-		var name_label := Label.new()
-		name_label.text = "Fazenda (%d, %d)" % [farm_cell.x, farm_cell.y]
-		name_label.custom_minimum_size.x = 130
-		row.add_child(name_label)
-		var status := Label.new()
-		status.text = "+%d alimento" % _city.farm_food(farm_cell) if worked else "sem trabalhador"
-		status.custom_minimum_size.x = 176
-		row.add_child(status)
-		_add_worker_controls(row, _city.farms[farm_cell], 1 if worked or _city.free_citizens() > 0 else 0,
-				func(value: int) -> void: _city.set_farm_worked(farm_cell, value > 0))
-	for mill_cell: Vector2i in _city.lumber_mills:
-		var row := HBoxContainer.new()
-		row.add_theme_constant_override("separation", 6)
-		_farms_box.add_child(row)
-
-		var workers: int = _city.lumber_mills[mill_cell]
-		row.add_child(Icons.build_icon(City.Build.LUMBER_MILL, _city.owner_player.color))
-		var name_label := Label.new()
-		name_label.text = "Madeireira (%d, %d)" % [mill_cell.x, mill_cell.y]
-		name_label.custom_minimum_size.x = 130
-		row.add_child(name_label)
-		# Barra azul: madeira que resta na floresta
-		var wood := _game.game_map.wood_left(mill_cell)
-		var bar := ProgressBar.new()
-		bar.max_value = Terrain.WOOD_PER_FOREST
-		bar.value = wood
-		bar.show_percentage = false
-		bar.custom_minimum_size = Vector2(50, 14)
-		bar.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-		bar.add_theme_stylebox_override("background", _bar_style(Color(0.3, 0.3, 0.33)))
-		bar.add_theme_stylebox_override("fill", _bar_style(LumberMill.WOOD_BAR_COLOR))
-		bar.tooltip_text = "Madeira que resta na floresta: %d/%d. Quando acaba, vira cerrado." % [wood, Terrain.WOOD_PER_FOREST]
-		row.add_child(bar)
-		var status := Label.new()
-		status.text = "+%d madeira" % (workers * LumberMill.WOOD_PER_WORKER) if workers > 0 else "sem trabalhador"
-		status.custom_minimum_size.x = 120
-		row.add_child(status)
-		_add_worker_controls(row, workers, mini(LumberMill.MAX_WORKERS, workers + _city.free_citizens()),
-				func(value: int) -> void: _city.set_mill_workers(mill_cell, value))
 	# Melhorias pilhadas: não produzem até um Trabalhador reconstruir
 	for ruin_cell: Vector2i in _city.ruins:
 		var ruin: Dictionary = _city.ruins[ruin_cell]
