@@ -72,7 +72,7 @@ const DATA := {
 	},
 	Tech.IRON_WORKING: {
 		"name": "Trabalho em Ferro", "cost": 70, "requires": [Tech.BRONZE_WORKING],
-		"description": "Fundir e forjar o ferro. Mostra o ferro no mapa, libera a Mina (+1 de ferro por cidadão) e a Forja (Espadas Curtas; parada, impostos e bem-estar).",
+		"description": "Fundir e forjar o ferro. Mostra o ferro no mapa, libera a Mina (+1 de ferro por cidadão), a Forja (Espadas Curtas; parada, impostos e bem-estar) e o Guerreiro de Espada Curta (Ataque 2, Defesa 2).",
 		"image": "res://assets/tech/trabalho_em_ferro.png",
 	},
 	Tech.CURRENCY: {

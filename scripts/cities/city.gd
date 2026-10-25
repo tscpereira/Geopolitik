@@ -78,7 +78,7 @@ signal changed
 ## Novos itens entram no fim: o save guarda o número de cada um.
 enum Build {
 	FARM, LUMBER_MILL, WARRIOR, WORKER, SETTLER, CITY_HALL, HEADQUARTERS, CARPENTRY, SPEAR, TEMPLE, WALLS, SPEARMAN, MINE,
-	SCHOOL, LIBRARY, MARKET, FORGE, ARENA, SHORT_SWORD, CATAPULT, LIGHT_CAVALRY, CHARIOT,
+	SCHOOL, LIBRARY, MARKET, FORGE, ARENA, SHORT_SWORD, CATAPULT, LIGHT_CAVALRY, CHARIOT, SWORDSMAN,
 }
 
 ## Humor de um cidadão (bem-estar social).
@@ -201,7 +201,7 @@ const BUILDS := {
 	Build.HEADQUARTERS: {
 		"name": "Quartel General", "article": "o", "category": Category.BUILDING,
 		"cost": 15, "gold": 50, "wood": 15, "on_tile": false,
-		"description": "Prédio militar: faz as unidades militares (Guerreiro, Lanceiro, Catapulta, Cavalaria Leve, Bigas). Gasta 15 de madeira.",
+		"description": "Prédio militar: faz as unidades militares (Guerreiro, Lanceiro, Guerreiro de Espada Curta, Catapulta, Cavalaria Leve, Bigas). Gasta 15 de madeira.",
 	},
 	Build.CARPENTRY: {
 		"name": "Marcenaria", "article": "a", "category": Category.BUILDING,
@@ -262,7 +262,14 @@ const BUILDS := {
 		"name": "Espada Curta", "article": "a", "category": Category.WEAPON,
 		"cost": 6, "gold": 50, "iron": 2, "on_tile": false,
 		"weapon": Arsenal.Weapon.SHORT_SWORD, "requires": Build.FORGE, "tech": Technology.Tech.IRON_WORKING,
-		"description": "Arma do arsenal: as Bigas levam 1. Feita na Forja; gasta 2 de ferro. Exige Trabalho em Ferro.",
+		"description": "Arma do arsenal: as Bigas e o Guerreiro de Espada Curta levam 1. Feita na Forja; gasta 2 de ferro. Exige Trabalho em Ferro.",
+	},
+	Build.SWORDSMAN: {
+		"name": "Guerreiro de Espada Curta", "article": "o", "category": Category.UNIT,
+		"cost": 15, "gold": 50, "weapons": {Arsenal.Weapon.SHORT_SWORD: 1}, "on_tile": false,
+		"unit": preload("res://data/units/guerreiro_espada.tres"), "population": 1,
+		"requires": Build.HEADQUARTERS, "tech": Technology.Tech.IRON_WORKING,
+		"description": "Legionário com gládio e escudo grande (Ataque 2, Defesa 2, Movimento 1). Exige Trabalho em Ferro; leva 1 Espada Curta.",
 	},
 	Build.CATAPULT: {
 		"name": "Catapulta", "article": "a", "category": Category.UNIT,

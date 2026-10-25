@@ -165,6 +165,8 @@ C:\ProjetoGame
 |       |                          direto para assets/sprites/units/
 |       |-- variantes_cidade.gd    Monta as variantes das cidades
 |       |                          (capital/normal, com/sem muralha)
+|       |-- guerreiro_espada.gd    Monta o Guerreiro de Espada Curta
+|       |                          (o hoplita com scutum e gládio)
 |       |-- guerreiro_rustico.gd   Monta o Guerreiro rústico (a partir
 |       |                          do Trabalhador do ChatGPT)
 |       |-- PROMPTS-CHATGPT.txt    Prompts para gerar os desenhos
@@ -459,6 +461,8 @@ UNIDADES (scripts/units/)
     Arqueiro    A        2       1       1          100
     Colono      S        0       0       1          100
     Trabalhador T        0       0       1          100
+    Gr. Espada  E        2       2       1          100  (Trabalho em Ferro;
+                                                         leva 1 Espada Curta)
     Catapulta   K        4       1       1          100  (Matemática)
     Cav. Leve   V        1       1       4          100  (Montaria; cavalaria)
     Bigas       B        2       1       3          100  (Guerra de movimento;
@@ -498,6 +502,13 @@ UNIDADES (scripts/units/)
                                            (tools/art/guerreiro_rustico.gd;
                                            prompt 14 para um desenho
                                            original no ChatGPT)
+    assets/sprites/units/guerreiro_espada.png  legionário: o hoplita do
+                                           Lanceiro com escudo
+                                           retangular grande (scutum,
+                                           face na cor do time, faixas
+                                           douradas, umbo) e gládio;
+                                           montado por código
+                                           (tools/art/guerreiro_espada.gd)
     assets/sprites/units/lanceiro.png     hoplita (Antiguidade; era o
                                            Guerreiro até 25/10/2026):
                                            elmo coríntio de bronze
@@ -1059,7 +1070,9 @@ CIDADES (scripts/cities/city.gd)
     Arena       40 + 30 de madeira          prédio (Pão e Circo)
     Espada      6 de produção + 2 de        Forja (vai para o arsenal)
     Curta       ferro
-    Catapulta, Cavalaria Leve, Bigas: ver UNIDADES.
+    Guerreiro de Espada Curta (15 + 1 de população + 1 Espada Curta,
+    Quartel General, Trabalho em Ferro), Catapulta, Cavalaria Leve,
+    Bigas: ver UNIDADES.
   Todos custam 50 de ouro para comprar na hora (os novos também, por
   enquanto; ver BACKLOG).
 
@@ -2069,7 +2082,9 @@ CIÊNCIA E PESQUISA (scripts/science/technology.gd, Player.research)
     Literatura (70)           Escrita                Biblioteca
     Matemática (60)           Construção             Catapulta
     Trabalho em Ferro (70)    Bronze                 ferro no mapa,
-                                                     Mina, Forja
+                                                     Mina, Forja,
+                                                     Guerreiro de
+                                                     Espada Curta
     Moeda (70)                Escrita, Bronze        Mercado
     Guerra de movimento (80)  Montaria, Bronze       Bigas
     Direito (100)             Literatura             +1 contente de base
@@ -3479,6 +3494,18 @@ Screenshots também confirmaram o visual.
   save antigo), do relevo, das regras dos rios e do Bronze, ajustados
   para a Cavalaria Leve (movimento 4), e do ferro, da mina remota, do
   ataque pelo modo Mover, da Muralha e do carregamento passaram.
+- GUERREIRO DE ESPADA CURTA (pedido do usuário): 2/2/1, leva 1 Espada
+  Curta, exige Trabalho em Ferro, feito no Quartel General (custo
+  sugerido: 15 de produção + 1 de população). Desenho montado por
+  código a partir do hoplita do ChatGPT (o do Lanceiro), estilo
+  legionário (tools/art/guerreiro_espada.gd): a lança é apagada (e os
+  pedacinhos soltos que sobram), o escudo redondo fica coberto por um
+  scutum grande e curvo com a face na cor do time, faixas douradas e
+  umbo de bronze, e um gládio vai na mão direita. A máquina ainda não
+  faz essa unidade. Validação: 6 verificações novas no teste da era
+  antiga (2/2/1 com desenho, tecnologia e Quartel, sem e com Espada
+  Curta, a espada é paga e devolvida), prévias nas duas cores e
+  screenshot no jogo ao lado das outras unidades militares.
 
 --------------------------------------------------------------
 7. BACKLOG (ideias para depois)
