@@ -163,6 +163,9 @@ C:\ProjetoGame
 |       |-- import_unit.gd         Importa UM desenho de unidade do
 |       |                          ChatGPT (fundo xadrez, azul do time)
 |       |                          direto para assets/sprites/units/
+|       |-- consolidado.gd         Consolidado da arte das unidades
+|       |                          (todas no jogo, nas duas cores) e a
+|       |                          referência para anexar no ChatGPT
 |       |-- variantes_cidade.gd    Monta as variantes das cidades
 |       |                          (capital/normal, com/sem muralha)
 |       |-- guerreiro_espada.gd    Monta o Guerreiro de Espada Curta
@@ -173,7 +176,8 @@ C:\ProjetoGame
 |       `-- chatgpt/               Referência, folha gerada, recortes
 |                                  grandes (grandes/) e os desenhos
 |                                  prontos com os nomes do jogo
-|                                  (prontos/)
+|                                  (prontos/); consolidado_unidades.png
+|                                  e referencia_unidades.png
 `-- data/
     |-- maps/
     |   |-- mapa_teste.png         Mapa de teste 120x75 (era o
@@ -476,8 +480,11 @@ UNIDADES (scripts/units/)
   usuário (25/10/2026: cavaleiro de crista e capa na cor do time, com
   lança), importado por tools/art/import_unit.gd. Catapulta e Bigas
   ainda são desenhos PROVISÓRIOS feitos por código ("tools/art/gen_art.gd
-  -- unidades", com a cor do time); os prompts 15 e 17 de
-  tools/art/PROMPTS-CHATGPT.txt pedem os definitivos.
+  -- unidades", com a cor do time) e estão fora do padrão das outras
+  (traço chapado, sombra própria, vista de lado, largos demais). Os
+  prompts B1 e B2 da seção "UNIDADE NOVA" de
+  tools/art/PROMPTS-CHATGPT.txt pedem os definitivos, com a imagem
+  tools/art/chatgpt/referencia_unidades.png anexada.
 - LANCEIRO (desde 25/10/2026, pedido do usuário; exige a
   tecnologia Trabalho em Bronze): +1 de ataque e +1 de defesa
   quando luta contra cavalaria (campo "Anti Cavalry Bonus" do
@@ -3506,6 +3513,18 @@ Screenshots também confirmaram o visual.
   antiga (2/2/1 com desenho, tecnologia e Quartel, sem e com Espada
   Curta, a espada é paga e devolvida), prévias nas duas cores e
   screenshot no jogo ao lado das outras unidades militares.
+- CONSOLIDADO DA ARTE DAS UNIDADES (pedido do usuário: as Bigas e a
+  Catapulta estão fora do padrão): tools/art/consolidado.gd grava em
+  tools/art/chatgpt/ o consolidado_unidades.png (as 9 unidades como
+  estão no jogo, ampliadas 3x, em azul e em vermelho) e o
+  referencia_unidades.png (os 7 desenhos do ChatGPT, grandes, em azul
+  do time, na escala relativa do jogo), para anexar no ChatGPT.
+  PROMPTS-CHATGPT.txt ganhou a seção "UNIDADE NOVA" no topo: passo a
+  passo, um PROMPT PADRÃO (estilo, câmera 3/4 à direita, luz de cima
+  à esquerda, escala dos cavalos e máquinas igual à das pessoas,
+  enquadramento quase quadrado, azul #1E50FF, sem sombra) e os
+  pedidos B1 (Bigas) e B2 (Catapulta), que substituem os prompts 17
+  e 15. Validação: as duas imagens geradas e revisadas.
 
 --------------------------------------------------------------
 7. BACKLOG (ideias para depois)
@@ -3587,6 +3606,8 @@ histórico):
     Arena)
 [ ] IA: fazer as unidades novas (Catapulta, Cavalaria Leve, Bigas) e
     estradas
+[ ] Arte definitiva das Bigas e da Catapulta (ChatGPT, prompts B1 e
+    B2 de tools/art/PROMPTS-CHATGPT.txt)
 [ ] Ritmo da ciência: em 100 rodadas a máquina só pesquisa as
     tecnologias de 20 a 35 pontos (cada cidade gera 1-3 por turno)
 [x] Bem-estar social (23/10/2026). Ideias para depois:

@@ -7,6 +7,111 @@ mudar a resolução atual (unidades 80x80, cidades 128x128). As imagens podem
 vir grandes (1024x1024); eu recorto e reduzo.
 
 
+========================================================================
+UNIDADE NOVA: O PADRÃO ATUAL (desde 25/10/2026; use esta seção primeiro)
+========================================================================
+
+Consolidado da arte (refaça depois de trocar qualquer desenho):
+  godot_console.cmd --headless --path . --script tools/art/consolidado.gd
+  -> tools/art/chatgpt/consolidado_unidades.png  todas as unidades como
+     estão no jogo, em azul e em vermelho (para comparar o padrão)
+  -> tools/art/chatgpt/referencia_unidades.png   só os desenhos do ChatGPT
+     (Trabalhador, Colono, Guerreiro, Lanceiro, Guerreiro de Espada Curta,
+     Arqueiro, Cavalaria Leve), em azul, na escala do jogo. É ESTA a imagem
+     para anexar no ChatGPT.
+
+Fora do padrão hoje: Bigas e Catapulta (desenhos provisórios feitos por
+código: traço chapado de desenho animado, sombra própria no chão, vista de
+lado pura e muito largos). Os prompts B1 e B2 abaixo substituem os 15 e 17.
+
+Como pedir:
+  1. Conversa nova no ChatGPT; anexe referencia_unidades.png.
+  2. Cole o PROMPT PADRÃO com o pedido da unidade no fim (B1, B2, ou um
+     texto seu no mesmo formato). Um desenho por pedido.
+  3. Baixe o PNG e importe (o fundo xadrez falso do ChatGPT é removido):
+     godot_console.cmd --headless --path . --script tools/art/import_unit.gd -- <imagem> <nome>
+     O <nome> é o do arquivo do jogo (bigas, catapulta, ...). Depois rode o
+     consolidado e compare.
+
+Se sair fora do padrão, peça para refazer citando a regra, por exemplo:
+"Redo it: no shadow on the ground", "Redo it: same painted style and scale
+as the attached figures", "Redo it: make it more compact, three-quarter
+view, not a flat side view".
+
+------------------------------------------------------------------------
+PROMPT PADRÃO (cole inteiro; troque só o bloco UNIT no fim)
+------------------------------------------------------------------------
+
+I am making unit sprites for a 2D turn-based strategy game set in ancient
+Greece. The attached image shows the units already in the game. The new
+unit MUST look like it belongs to the same set: same artist, same style,
+same scale, same camera, same light.
+
+STYLE (copy it from the attached figures):
+- Detailed painted digital illustration, realistic proportions (not
+  cartoon, not chibi, not pixel art, no thick black outlines, no flat
+  colors). Soft painted shading, warm earthy palette: tanned skin, white
+  linen, brown leather, warm wood, polished bronze and gold.
+- Strong, clean silhouette that stays readable when shrunk to 80x80 pixels.
+
+CAMERA AND LIGHT:
+- Three-quarter view, facing to the RIGHT, seen from slightly above (about
+  20-30 degrees), like the attached figures. Not a flat side view, not a
+  top-down view.
+- Soft daylight from the TOP-LEFT.
+
+SCALE AND FRAMING:
+- One subject only, whole, never cropped, centered, small empty margin.
+- People are the same size as the attached figures. Horses, chariots and
+  machines are drawn at the SAME scale as the people (a horse like the
+  attached horseman); the whole group must fit a near-square frame, so
+  keep it compact rather than long and wide.
+- Feet, hooves and wheels on one common ground line at the bottom.
+
+TEAM COLOR:
+- The player's parts (crest, cloak, tunic trim, belt, sash, shield face,
+  pennant, painted panels) are ONE vivid royal blue (#1E50FF), only in
+  lighter and darker shades of that blue, exactly like the attached
+  figures. No other blue, cyan, teal or purple anywhere (no blue sky, no
+  water, no blue stones, no blue shadows, no blue eyes).
+
+BACKGROUND:
+- Fully transparent background (or plain white). No ground, no grass, no
+  cast shadow under the subject, no base, no pedestal, no scenery, no
+  frame, no text, no signature.
+
+UNIT:
+<cole aqui o bloco da unidade>
+
+------------------------------------------------------------------------
+B1  ->  bigas.png   (substitui o PROMPT 17)
+------------------------------------------------------------------------
+UNIT:
+An ancient Greek two-horse war chariot (biga), three-quarter view facing
+right, so the horses come slightly toward the viewer and the group stays
+compact. Two brown horses side by side, harnessed to a yoke pole, in mid
+trot. A light wooden chariot with two large spoked wheels; the front panel
+of the chariot box is painted team blue with a bronze rim. One charioteer
+standing inside, same build as the attached hoplites: bronze Corinthian
+helmet with a team-blue horsehair crest, white chiton with team-blue trim,
+holding the reins in both hands, a short sword at the hip. Same scale as
+the attached horseman: horse and chariot together no wider than about 1.3
+times their height.
+
+------------------------------------------------------------------------
+B2  ->  catapulta.png   (substitui o PROMPT 15)
+------------------------------------------------------------------------
+UNIT:
+An ancient Greek/Roman torsion catapult (onager), three-quarter view
+facing right, compact. Heavy dark wooden frame on four solid wooden
+wheels with bronze hubs and iron nails, a thick bundle of twisted rope at
+the base of the throwing arm, the arm pulled back with a leather sling cup
+holding a round stone, a padded crossbeam stop. A small team-blue pennant
+on a short pole at the back and a team-blue painted band on the side of
+the frame. No crew, no ground, no shadow. About as tall as the attached
+standing figures and no wider than about 1.3 times its height.
+
+
 VERSÃO RÁPIDA: TUDO EM UM PROMPT SÓ (tente esta primeiro)
 --------------------------------------------------------
 Uma única imagem com as 5 unidades e as 4 cidades lado a lado (uma "folha de
@@ -260,8 +365,7 @@ Para importar um desenho avulso de unidade (fundo xadrez, azul do time):
   godot_console.cmd --headless --path . --script tools/art/import_unit.gd -- <imagem> <nome>
 
 PROMPT 15  ->  salvar como: catapulta.png   (desde 25/10/2026)
-Hoje é um desenho provisório feito por código (tools/art/gen_art.gd --
-unidades). Para o definitivo:
+SUBSTITUÍDO pelo B2 (seção UNIDADE NOVA, no topo). Mantido como histórico:
 Following all the rules above: an ancient Greek/Roman torsion catapult
 (onager style), a siege engine seen from the side, facing right. Heavy
 wooden frame on four solid wooden wheels with bronze hubs, a thick bundle
@@ -285,7 +389,7 @@ horseman. Transparent background.
 
 
 PROMPT 17  ->  salvar como: bigas.png   (desde 25/10/2026)
-Provisório feito por código. Para o definitivo:
+SUBSTITUÍDO pelo B1 (seção UNIDADE NOVA, no topo). Mantido como histórico:
 Following all the rules above: an ancient two-horse war chariot (biga), seen
 from the side, facing right. Two horses side by side pull a light chariot
 with two large spoked wooden wheels; the front of the chariot box is
