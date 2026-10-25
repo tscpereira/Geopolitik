@@ -775,7 +775,9 @@ CIDADES (scripts/cities/city.gd)
     Marcenaria  10 de produção + 10 de      prédio da cidade
                 madeira
     Templo      20 de produção + 30 de      prédio da cidade
-                madeira                     (exige Misticismo)
+                madeira                     (exige Misticismo; só
+                                            aparece na lista depois
+                                            dele)
   Todos custam 50 de ouro para comprar na hora (menos as
   melhorias de terreno, que não podem ser compradas).
 
@@ -1632,9 +1634,13 @@ CIÊNCIA E PESQUISA (scripts/science/technology.gd, Player.research)
       Construção  30 pontos
       Misticismo  20 pontos
       Alfabeto    40 pontos
-  O que libera: Misticismo -> Templo (campo "tech" em City.BUILDS;
-  sem a tecnologia, a linha mostra "Precisa da tecnologia
-  Misticismo."). Construção e Alfabeto ainda não liberam nada.
+  O que libera: Misticismo -> Templo (campo "tech" em City.BUILDS).
+  Desde 24/10/2026, o que depende de uma tecnologia NÃO aparece na
+  lista "Construir" enquanto ela não for pesquisada
+  (City.has_tech_for); antes aparecia desabilitado com "Precisa da
+  tecnologia Misticismo.", motivo que City.build_error ainda
+  devolve (proteção para a máquina e para compras). Construção e
+  Alfabeto ainda não liberam nada.
 - JANELA DE PESQUISA (scripts/ui/research_dialog.gd): as
   tecnologias disponíveis, cada uma com o custo, os pontos já
   feitos, a estimativa de turnos e o botão "Pesquisar"; embaixo, a
@@ -1981,6 +1987,8 @@ Screenshots também confirmaram o visual.
     império), Templo, guarnição, festividades, bens da Marcenaria,
     desordem civil e celebração
 [x] Primeira tecnologia com efeito: Misticismo libera o Templo
+[x] Construções que exigem tecnologia só aparecem na lista
+    "Construir" depois de pesquisada (24/10/2026)
 [ ] Bem-estar: perda de população depois de muitos turnos de
     desordem (emigração)
 [ ] Bem-estar: mais prédios (ex.: coliseu, mercado) e maravilhas
@@ -2621,6 +2629,12 @@ Screenshots também confirmaram o visual.
   lugar. Nova função City.sprite_rect. Validação: screenshots do
   mapa (povoados ao lado de vila, cidade e metrópole; ruínas) e o
   teste das variantes passou.
+- Lista "Construir" (pedido do usuário): o que exige tecnologia
+  (hoje, o Templo) só aparece depois de a tecnologia ser pesquisada;
+  antes aparecia desabilitado. Nova função City.has_tech_for.
+  Validação: teste com 7 verificações (sem Misticismo o Templo não
+  aparece e os outros prédios sim; build_error continua barrando;
+  com Misticismo o Templo aparece), mais screenshots da lista.
 
 --------------------------------------------------------------
 7. BACKLOG (ideias para depois)

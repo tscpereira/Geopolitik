@@ -479,6 +479,12 @@ func has_building(build: int) -> bool:
 	return buildings.has(build)
 
 
+## Se o dono já pesquisou a tecnologia que [param build] exige (campo "tech").
+func has_tech_for(build: int) -> bool:
+	var info: Dictionary = BUILDS[build]
+	return not info.has("tech") or owner_player.researched.has(info["tech"])
+
+
 ## Obra da fila que faz [param build] (ou null).
 func construction_of(build: int) -> Construction:
 	for construction in constructions:
@@ -499,7 +505,7 @@ func build_error(build: int) -> String:
 			return "A cidade já tem %s." % info["name"]
 		if construction_of(build):
 			return "Já está em obra."
-	if info.has("tech") and not owner_player.researched.has(info["tech"]):
+	if not has_tech_for(build):
 		return "Precisa da tecnologia %s." % Technology.tech_name(info["tech"])
 	if info.has("requires") and not has_building(info["requires"]):
 		return "Precisa de %s." % BUILDS[info["requires"]]["name"]

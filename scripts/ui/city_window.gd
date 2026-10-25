@@ -495,10 +495,12 @@ func _rebuild_build_list() -> void:
 	_treasury_label.text = "Tesouro: %d" % _city.owner_player.gold
 	for category: int in City.CATEGORY_NAMES:
 		_build_list.add_child(_make_section(City.CATEGORY_NAMES[category]))
-		# Prédios prontos (e os que toda cidade já tem) somem da lista
+		# Prédios prontos (e os que toda cidade já tem) somem da lista, e o que
+		# depende de uma tecnologia ainda não pesquisada nem aparece
 		var builds := City.BUILDS.keys().filter(func(build: int) -> bool:
 			return (City.BUILDS[build]["category"] == category
-					and not City.BUILDS[build].get("native", false) and not _city.has_building(build)))
+					and not City.BUILDS[build].get("native", false) and not _city.has_building(build)
+					and _city.has_tech_for(build)))
 		if builds.is_empty():
 			_build_list.add_child(_make_muted("Nenhum disponível ainda."))
 		for build: int in builds:
