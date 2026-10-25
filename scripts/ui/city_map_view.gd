@@ -123,6 +123,10 @@ func _get_tooltip(at_position: Vector2) -> String:
 	var text := "(%d, %d) %s" % [cell.x, cell.y, Terrain.NAMES[map.get_terrain(cell)]]
 	if map.get_terrain(cell) == Terrain.Type.FOREST:
 		text += " (madeira %d/%d)" % [map.wood_left(cell), Terrain.WOOD_PER_FOREST]
+	elif map.get_terrain(cell) == Terrain.Type.HILLS:
+		text += " (sem fazenda)"
+	elif map.get_terrain(cell) == Terrain.Type.MOUNTAINS:
+		text += " (intransponível, não dá para trabalhar)"
 	if map.has_river(cell):
 		text += " à beira do rio (+%d alimento)" % Terrain.RIVER_FOOD
 	if _is_transferable(cell):

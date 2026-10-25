@@ -4,7 +4,8 @@ extends Node2D
 ## Mapa em grid quadrado. Guarda o terreno de cada casa (e a madeira das
 ## florestas) e desenha o mapa inteiro com o shader terrain.gdshader, que faz
 ## as transições naturais entre os terrenos (costa arredondada, borda das
-## florestas, pradaria <-> cerrado) e as fazendas (set_improvement). Os rios
+## florestas, pradaria <-> cerrado, relevo das colinas e montanhas visto de
+## cima) e as fazendas (set_improvement). Os rios
 ## (Rivers) correm pelas bordas das casas e são desenhados por cima do terreno
 ## (RiverLayer). O TileMapLayer só serve para converter posições em casas.
 
@@ -25,6 +26,8 @@ const SHADER_TEXTURES := {
 	Terrain.Type.GRASSLAND: "grass_tex",
 	Terrain.Type.FOREST: "forest_tex",
 	Terrain.Type.CERRADO: "cerrado_tex",
+	Terrain.Type.HILLS: "hill_tex",
+	Terrain.Type.MOUNTAINS: "mountain_tex",
 }
 
 var width := 0

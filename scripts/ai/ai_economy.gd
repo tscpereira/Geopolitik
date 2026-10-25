@@ -14,8 +14,8 @@ extends RefCounted
 ##        Trabalhador para as tarefas dele (_worker_jobs): fazendas que faltam,
 ##                 madeireira (se falta madeira), ruínas (melhorias pilhadas)
 ##                 e cidades vazias para repovoar;
-##        defesa   soldado (Lanceiro com Trabalho em Bronze, senão Guerreiro; e a
-##                 Lança dele) para a guarnição da cidade;
+##        defesa   soldado (Lanceiro com Trabalho em Bronze, e a Lança dele;
+##                 senão Guerreiro, que não leva Lança) para a guarnição;
 ##        expansão Colono (população >= settler_population);
 ##        bem-estar Templo (com Misticismo) quando a população chega aos
 ##                 contentes de base (City.base_content);
@@ -23,7 +23,7 @@ extends RefCounted
 ##                 cidades grandes), guardando a madeira para eles;
 ##        muralha  Muralha (com Construção e o Quartel) na capital e nas
 ##                 cidades com inimigo por perto;
-##        armas    Lanças até spears_per_city por cidade;
+##        armas    Lanças até spears_per_city por cidade (só com o Lanceiro);
 ##        exército Guerreiros até army_to_attack fora das cidades;
 ##   3. cidadãos, do zero (_distribute_workers): fazendas e casas sem
 ##      melhoria até a cidade não passar fome, festividades até sair da
@@ -112,9 +112,9 @@ func _plan(city: City) -> void:
 			and (city == _player.cities[0] or _enemy_near(city.cell, _p.threat_radius)):
 		_try_order(city, City.Build.WALLS)
 
-	# Armas
+	# Armas (só para o soldado que leva Lança: o Guerreiro não leva)
 	var spears: int = _player.arsenal[Arsenal.Weapon.SPEAR] + _player.weapons_in_production(Arsenal.Weapon.SPEAR)
-	if city.has_building(City.Build.CARPENTRY) and spears < _p.spears_per_city * _player.cities.size() \
+	if _soldier_needs_spear() and city.has_building(City.Build.CARPENTRY) and spears < _p.spears_per_city * _player.cities.size() \
 			and _player.wood - City.BUILDS[City.Build.SPEAR]["wood"] >= reserve:
 		_try_order(city, City.Build.SPEAR)
 
@@ -266,7 +266,7 @@ func _queued_in(city: City, build: int) -> int:
 func _buy_defense(city: City) -> void:
 	if not _p.buy_defense or _garrison_count(city) > 0 or not _enemy_near(city.cell, _p.threat_radius):
 		return
-	if _player.arsenal[Arsenal.Weapon.SPEAR] == 0 and _game.buy_error(city, City.Build.SPEAR).is_empty():
+	if not city.weapons_error(_soldier()).is_empty() and _game.buy_error(city, City.Build.SPEAR).is_empty():
 		_game.buy_build(city, City.Build.SPEAR)
 	if _game.buy_error(city, _soldier()).is_empty():
 		var bought := _soldier()
@@ -540,7 +540,7 @@ func _best_city_site(settler: Unit) -> Vector2i:
 			match map.get_terrain(area_cell):
 				Terrain.Type.GRASSLAND:
 					score += 3.0
-				Terrain.Type.CERRADO, Terrain.Type.FOREST:
+				Terrain.Type.CERRADO, Terrain.Type.FOREST, Terrain.Type.HILLS:
 					score += 2.0
 				Terrain.Type.WATER:
 					score += 1.0
@@ -639,6 +639,11 @@ func _garrison_count(city: City) -> int:
 ## quando já tem Trabalho em Bronze; senão, o Guerreiro.
 func _soldier() -> int:
 	return City.Build.SPEARMAN if _player.researched.has(Technology.Tech.BRONZE_WORKING) else City.Build.WARRIOR
+
+
+## Se o soldado da máquina gasta Lanças do arsenal (o Lanceiro sim, o Guerreiro não).
+func _soldier_needs_spear() -> bool:
+	return City.BUILDS[_soldier()].get("weapons", {}).has(Arsenal.Weapon.SPEAR)
 
 
 ## Quantos soldados faltam na guarnição da cidade (contando os que já estão

@@ -152,10 +152,10 @@ const BUILDS := {
 	},
 	Build.WARRIOR: {
 		"name": "Guerreiro", "article": "o", "category": Category.UNIT,
-		"cost": 10, "gold": 50, "weapons": {Arsenal.Weapon.SPEAR: 1}, "on_tile": false,
+		"cost": 10, "gold": 50, "on_tile": false,
 		"unit": preload("res://data/units/guerreiro.tres"), "population": 1,
 		"requires": Build.HEADQUARTERS,
-		"description": "Unidade militar rústica (Ataque 1, Defesa 1, Movimento 1). Feita no Quartel General; leva 1 Lança do arsenal.",
+		"description": "Unidade militar rústica (Ataque 1, Defesa 1, Movimento 1). Feita no Quartel General; não precisa de armas do arsenal.",
 	},
 	Build.SPEARMAN: {
 		"name": "Lanceiro", "article": "o", "category": Category.UNIT,

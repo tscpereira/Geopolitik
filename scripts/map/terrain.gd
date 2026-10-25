@@ -10,18 +10,25 @@ extends RefCounted
 ##            casa tem o seu estoque de madeira (WOOD_PER_FOREST, guardado no
 ##            GameMap); a madeireira só extrai dele. Esgotada, vira Cerrado.
 ##   Cerrado  o que sobra da floresta explorada. Igual à Pradaria.
+##   Colinas  verdes; custam 1 movimento a mais, como a floresta (unidades com
+##            mais de 1 de movimento); não aceitam fazendas; aceitam cidades.
+##   Montanhas rochosas e intransponíveis: nenhuma unidade entra; não dão
+##            alimento nem aceitam melhorias.
 ## Um cidadão trabalhando a casa sem melhoria tira TILE_FOOD de alimento por
-## turno (pradaria, floresta e cerrado: 1; água: não dá para trabalhar). Casa
+## turno (pradaria, floresta, cerrado e colinas: 1; água e montanhas: não dá
+## para trabalhar). Casa
 ## que encosta num rio (Rivers, GameMap.has_river) tira RIVER_FOOD a mais.
 
 ## A ordem do enum é a ordem das imagens no atlas do mapa (ver GameMap).
-enum Type { WATER, GRASSLAND, FOREST, CERRADO }
+enum Type { WATER, GRASSLAND, FOREST, CERRADO, HILLS, MOUNTAINS }
 
 const NAMES := {
 	Type.WATER: "Água",
 	Type.GRASSLAND: "Pradaria",
 	Type.FOREST: "Floresta",
 	Type.CERRADO: "Cerrado",
+	Type.HILLS: "Colinas",
+	Type.MOUNTAINS: "Montanhas",
 }
 
 ## Imagem de cada terreno (TILE_SIZE x TILE_SIZE pixels, ver GameMap).
@@ -31,6 +38,8 @@ const TEXTURE_PATHS := {
 	Type.GRASSLAND: "res://assets/tiles/pradaria.png",
 	Type.FOREST: "res://assets/tiles/floresta.png",
 	Type.CERRADO: "res://assets/tiles/cerrado.png",
+	Type.HILLS: "res://assets/tiles/colinas.png",
+	Type.MOUNTAINS: "res://assets/tiles/montanhas.png",
 }
 
 ## Cor de cada terreno no PNG do mapa (data/maps/). As cores são as da paleta
@@ -40,6 +49,8 @@ const COLORS := {
 	Type.GRASSLAND: Color8(181, 230, 29), # verde-claro
 	Type.FOREST: Color8(34, 177, 76),     # verde-escuro
 	Type.CERRADO: Color8(239, 228, 176),  # bege
+	Type.HILLS: Color8(195, 195, 195),    # cinza-claro
+	Type.MOUNTAINS: Color8(127, 127, 127), # cinza-escuro
 }
 
 ## Defesa extra de quem defende neste terreno (soma com a fortificação).
@@ -51,6 +62,7 @@ const DEFENSE_BONUS := {
 ## 1 de movimento (Cavaleiro: 2 casas na pradaria, 1 na floresta).
 const MOVE_PENALTY := {
 	Type.FOREST: 1,
+	Type.HILLS: 1,
 }
 
 ## Alimento por turno de um cidadão trabalhando a casa sem melhoria. A fazenda
@@ -59,6 +71,7 @@ const TILE_FOOD := {
 	Type.GRASSLAND: 1,
 	Type.FOREST: 1,
 	Type.CERRADO: 1,
+	Type.HILLS: 1,
 }
 
 ## Alimento a mais da casa que encosta num rio (soma no alimento base da casa:
@@ -76,7 +89,7 @@ const WOOD_PER_FOREST := 100
 
 ## Se unidades terrestres podem andar neste terreno.
 static func is_walkable(type: Type) -> bool:
-	return type != Type.WATER
+	return type != Type.WATER and type != Type.MOUNTAINS
 
 
 ## Se dá para construir uma fazenda neste terreno.

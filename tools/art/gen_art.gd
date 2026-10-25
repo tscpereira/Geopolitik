@@ -16,6 +16,8 @@ extends SceneTree
 ##       fazenda.png (vista de cima, lotes em retalhos), fazenda_obra.png
 ##       (terra lavrada), fazenda_destruida.png
 ##   tiles/pradaria.png, floresta.png, agua.png, cerrado.png (sem emenda)
+##   tiles/colinas.png, montanhas.png (sem emenda; o relevo visto de cima é
+##     pintado pelo shader do terreno; só estes dois: "-- relevo")
 ##
 ## COR DO JOGADOR: cada desenho com cor de time é feito duas vezes, com a cor
 ## preta e branca. O PNG principal é a versão preta; a máscara (_time.png, em
@@ -33,6 +35,8 @@ const UNITS_DIR := "res://assets/sprites/units/"
 const CITIES_DIR := "res://assets/sprites/cities/"
 const IMPROVEMENTS_DIR := "res://assets/sprites/improvements/"
 const TILES_DIR := "res://assets/tiles/"
+## Pedra do chão das montanhas.
+const ROCK_L := Color8(152, 144, 130)
 ## Cidades: 128x128 (1,6 casa, City.SPRITE_SIZE), desenhadas num espaço de 112.
 const CITY_SIZE := 128
 const CITY_DESIGN := 112.0
@@ -105,6 +109,13 @@ func _run() -> void:
 	# Só ruínas das cidades de uma pasta (<nome>.png + <nome>_time.png):
 	#   godot_console.cmd --path . --script tools/art/gen_art.gd -- ruinas <pasta>
 	var args := OS.get_cmdline_user_args()
+	# Só o chão das colinas e das montanhas (texturas sem emenda):
+	#   godot_console.cmd --path . --script tools/art/gen_art.gd -- relevo
+	if args.size() >= 1 and args[0] == "relevo":
+		await relief_art()
+		print("ok")
+		quit()
+		return
 	if args.size() >= 2 and args[0] == "ruinas":
 		for file in DirAccess.get_files_at(args[1]):
 			var city_name := file.get_basename()
@@ -134,6 +145,7 @@ func _run() -> void:
 	var tiles := {"pradaria": grass_tile, "floresta": forest_tile, "agua": water_tile, "cerrado": cerrado_tile}
 	for tile_name: String in tiles:
 		shrink(await render(S, tiles[tile_name], false), S, false, false).save_png(TILES_DIR + tile_name + ".png")
+	await relief_art()
 	print("ok")
 	quit()
 
@@ -1324,3 +1336,76 @@ func cerrado_tile() -> void:
 			var p: Vector2 = s[0] + o
 			c.draw_colored_polygon(ell(p + Vector2(1.5, 2), Vector2(s[1], s[1] * 0.55), 0, TAU, 16), Color(0.08, 0.06, 0.03, 0.35))
 			sphere(p, Vector2(s[1], s[1] * 0.8), Color8(92, 102, 52)))
+
+
+# --- Relevo: colinas e montanhas ---------------------------------------------------
+
+## Chão das colinas e das montanhas (texturas sem emenda). O relevo visto de
+## cima (cristas, encostas iluminadas e na sombra) é pintado pelo shader do
+## terreno por cima delas.
+func relief_art() -> void:
+	shrink(await render(S, hill_ground_tile, false), S, false, false).save_png(TILES_DIR + "colinas.png")
+	shrink(await render(S, mountain_ground_tile, false), S, false, false).save_png(TILES_DIR + "montanhas.png")
+
+
+## Chão das colinas: capim verde mais viçoso que a pradaria.
+func hill_ground_tile() -> void:
+	_rng.seed = 41
+	c.draw_rect(Rect2(0, 0, S, S), Color8(92, 118, 50))
+	var blots := []
+	for i in 12:
+		blots.append([Vector2(_rng.randf() * S, _rng.randf() * S), _rng.randf_range(7, 15), _rng.randi() % 2])
+	var tufts := []
+	for i in 360:
+		tufts.append([Vector2(_rng.randf() * S, _rng.randf() * S), _rng.randf_range(0.75, 1.25), _rng.randf_range(1.2, 2.4)])
+	repeat_tiles(func(o: Vector2) -> void:
+		for b in blots:
+			var color: Color = Color8(78, 104, 42) if b[2] == 0 else Color8(118, 142, 62)
+			c.draw_colored_polygon(ell(b[0] + o, Vector2(b[1], b[1] * 0.7), 0, TAU, 24), Color(color, 0.45))
+		for t in tufts:
+			var p: Vector2 = t[0] + o
+			for k in [-1.0, 0.0, 1.0]:
+				line(p, p + Vector2(k * 0.6, -t[2] + absf(k) * 0.4), lit(Color8(106, 132, 54), t[1] * (1.1 if k == 0.0 else 0.9)), 0.3))
+
+
+## Chão das montanhas: pedra cinza-parda com lajes, rachaduras, cascalho e
+## pouco capim.
+func mountain_ground_tile() -> void:
+	_rng.seed = 43
+	c.draw_rect(Rect2(0, 0, S, S), Color8(120, 114, 102))
+	var blots := []
+	for i in 16:
+		blots.append([Vector2(_rng.randf() * S, _rng.randf() * S), _rng.randf_range(5, 13), _rng.randi() % 3, _rng.randf() * TAU])
+	var stones := []
+	for i in 22:
+		stones.append([Vector2(_rng.randf() * S, _rng.randf() * S), _rng.randf_range(0.8, 2.2), _rng.randf_range(0.85, 1.15)])
+	var cracks := []
+	for i in 12:
+		var p := Vector2(_rng.randf() * S, _rng.randf() * S)
+		var points := [p]
+		for k in 3:
+			p += Vector2(_rng.randf_range(2, 5), _rng.randf_range(-3, 3))
+			points.append(p)
+		cracks.append(points)
+	var tufts := []
+	for i in 30:
+		tufts.append(Vector2(_rng.randf() * S, _rng.randf() * S))
+	repeat_tiles(func(o: Vector2) -> void:
+		for b in blots:
+			var color: Color = [Color8(92, 88, 80), Color8(146, 138, 122), Color8(124, 108, 86)][b[2]]
+			var slab := PackedVector2Array()
+			for k in 6:
+				var a: float = b[3] + k * TAU / 6.0
+				slab.append(b[0] + o + Vector2(cos(a), sin(a) * 0.7) * b[1] * (0.75 + 0.25 * sin(k * 2.3 + b[3])))
+			c.draw_colored_polygon(slab, Color(color, 0.5))
+		for k in cracks:
+			var points := PackedVector2Array()
+			for p: Vector2 in k:
+				points.append(p + o)
+			stroke(points, Color(0.2, 0.18, 0.15, 0.6), 0.5)
+		for t in tufts:
+			line(t + o, t + o + Vector2(0.4, -1.6), Color8(98, 104, 60), 0.35)
+		for s in stones:
+			var p: Vector2 = s[0] + o
+			c.draw_colored_polygon(ell(p + Vector2(0.8, 1.0), Vector2(s[1], s[1] * 0.6), 0, TAU, 12), Color(0.08, 0.07, 0.05, 0.4))
+			sphere(p, Vector2(s[1], s[1] * 0.75), lit(ROCK_L, s[2] * 0.9)))

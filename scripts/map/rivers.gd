@@ -12,7 +12,7 @@ extends RefCounted
 ## Cada rio nasce no interior, longe da costa, e desce em direção ao mar pela
 ## distância até a água, com desvios para os lados (fica sinuoso). Termina ao
 ## chegar à costa ou ao encontrar outro rio (afluente). Só corre entre casas de
-## terra; o save guarda os rios.
+## terra, e nunca encostado numa montanha; o save guarda os rios.
 ##
 ## DESENHO (draw), no estilo do rio do Civilization do SNES: três camadas ao
 ## longo de uma curva suavizada que ondula em volta das bordas: a margem de
@@ -183,8 +183,8 @@ static func edge_cells(a: Vector2i, b: Vector2i) -> Array[Vector2i]:
 
 static func _is_land_edge(map: GameMap, a: Vector2i, b: Vector2i) -> bool:
 	for cell in edge_cells(a, b):
-		if not map.is_in_bounds(cell) or map.get_terrain(cell) == Terrain.Type.WATER:
-			return false
+		if not map.is_in_bounds(cell) or map.get_terrain(cell) in [Terrain.Type.WATER, Terrain.Type.MOUNTAINS]:
+			return false # rio não corre colado na montanha (a rocha cobre a borda)
 	return true
 
 

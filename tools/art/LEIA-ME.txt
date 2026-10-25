@@ -24,6 +24,9 @@ Ele grava em assets/:
     sprites/improvements/fazenda.png (vista de cima: lotes em retalhos),
         fazenda_obra.png (terra lavrada) e fazenda_destruida.png
     tiles/pradaria.png, floresta.png, agua.png, cerrado.png (sem emenda)
+    tiles/colinas.png e montanhas.png (sem emenda; o relevo visto de cima é
+        pintado pelo shader do terreno). Só estes dois:
+        godot_console.cmd --path . --script tools/art/gen_art.gd -- relevo
 
 COR DO JOGADOR: o PNG principal tem a parte do time (túnicas, tabardos,
 crista, escudo, estandartes) em preto, e o _time.png (tons de cinza) diz

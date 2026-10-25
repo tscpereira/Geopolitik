@@ -3,7 +3,7 @@ extends RefCounted
 
 ## Armas que o império estoca no arsenal (Player.arsenal: {Weapon: quantidade}).
 ## Armas são produzidas em prédios (ex.: Lança na Marcenaria) e gastas para
-## treinar tropas (ex.: o Guerreiro leva 1 Lança). Para uma arma nova: entre no
+## treinar tropas (ex.: o Lanceiro leva 1 Lança). Para uma arma nova: entre no
 ## enum, nos nomes abaixo, em City.BUILDS (com "weapon") e no ícone
 ## (Icons.draw_weapon).
 

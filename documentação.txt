@@ -92,7 +92,8 @@ C:\ProjetoGame
 |   |   `-- window_settings.gd     Janela maximizada (F11), global
 |   |-- map/
 |   |   |-- terrain.gd             Tipos de terreno e regras (Água,
-|   |   |                          Pradaria, Floresta, Cerrado)
+|   |   |                          Pradaria, Floresta, Cerrado,
+|   |   |                          Colinas, Montanhas)
 |   |   |-- game_map.gd            Mapa em grid (dados + desenho)
 |   |   |-- movement.gd            Alcance e caminho das unidades
 |   |   |-- move_overlay.gd        Destaque das casas alcançáveis
@@ -100,7 +101,8 @@ C:\ProjetoGame
 |   |   |-- ruins_layer.gd         Ruínas sem dono (cidades destruídas)
 |   |   |-- rivers.gd              Rios: geração e desenho
 |   |   `-- terrain.gdshader       Desenho do mapa com transições
-|   |                              naturais entre os terrenos
+|   |                              naturais entre os terrenos e o
+|   |                              relevo (colinas, montanhas)
 |   |-- science/
 |   |   `-- technology.gd          Árvore de conhecimentos (tecnologias)
 |   |-- save/
@@ -151,7 +153,9 @@ C:\ProjetoGame
 |-- tools/
 |   `-- art/
 |       |-- gen_art.gd             Gera todos os desenhos (80x80,
-|       |                          estilo pintado; ver LEIA-ME.txt)
+|       |                          estilo pintado; ver LEIA-ME.txt;
+|       |                          "-- relevo": só o chão das
+|       |                          colinas e montanhas)
 |       |-- import_sheet.gd        Importa a folha do ChatGPT
 |       |-- variantes_cidade.gd    Monta as variantes das cidades
 |       |                          (capital/normal, com/sem muralha)
@@ -321,12 +325,15 @@ MAPA (scripts/map/)
     verde-claro  (181, 230, 29)  -> Pradaria
     verde-escuro (34, 177, 76)   -> Floresta
     bege         (239, 228, 176) -> Cerrado
+    cinza-claro  (195, 195, 195) -> Colinas
+    cinza-escuro (127, 127, 127) -> Montanhas
   Cada pixel vira o terreno de cor mais parecida
   (Terrain.from_color). Para criar ou editar um mapa, basta
   desenhar um PNG (no Paint, por exemplo) e trocar o arquivo em
   data/maps/. O tamanho da imagem define o tamanho do mapa.
-  O mapa de teste atual tem 763 casas de pradaria e 44 de
-  floresta.
+  O mapa de teste atual (repintado pelo usuário em 25/10/2026) tem
+  704 casas de pradaria, 44 de floresta, 23 de colinas e 36 de
+  montanhas.
 - O visual de cada terreno vem de uma imagem PNG de 80x80 pixels:
     assets/tiles/agua.png      azul acinzentado, manchas e
                                ondinhas claras
@@ -334,6 +341,11 @@ MAPA (scripts/map/)
                                capim e florzinhas
     assets/tiles/floresta.png  copas escuras em bolos, com sombra
     assets/tiles/cerrado.png   terra seca, capim amarelado, moitas
+    assets/tiles/colinas.png   capim verde mais viçoso
+    assets/tiles/montanhas.png pedra cinza-parda, lajes, rachaduras
+                               e cascalho
+  (o relevo das colinas e montanhas é pintado pelo shader por cima;
+  ver COLINAS E MONTANHAS)
   São desenhos provisórios, gerados por tools/art/gen_art.gd. As
   texturas são "sem emenda": o desenho continua na casa vizinha.
   O antigo assets/tiles/terra.png não é mais usado.
@@ -514,15 +526,17 @@ UNIDADES (scripts/units/)
   1 Guerreiro, 1 Arqueiro e 1 Cavaleiro, e os dois lados começam
   frente a frente no centro da ilha, a 3 casas de distância
   (J1 em x=57-58, J2 em x=61-62).
-- Uma unidade só é criada em casa de terra (qualquer terreno menos
-  Água). Se a casa for água ou estiver fora do mapa, aparece um
-  aviso no console.
+- Uma unidade só é criada em casa andável (qualquer terreno menos
+  Água e Montanhas). Se não for, ou se estiver fora do mapa,
+  aparece um aviso no console.
 
 RIOS (scripts/map/rivers.gd; desde 25/10/2026, pedido do usuário)
 - Os rios correm pelas BORDAS das casas, no limiar entre uma casa e
   outra, de um canto da grade ao próximo (cada rio é a lista dos
   cantos por onde passa; o canto (x, y) é o de cima à esquerda da
-  casa (x, y)). Só correm entre casas de terra.
+  casa (x, y)). Só correm entre casas de terra, e nunca encostados
+  numa montanha (desde 25/10/2026: a rocha cobre a borda; eles
+  nascem no pé dela).
 - BÔNUS: toda casa que encosta num trecho de rio (qualquer um dos 4
   lados) ganha +1 de alimento na produtividade base
   (Terrain.RIVER_FOOD; GameMap.has_river):
@@ -612,6 +626,48 @@ FLORESTA (scripts/map/terrain.gd)
   mesmo nos dois; antes o cerrado rendia menos).
 - Passar o mouse sobre uma floresta mostra a madeira que resta
   (ex.: "Floresta (madeira 85/100, defesa +1...)").
+
+COLINAS E MONTANHAS (scripts/map/terrain.gd; desde 25/10/2026, pedido
+do usuário)
+- No PNG do mapa: cinza-claro (195, 195, 195) = Colinas e
+  cinza-escuro (127, 127, 127) = Montanhas (Terrain.Type.HILLS e
+  MOUNTAINS).
+- MONTANHAS: intransponíveis. Nenhuma unidade entra nem atravessa
+  (Terrain.is_walkable); o caminho e a ordem "Mover" contornam, como
+  na água. Não dão alimento (o cidadão não trabalha nelas), não
+  aceitam fazenda nem madeireira e não dá para fundar cidade (o
+  Colono não chega lá). Os rios não correm encostados nelas (nascem
+  no pé da montanha).
+- COLINAS: andáveis, com a mesma penalidade da floresta: unidades
+  com mais de 1 de movimento gastam 1 a mais para ENTRAR
+  (Terrain.MOVE_PENALTY; o Cavaleiro anda 1 casa por turno nelas;
+  soma com o rio, limitado ao movimento cheio). NÃO aceitam fazenda
+  (Terrain.can_farm), mas aceitam cidade (a casa continua colina).
+  Trabalhadas sem melhoria, dão 1 de alimento, como a pradaria (+1
+  à beira do rio). Por enquanto não dão bônus de defesa.
+- Painel de informações: "Colinas (movimento -1 para quem anda mais
+  de 1, sem fazenda)" e "Montanhas (intransponível)"; o tooltip do
+  mapa da cidade também avisa.
+- A máquina dá nota 2 às colinas ao escolher o lugar das cidades
+  (como floresta e cerrado) e 0 às montanhas.
+- VISUAL (relevo visto de cima, como no Civilization do SNES, pedido
+  do usuário): o shader do terreno pinta o chão (colinas.png, capim
+  verde; montanhas.png, pedra) e, por cima, uma ALTURA calculada para
+  cada casa, iluminada de cima à esquerda (a encosta virada para a
+  luz fica clara, a outra escura; terrain.gdshader, slope_light):
+    * montanha: um pico principal e um menor, como pirâmides de
+      pedra de faces planas com as arestas e a borda recortadas, e uma
+      crista até o pico de cada montanha vizinha: juntas formam uma
+      cordilheira. O chão em volta fica um pouco sombreado e não há
+      areia entre a montanha e o mar;
+    * colina: três morros verdes arredondados, unidos sem vinco.
+  Ajustes no topo do shader: mountain_relief e hill_relief (quanto
+  a inclinação clareia/escurece) e light_dir. Vale também na janela
+  da cidade (mesmo shader). As texturas do chão são geradas por
+  "godot_console.cmd --path . --script tools/art/gen_art.gd --
+  relevo" (com janela).
+- A partida de teste: o Jogador 2 passou a começar em (66, 41) (a
+  casa antiga, (64, 41), virou montanha).
 
 OURO (TESOURO)
 - Cada jogador tem um tesouro em ouro (Player.gold). Para testes,
@@ -747,8 +803,9 @@ COLONO
 - Ataque 0, Defesa 0, Movimento 1 (data/units/colono.tres).
   Sprite: assets/sprites/units/colono.png (boneco com uma pá).
 - Todo jogador começa com um Colono
-  (J1 em (55, 41), J2 em (64, 41)) e um Trabalhador logo abaixo
-  dele (55, 42) e (64, 42).
+  (J1 em (55, 41), J2 em (66, 41), desde 25/10/2026; antes (64, 41),
+  que virou montanha) e um Trabalhador logo abaixo dele (55, 42) e
+  (66, 42).
 - Não ataca (unidades com Ataque 0 não atacam) e, com Defesa 0,
   é destruído com um único ataque.
 - Habilidade: construir uma nova cidade na casa em que está
@@ -887,7 +944,8 @@ CIDADES (scripts/cities/city.gd)
   24/10/2026):
     Construção  Custo                       Onde
     Guerreiro  10 de produção + 1 de       Quartel General
-                população + 1 Lança
+                população (sem Lança, desde
+                25/10/2026)
     Lanceiro    12 de produção + 1 de       Quartel General
                 população + 1 Lança         (exige Trabalho em
                                             Bronze)
@@ -915,8 +973,9 @@ CONSTRUÇÕES QUE GASTAM RECURSOS (campos "wood" e "weapons" em City.BUILDS)
     Quartel General  15 de madeira
     Marcenaria       10 de madeira
     Lança             2 de madeira
-- O Guerreiro NÃO gasta mais madeira: gasta 1 Lança do arsenal
-  (ver ARSENAL). Sem a Lança, a linha mostra "Faltam armas:
+- O Lanceiro gasta 1 Lança do arsenal (ver ARSENAL). O Guerreiro
+  rústico não gasta armas nem madeira (desde 25/10/2026, decisão do
+  usuário; antes levava 1 Lança). Sem a Lança, a linha mostra "Faltam armas:
   precisa de 1 Lança (arsenal: 0)." (City.weapons_error). A Lança
   segue as mesmas regras da madeira abaixo: paga ao pedir ou
   comprar, devolvida se a obra for cancelada
@@ -1019,7 +1078,8 @@ ARSENAL (scripts/players/arsenal.gd, Player.arsenal)
   cidade). Por enquanto existe só a Lança.
 - Para formar um exército: primeiro a matéria-prima (madeira),
   depois as armas (Lança, na Marcenaria) e, por fim, a tropa
-  (Guerreiro, no Quartel General, levando 1 Lança).
+  (Lanceiro, no Quartel General, levando 1 Lança). O Guerreiro
+  rústico não precisa de armas.
 - Lança: classe "Armas" da lista Construir. 5 de produção + 2 de
   madeira (ou 50 de ouro + 2 de madeira). Entra na fila da
   Marcenaria; pronta, vai direto para o arsenal (mensagem "Lança
@@ -1486,15 +1546,17 @@ IA: ECONOMIA, EXPANSÃO E DEFESA (scripts/ai/ai_economy.gd)
 - Economia, a cada turno:
   * Compra de defesa (primeiro, em todas as cidades): inimigo
     militar a até threat_radius casas e cidade sem guarnição ->
-    compra um soldado com ouro (e a Lança, se der). O soldado da
-    máquina é o Lanceiro quando ela já tem Trabalho em Bronze
-    (Defesa 2); senão, o Guerreiro (AIEconomy._soldier). Vale também
-    para a guarnição e o exército.
+    compra um soldado com ouro (e a Lança, se ele precisar e der). O
+    soldado da máquina é o Lanceiro quando ela já tem Trabalho em
+    Bronze (Defesa 2); senão, o Guerreiro (AIEconomy._soldier). Vale
+    também para a guarnição e o exército. Lanças só são pedidas e
+    compradas quando o soldado é o Lanceiro
+    (AIEconomy._soldier_needs_spear; o Guerreiro não leva).
   * Pedidos de cada cidade, um de cada tipo por vez: Trabalhador,
     se há tarefas para ele (fazendas que faltam: uma por
     habitante; uma madeireira se falta madeira; ruínas e cidades
     vazias) e Trabalhadores de menos (no máximo workers_per_city
-    por cidade + 1), Guerreiro e Lança para a guarnição, Colono (população >= settler_population, até max_cities),
+    por cidade + 1), soldado (e a Lança do Lanceiro) para a guarnição, Colono (população >= settler_population, até max_cities),
     Marcenaria e depois Quartel General (na capital e em cidades
     de 4+; a madeira fica guardada para eles), Lanças (até
     spears_per_city por cidade) e Guerreiros para o exército (até
@@ -1640,11 +1702,14 @@ MOVER PARA UM DESTINO (tecla G)
 MOVIMENTO (scripts/map/movement.gd)
 - 8 direções (diagonais incluídas), custo 1 por casa, como no
   Civilization 1. Exceções, para unidades com mais de 1 de
-  movimento: entrar na floresta custa 2 (ver FLORESTA) e atravessar
+  movimento: entrar na floresta ou nas colinas custa 2 (ver FLORESTA
+  e COLINAS E MONTANHAS) e atravessar
   um rio custa +1 (ver RIOS); somam, mas um passo nunca custa mais
   que o movimento cheio da unidade. Sem movimento suficiente, a
   unidade espera o próximo turno para entrar.
-- Unidades só andam em terra (Pradaria, Floresta, Cerrado).
+- Unidades só andam em terra (Pradaria, Floresta, Cerrado, Colinas).
+  Montanhas são intransponíveis, como a água; colinas custam como a
+  floresta (ver COLINAS E MONTANHAS).
 - Uma unidade por casa, sem empilhar, em terrenos e em cidades:
   dá para atravessar casas com unidades aliadas, mas não parar
   nelas. Uma unidade treinada numa cidade ocupada nasce numa casa
@@ -2025,7 +2090,11 @@ Screenshots também confirmaram o visual.
 [x] HUD com turno, jogador da vez e confirmação de fim de turno
 [x] Combate por desgaste de energia (corpo a corpo)
 [x] Bônus de combate por terreno: +1 de defesa na floresta
-[ ] Outros terrenos com bônus (ex.: montanha, colina)
+[x] Colinas (andáveis, movimento como a floresta, sem fazenda,
+    aceitam cidade) e Montanhas (intransponíveis), com relevo visto
+    de cima no estilo do Civilization do SNES (25/10/2026)
+[ ] Colinas: bônus de defesa (como a floresta)? Hoje não têm
+[ ] Outros terrenos (ex.: deserto, pântano, tundra)
 [x] Rios pelas bordas das casas, sinuosos, com +1 de alimento nas
     casas vizinhas (25/10/2026)
 [x] Rios: +1 de movimento ao atravessar (movimento > 1) e +1 de
@@ -2137,13 +2206,14 @@ Screenshots também confirmaram o visual.
 [x] Ouro: tesouro do jogador (200 para testes), no HUD, e compra
     na hora de unidades (50 de ouro)
 [x] Roda do mouse não dá zoom no mapa com a janela da cidade aberta
-[x] Arsenal (Lança) e Marcenaria; Guerreiro leva 1 Lança
+[x] Arsenal (Lança) e Marcenaria; Guerreiro leva 1 Lança (até
+    25/10/2026; hoje só o Lanceiro leva)
 [x] Primeira fonte de ouro: impostos da Marcenaria parada
 [x] Lanceiro (1/2/1, +1 de ataque e defesa contra cavalaria) com a
     tecnologia Trabalho em Bronze; o Guerreiro ganhou um desenho
     rústico e o hoplita virou o Lanceiro (25/10/2026)
-[ ] Guerreiro rústico: hoje ele leva 1 Lança do arsenal, como o
-    Lanceiro; decidir se continua (ou outra arma, ex.: machado)
+[x] Guerreiro rústico não leva Lança do arsenal (decisão do
+    usuário, 25/10/2026); a máquina só faz Lanças para o Lanceiro
 [ ] Desenho original do Guerreiro rústico pelo ChatGPT (prompt 14)
 [ ] Mais armas (ex.: arco, espada) e tropas que usem cada uma
 [ ] Economia: outras formas de ganhar ouro (comércio...)
@@ -3055,6 +3125,39 @@ Screenshots também confirmaram o visual.
   rios, das melhorias, do ataque, da lista e da conquista passaram, e
   a partida de 100 rodadas máquina x máquina rodou sem erros (as duas
   pesquisaram Trabalho em Bronze).
+- GUERREIRO SEM LANÇA (decisão do usuário): o Guerreiro rústico não
+  gasta mais Lança do arsenal; só o Lanceiro leva. A máquina só pede
+  e compra Lanças quando o soldado dela é o Lanceiro.
+- COLINAS E MONTANHAS (pedido do usuário, que repintou o mapa de
+  teste: cinza-escuro = montanhas, cinza-claro = colinas). Montanhas
+  são intransponíveis; colinas são andáveis, com a penalidade de
+  movimento da floresta, sem fazenda e com cidade. Visual: o usuário
+  pediu o relevo visto de cima, como no Civilization do SNES (a
+  primeira versão, com picos desenhados de lado, foi descartada). O
+  shader do terreno calcula uma altura para cada casa (pirâmides de
+  pedra com cristas ligando as montanhas vizinhas; três morros
+  verdes nas colinas) e ilumina as encostas de cima à esquerda.
+  Texturas novas: assets/tiles/colinas.png e montanhas.png
+  (gen_art.gd -- relevo). Os rios não correm mais encostados nas
+  montanhas (nascem no pé delas). O Jogador 2 começa em (66, 41),
+  porque (64, 41) virou montanha.
+- Validação: teste com 32 verificações (cores do mapa e contagem
+  23/36; texturas; posição do J2; montanha fora do alcance do
+  Guerreiro e do Cavaleiro e clique nela não move; custo 2 do
+  Cavaleiro e 1 do Guerreiro na colina; painéis; cidade fundada na
+  colina; fazenda recusada; cidadão trabalha a colina; Guerreiro
+  comprado com o arsenal vazio; Lanceiro ainda leva a Lança; máquina
+  só quer Lança com Bronze), mais screenshots (cordilheiras em zoom
+  0,75 e 1,4, colinas, ilha inteira em 0,3 e janela da cidade),
+  revisados e ajustados (cristas entre montanhas, sombra mais clara,
+  morros sem vinco, rios fora das montanhas). Testes do Bronze, da
+  Muralha, dos rios, das regras dos rios, das obras do Trabalhador,
+  do ataque pelo modo Mover e da lista passaram. O teste antigo de
+  diagnóstico do ataque na diagonal precisou de casas novas (as
+  antigas viraram montanha); o caso que sobra falha porque o
+  Trabalhador está numa floresta (+1 de defesa), não por causa
+  desta mudança. Partida de 100 rodadas máquina x máquina sem erros
+  (Econômica 7 de 9 marcos, Equilibrada 8 de 9, como antes).
 
 --------------------------------------------------------------
 7. BACKLOG (ideias para depois)

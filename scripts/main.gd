@@ -1774,9 +1774,9 @@ func _spawn_example_units() -> void:
 	# Todo jogador começa com um Colono e um Trabalhador (só o Trabalhador faz
 	# fazendas, e a cidade de 1 habitante sem fazenda não cresce)
 	_spawn_unit(SETTLER, players[0], Vector2i(55, 41))
-	_spawn_unit(SETTLER, players[1], Vector2i(64, 41))
+	_spawn_unit(SETTLER, players[1], Vector2i(66, 41))
 	_spawn_unit(WORKER, players[0], Vector2i(55, 42))
-	_spawn_unit(WORKER, players[1], Vector2i(64, 42))
+	_spawn_unit(WORKER, players[1], Vector2i(66, 42))
 
 
 func _next_city_name() -> String:
@@ -1966,6 +1966,10 @@ func _terrain_text(cell: Vector2i) -> String:
 	if type == Terrain.Type.FOREST:
 		text += " (madeira %d/%d, defesa +%d, movimento -%d para quem anda mais de 1)" % [
 			game_map.wood_left(cell), Terrain.WOOD_PER_FOREST, Terrain.DEFENSE_BONUS[type], Terrain.MOVE_PENALTY[type]]
+	elif type == Terrain.Type.HILLS:
+		text += " (movimento -%d para quem anda mais de 1, sem fazenda)" % Terrain.MOVE_PENALTY[type]
+	elif type == Terrain.Type.MOUNTAINS:
+		text += " (intransponível)"
 	if game_map.has_river(cell):
 		text += " à beira do rio (+%d de alimento)" % Terrain.RIVER_FOOD
 	return text
