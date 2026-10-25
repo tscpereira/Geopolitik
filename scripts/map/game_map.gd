@@ -31,6 +31,13 @@ const ROAD_IN_PROGRESS_ALPHA := 0.4
 const ROAD_JITTER := 0.14
 ## Segmentos de cada curva da estrada.
 const ROAD_CURVE_STEPS := 12
+## Sulcos das rodas: duas trilhas finas e escuras, a ROAD_RUT_OFFSET do meio
+## da estrada (em casas).
+const ROAD_RUT_COLOR := Color(0.3, 0.22, 0.14, 0.26)
+const ROAD_RUT_OFFSET := 0.028
+const ROAD_RUT_WIDTH := 0.02
+## Textura das estradas e dos rios (granulado, pedrinhas, reflexos na água).
+const PATH_TEXTURE_SHADER: Shader = preload("res://scripts/map/path_texture.gdshader")
 
 ## Melhoria desenhada pelo shader numa casa (ver set_improvement).
 enum Improvement { NONE, FARM, FARM_IN_PROGRESS }
@@ -126,12 +133,14 @@ func _ready() -> void:
 	_river_layer = Node2D.new()
 	_river_layer.name = "RiverLayer"
 	_river_layer.draw.connect(func() -> void: Rivers.draw(_river_layer, self, rivers, TILE_SIZE))
+	_river_layer.material = _path_texture_material()
 	add_child(_river_layer)
 	move_child(_river_layer, 1)
 	# Estradas por cima do terreno e por baixo dos rios
 	_road_layer = Node2D.new()
 	_road_layer.name = "RoadLayer"
 	_road_layer.draw.connect(_draw_roads)
+	_road_layer.material = _path_texture_material()
 	add_child(_road_layer)
 	move_child(_road_layer, 1)
 	# Bigornas das casas com ferro, por cima dos rios
@@ -235,8 +244,9 @@ func redraw_roads() -> void:
 ## o trecho vai reto até o centro (fica por baixo do desenho dela). Primeiro as
 ## bordas escuras, depois o miolo; em obra, mais transparente.
 func _draw_roads() -> void:
-	for layer in 2:
-		var color := ROAD_EDGE_COLOR if layer == 0 else ROAD_COLOR
+	for layer in 3: # bordas escuras, miolo de terra e, por cima, os sulcos das rodas
+		var ruts := layer == 2
+		var color: Color = [ROAD_EDGE_COLOR, ROAD_COLOR, ROAD_RUT_COLOR][layer]
 		var width := (ROAD_EDGE_WIDTH if layer == 0 else ROAD_WIDTH) * TILE_SIZE
 		for cell: Vector2i in roads.keys() + road_progress.keys():
 			var alpha := 1.0 if roads.has(cell) else ROAD_IN_PROGRESS_ALPHA
@@ -246,34 +256,57 @@ func _draw_roads() -> void:
 			var tints: Array[Color] = []
 			for other in links:
 				var mid := (point + _road_point(other)) * 0.5
-				var tint := Color(color, alpha if roads.has(other) or cities.has(other) else ROAD_IN_PROGRESS_ALPHA)
+				var tint := Color(color, color.a * (alpha if roads.has(other) or cities.has(other) else ROAD_IN_PROGRESS_ALPHA))
 				mids.append(mid)
 				tints.append(tint)
-				if tint.a >= 1.0: # em obra (transparente), o círculo sobreposto viraria uma mancha
+				if tint.a >= 1.0 and not ruts: # em obra (transparente), o círculo sobreposto viraria uma mancha
 					_road_layer.draw_circle(mid, width * 0.5, tint)
 				if cities.has(other):
-					_road_layer.draw_line(mid, _road_point(other), tint, width, true)
+					_draw_road_path(PackedVector2Array([mid, _road_point(other)]), tint, width, ruts)
 			if links.is_empty():
 				# Estrada solta: um trecho curto, levemente curvo
 				var side := Vector2(TILE_SIZE * 0.3, 0)
-				_draw_road_curve(point - side, point + Vector2(0, TILE_SIZE * 0.06), point + side, Color(color, alpha), width)
+				_draw_road_curve(point - side, point + Vector2(0, TILE_SIZE * 0.06), point + side, Color(color, color.a * alpha), width, ruts)
 			elif links.size() == 1:
-				_road_layer.draw_line(point, mids[0], tints[0], width, true)
-				_road_layer.draw_circle(point, width * 0.5, tints[0])
+				_draw_road_path(PackedVector2Array([point, mids[0]]), tints[0], width, ruts)
+				if not ruts:
+					_road_layer.draw_circle(point, width * 0.5, tints[0])
 			else:
 				for i in links.size():
 					for j in range(i + 1, links.size()):
 						var tint: Color = tints[i] if tints[i].a <= tints[j].a else tints[j]
-						_draw_road_curve(mids[i], point, mids[j], tint, width)
+						_draw_road_curve(mids[i], point, mids[j], tint, width, ruts)
 
 
 ## Curva da estrada de [param from] a [param to], puxada por [param control].
-func _draw_road_curve(from: Vector2, control: Vector2, to: Vector2, color: Color, width: float) -> void:
+func _draw_road_curve(from: Vector2, control: Vector2, to: Vector2, color: Color, width: float, ruts := false) -> void:
 	var points := PackedVector2Array()
 	for k in ROAD_CURVE_STEPS + 1:
 		var t := float(k) / ROAD_CURVE_STEPS
 		points.append(from.lerp(control, t).lerp(control.lerp(to, t), t))
-	_road_layer.draw_polyline(points, color, width, true)
+	_draw_road_path(points, color, width, ruts)
+
+
+## Um trecho da estrada pelos [param points]: a faixa ou ([param ruts]) os
+## dois sulcos das rodas, deslocados para os lados ao longo da curva.
+func _draw_road_path(points: PackedVector2Array, color: Color, width: float, ruts: bool) -> void:
+	if not ruts:
+		_road_layer.draw_polyline(points, color, width, true)
+		return
+	for side in [-1.0, 1.0]:
+		var rut := PackedVector2Array()
+		for i in points.size():
+			var tangent := points[mini(i + 1, points.size() - 1)] - points[maxi(i - 1, 0)]
+			rut.append(points[i] + tangent.normalized().orthogonal() * side * ROAD_RUT_OFFSET * TILE_SIZE)
+		_road_layer.draw_polyline(rut, color, ROAD_RUT_WIDTH * TILE_SIZE, true)
+
+
+## Material com a textura das estradas e dos rios (path_texture.gdshader).
+func _path_texture_material() -> ShaderMaterial:
+	var material := ShaderMaterial.new()
+	material.shader = PATH_TEXTURE_SHADER
+	material.set_shader_parameter("tile_size", float(TILE_SIZE))
+	return material
 
 
 ## Casas vizinhas ligadas por estrada (com estrada, em obra ou cidade). Na

@@ -1834,7 +1834,15 @@ MOVIMENTO (scripts/map/movement.gd)
   há caminho pelas casas do lado (um L vira uma curva, não um
   triângulo); encruzilhada com uma curva para cada par; até a
   cidade, reta para o centro. Em obra, transparente (camada
-  RoadLayer, por baixo dos rios; GameMap.ROAD_JITTER). O painel mostra "com estrada" ou "estrada em
+  RoadLayer, por baixo dos rios; GameMap.ROAD_JITTER).
+  TEXTURA (desde 25/10/2026, pedido do usuário): sulcos discretos das
+  rodas (duas trilhas finas que acompanham as curvas; ROAD_RUT_*) e o
+  shader scripts/map/path_texture.gdshader nas camadas da estrada e
+  do rio: na terra (estrada e areia das margens), manchas, granulado
+  e pedrinhas claras e escuras; na água, variação de profundidade e
+  reflexos e ondinhas sem direção. Os detalhes finos somem com o zoom
+  afastado. Ajustes nos uniforms do topo do shader. (O mapa da janela
+  da cidade continua com o rio liso.) O painel mostra "com estrada" ou "estrada em
   obra N/2". A máquina ainda não faz estradas.
 - 8 direções (diagonais incluídas), custo 1 por casa, como no
   Civilization 1. Exceções, para unidades com mais de 1 de
@@ -3416,6 +3424,14 @@ Screenshots também confirmaram o visual.
   encruzilhada, a chegada à cidade e um trecho em obra (zoom 1,1 e
   0,6), revisados e ajustados (sem manchas nas emendas da estrada
   em obra); teste da era antiga passou.
+- Textura nas estradas e nos rios (pedido do usuário: estavam lisos).
+  Novo shader path_texture.gdshader (terra: manchas, granulado,
+  pedrinhas; água: profundidade, reflexos e ondinhas) e sulcos de
+  roda nas estradas. Validação: screenshots em zoom 1,5, 1,1 e 0,6,
+  revisados e ajustados (sulcos mais suaves, que pareciam trilho de
+  tábuas; reflexos sem direção, que na primeira versão viravam
+  degraus nos trechos verticais do rio); testes da era antiga e dos
+  rios passaram.
 
 --------------------------------------------------------------
 7. BACKLOG (ideias para depois)
