@@ -16,7 +16,7 @@ extends Node2D
 ##   3. alimento = CENTER_FOOD + 1 por casa trabalhada sem melhoria
 ##                 (Terrain.TILE_FOOD) + 2 por fazenda trabalhada (a casa + o
 ##                 FARM_BONUS da fazenda: farm_food)
-##                 − FOOD_PER_CITIZEN (2) por habitante;
+##                 − FOOD_PER_CITIZEN (1) por habitante;
 ##   4. a sobra vai para o estoque (como no Civilization II). Quando o
 ##      estoque enche, a cidade ganha 1 de população e o estoque esvazia.
 ##      Tamanho do estoque = (população atual + 1) × FOOD_BOX_PER_SIZE (10).
@@ -203,8 +203,9 @@ const FARM_BONUS := 1
 ## Alimento que a casa da cidade produz sozinha (sem isso, uma cidade nova
 ## passaria fome antes de terminar a primeira fazenda).
 const CENTER_FOOD := 2
-## Alimento que cada habitante come por turno (Civilization II).
-const FOOD_PER_CITIZEN := 2
+## Alimento que cada habitante come por turno (era 2 até 24/10/2026, como no
+## Civilization II).
+const FOOD_PER_CITIZEN := 1
 ## Tamanho do estoque = (população + 1) × FOOD_BOX_PER_SIZE (ver food_capacity).
 const FOOD_BOX_PER_SIZE := 10
 ## Distância mínima (em casas, contando diagonais) entre duas cidades.

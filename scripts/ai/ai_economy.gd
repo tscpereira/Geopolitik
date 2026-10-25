@@ -345,8 +345,8 @@ func _nearest(from: Vector2i, cells: Array) -> Vector2i:
 
 
 ## Se a cidade precisa de mais uma fazenda: uma por habitante (o cidadão na
-## fazenda come o que planta; numa casa sem melhoria, falta 1), sem outra
-## fazenda já em obra nela.
+## fazenda sobra 1; numa casa sem melhoria, só se paga), sem outra fazenda já
+## em obra nela.
 func _needs_farm(city: City) -> bool:
 	if city.population <= 0 or city.sites.values().any(func(site: Dictionary) -> bool: return site["build"] == City.Build.FARM):
 		return false

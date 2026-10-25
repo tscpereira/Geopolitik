@@ -942,7 +942,7 @@ MARCENARIA E IMPOSTOS (campo "idle_gold" em City.BUILDS)
     + 2 por fazenda com trabalhador (1 da casa + 1 da fazenda,
       City.FARM_BONUS; City.farm_food) - desde 24/10/2026; antes
       a fazenda dava 3 na pradaria e 2 no cerrado
-    - 2 por habitante (FOOD_PER_CITIZEN)
+    - 1 por habitante (FOOD_PER_CITIZEN; era 2 até 24/10/2026)
   A casa da cidade produz alimento sozinha. Sem isso, uma cidade
   nova passaria fome antes de terminar a primeira fazenda. Essa
   regra é uma suposição nossa e pode ser ajustada.
@@ -957,16 +957,13 @@ MARCENARIA E IMPOSTOS (campo "idle_gold" em City.BUILDS)
   mapa, uma barrinha logo acima da cidade. A barrinha do mapa fica
   verde normalmente e vermelha quando a cidade está passando
   fome.
-- Equilíbrio (regra de 24/10/2026): o cidadão numa fazenda produz
-  2 e come 2 (não sobra nada); numa casa sem melhoria produz 1
-  (falta 1); numa obra, prédio ou madeireira não produz alimento
-  (faltam 2). A única sobra é o +2 da casa da cidade. Uma cidade
-  com todos nas fazendas cresce +2 por turno; cada cidadão na
-  produção tira 2 disso. Na partida de teste máquina x máquina de
-  100 rodadas, as cidades pararam em 3-4 de população (ver
-  HISTÓRICO). (Com a regra antiga, a fazenda dava 3: +1 de sobra
-  por fazenda.) Próximo passo: decidir o equilíbrio (ver PRÓXIMOS
-  PASSOS).
+- Equilíbrio (regra de 24/10/2026, cada cidadão come 1): o
+  cidadão numa fazenda produz 2 e come 1 (sobra 1); numa casa sem
+  melhoria produz 1 (empata); numa obra, prédio ou madeireira não
+  produz alimento (falta 1). Mais o +2 da casa da cidade. Uma
+  cidade de 1 habitante numa casa sem melhoria cresce +2 por turno;
+  com a fazenda, +3. (Com o consumo de 2, a fazenda só pagava o
+  cidadão dela e as cidades paravam em 4-5 de população.)
 - Fome: se o estoque ficaria negativo, ele volta a 0 e a cidade
   perde 1 de população (nunca fica abaixo de 1). Quem perde o
   trabalho primeiro são os cidadãos das obras, depois os das
@@ -2051,13 +2048,14 @@ Screenshots também confirmaram o visual.
     com setas na madeireira (24/10/2026)
 [x] Casas sem melhoria podem ser trabalhadas (+1 de alimento); a
     fazenda soma +1 (24/10/2026)
-[ ] EQUILÍBRIO DO ALIMENTO com a regra nova: a fazenda só paga o
-    cidadão que trabalha nela (2 = 2), então a única sobra é o +2
-    da casa da cidade, e na partida máquina x máquina as cidades
-    pararam em 4-5 de população, sem Marcenaria nem segunda cidade
-    em 100 rodadas. Opções: a fazenda somar +2, o cidadão comer
-    menos, a casa da cidade dar mais, ou melhorias (irrigação,
-    celeiro). A decidir com o usuário
+[x] Equilíbrio do alimento: cada cidadão passou a comer 1 (antes
+    2), decisão do usuário em 24/10/2026
+[ ] Rever o tamanho do estoque ((população + 1) x 10) com o
+    consumo menor, se as cidades crescerem rápido demais
+[ ] IA: equilibrar crescimento e produção com as regras novas
+    (hoje a cidade inteira vai para fazendas, festividades e
+    madeireira e as obras ficam paradas; madeira só depois de
+    todas as fazendas)
 [ ] Começo da partida: hoje cada jogador ganha um Trabalhador com o
     Colono (sem ele, a primeira fazenda demoraria muito); confirmar
 [ ] Fazenda com mais de 1 cidadão? (hoje no máximo 1)
@@ -2742,6 +2740,19 @@ Screenshots também confirmaram o visual.
   apertado; ver PRÓXIMOS PASSOS). Os testes antigos que pedem
   fazendas e madeireiras pela cidade (order_build com casa)
   deixaram de valer por mudança de regra.
+- CONSUMO DE ALIMENTO (decisão do usuário): cada cidadão come 1
+  (antes 2). A fazenda passa a sobrar 1 por cidadão, a casa sem
+  melhoria empata e a produção custa 1. Teste das melhorias
+  ajustado (cidade nova +2, com fazenda +3) e passou. Partida de
+  100 rodadas máquina x máquina sem erros: as cidades crescem
+  bem mais (Equilibrada: 4 cidades, 20 de população e 18
+  fazendas; Econômica: 1 cidade de 7 com 7 fazendas e
+  madeireira), mas nenhuma fez Marcenaria: a máquina põe a
+  cidade inteira em fazendas (meta de sobra de comida),
+  festividades e madeireira, e não sobra ninguém para as obras;
+  a Equilibrada também não fez madeireira (as fazendas vêm
+  sempre antes da madeira). Ajustar as prioridades da máquina
+  (ver PRÓXIMOS PASSOS).
 
 --------------------------------------------------------------
 7. BACKLOG (ideias para depois)
