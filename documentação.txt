@@ -1456,15 +1456,22 @@ IA: ECONOMIA, EXPANSÃO E DEFESA (scripts/ai/ai_economy.gd)
     spears_per_city por cidade) e Guerreiros para o exército (até
     army_to_attack fora das cidades).
   * Templo (com Misticismo) a partir de 4 de população.
-  * Cidadãos redistribuídos do zero (City.clear_workers): fazendas
-    e depois casas sem melhoria até o alimento bastar (no máximo
-    2/3 da cidade no campo), festividades até sair da desordem civil, impostos
-    reservados (tax_workers), 1 em cada madeireira
-    se falta madeira, obras por prioridade (comida > defesa >
-    madeira > prédios > expansão > armas > exército; todos na mais
-    importante, para ela terminar logo), madeireiras cheias, a
-    Marcenaria parada (impostos) e o resto nas fazendas e casas sem
-    melhoria.
+  * Cidadãos redistribuídos do zero (City.clear_workers), nesta
+    ordem (desde 25/10/2026): fazendas e casas sem melhoria até a
+    cidade não passar fome; festividades até sair da desordem civil;
+    1 em cada madeireira se falta madeira; RESERVA DAS OBRAS (1/4 da
+    cidade, pelo menos 1, quando há obra na fila); mais comida até a
+    meta (food_surplus, no máximo 2/3 da cidade no campo); impostos
+    reservados (tax_workers); o resto das obras por prioridade
+    (comida > defesa > madeira > prédios > expansão > armas >
+    exército; todos na mais importante, para ela terminar logo);
+    madeireiras cheias, a Marcenaria parada (impostos) e o resto nas
+    fazendas e casas sem melhoria. (Antes a reserva não existia: a
+    cidade inteira ia para a comida e as obras ficavam paradas.)
+  * Falta de madeira (AIEconomy._wood_short): entra menos que a
+    meta por turno E o estoque está abaixo de 40 (WOOD_RESERVE).
+    Com madeira guardada, a máquina não faz Trabalhadores só para
+    mais madeireiras (cada um custa 1 de população).
 - Colonos: procuram, a até settler_search_radius casas e fora de
   qualquer território, o melhor lugar para uma cidade (o
   território que ela teria: pradaria 3, cerrado e floresta 2,
@@ -1473,9 +1480,11 @@ IA: ECONOMIA, EXPANSÃO E DEFESA (scripts/ai/ai_economy.gd)
   pode andar 1-2 casas para achar um lugar melhor.
 - Trabalhadores, nesta ordem: reconstroem a ruína em que estão,
   migram para a cidade vazia ao lado, vão até uma cidade vazia
-  ou uma ruína sua; senão vão até a casa mais perto onde falta
-  uma fazenda (cidades com menos fazendas que habitantes, ou obra
-  de fazenda parada) e a constroem (C); se falta madeira, fazem
+  ou uma ruína sua; se falta madeira e o jogador tem menos
+  madeireiras que cidades, a madeireira vem primeiro; senão vão até
+  a casa mais perto onde falta uma fazenda (até 2/3 da população
+  + 1 fazendas por cidade, ou obra de fazenda parada; à beira do
+  rio primeiro) e a constroem (C); se ainda falta madeira, fazem
   uma madeireira numa floresta do território (da cidade) ou, sem
   floresta, andam até a floresta livre mais próxima e trabalham
   numa madeireira remota (AIEconomy._worker_job). Dois
@@ -2146,10 +2155,13 @@ Screenshots também confirmaram o visual.
     2), decisão do usuário em 24/10/2026
 [ ] Rever o tamanho do estoque ((população + 1) x 10) com o
     consumo menor, se as cidades crescerem rápido demais
-[ ] IA: equilibrar crescimento e produção com as regras novas
-    (hoje a cidade inteira vai para fazendas, festividades e
-    madeireira e as obras ficam paradas; madeira só depois de
-    todas as fazendas)
+[x] IA: equilibrar crescimento e produção (reserva das obras,
+    madeira antes das fazendas quando falta, estoque de madeira
+    conta) e correção do Trabalhador que ia e voltava sem construir
+    a madeireira (25/10/2026)
+[ ] IA: crescer mais (as cidades da máquina ficam em 4 de população
+    em 100 rodadas: o crescimento é lento e Trabalhadores, Colonos e
+    Guerreiros custam população; ligado ao tamanho do estoque)
 [ ] Começo da partida: hoje cada jogador ganha um Trabalhador com o
     Colono (sem ele, a primeira fazenda demoraria muito); confirmar
 [ ] Fazenda com mais de 1 cidadão? (hoje no máximo 1)
@@ -2921,6 +2933,28 @@ Screenshots também confirmaram o visual.
   dano esperado 21 x 30 e 42 x 30, prévia "+1 atrás do rio", ataque
   de verdade pelo clique), mais os testes dos rios, das melhorias,
   do ataque pelo modo Mover e da conquista.
+- IA (pendência antiga): a máquina não fazia prédios. Mudanças:
+    * reserva das obras: depois de não passar fome, sair da desordem
+      e pôr gente na madeira, 1/4 da cidade (pelo menos 1) vai para
+      as obras antes de buscar mais comida;
+    * se falta madeira e há menos madeireiras que cidades, os
+      Trabalhadores fazem a madeireira antes das fazendas; a meta de
+      fazendas caiu para 2/3 da população + 1;
+    * "falta madeira" passou a olhar também o estoque (abaixo de 40):
+      com 200 de madeira guardada ela continuava fazendo
+      Trabalhadores, e cada um custa 1 de população;
+    * correção (achada com um diagnóstico das tarefas): o Trabalhador
+      que ia para uma madeireira remota contava a própria casa como
+      ocupada, ia para a floresta vizinha e voltava, sem nunca
+      construir (a Equilibrada ficou 100 rodadas sem fazenda nem
+      madeireira).
+- Validação: partidas de 100 rodadas máquina x máquina, sem erros.
+  Antes: 2 de 9 marcos cada (só fazendas e madeireira, ou fazendas
+  e cidades). Depois: Econômica 7 de 9 (fazendas, madeireira,
+  Marcenaria, Lanças, Quartel General, Guerreiro, guarnição) e
+  Equilibrada 8 de 9 (o mesmo e uma segunda cidade). As cidades
+  ficaram pequenas (máximo de 4 de população): o crescimento é lento
+  e as unidades custam população (ver PRÓXIMOS PASSOS).
 
 --------------------------------------------------------------
 7. BACKLOG (ideias para depois)
