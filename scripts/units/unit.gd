@@ -75,10 +75,12 @@ var rebuilding := false:
 var attack: int:
 	get:
 		return type.attack
-## Defesa base + fortificação + terreno (ex.: +1 na floresta).
+## Defesa base + fortificação + terreno (ex.: +1 na floresta) + Muralha (+2
+## dentro da própria cidade murada).
 var defense: int:
 	get:
-		return type.defense + (FORTIFY_DEFENSE_BONUS if fortified else 0) + terrain_defense_bonus()
+		return type.defense + (FORTIFY_DEFENSE_BONUS if fortified else 0) + terrain_defense_bonus() \
+				+ walls_defense_bonus()
 var movement: int:
 	get:
 		return type.movement
@@ -123,6 +125,17 @@ func apply_dict(data: Dictionary) -> void:
 ## Defesa extra do terreno em que a unidade está (Terrain.DEFENSE_BONUS).
 func terrain_defense_bonus() -> int:
 	return Terrain.DEFENSE_BONUS.get(_map.get_terrain(cell), 0) if _map else 0
+
+
+## Defesa extra da Muralha: a unidade está dentro de uma cidade do seu dono
+## que tem a Muralha (City.garrison_defense; fortificada ou não).
+func walls_defense_bonus() -> int:
+	if _map == null:
+		return 0
+	var city = _map.cities.get(cell) # sem tipo: a cidade pode ter acabado de ser destruída
+	if not is_instance_valid(city) or city.owner_player != owner_player:
+		return 0
+	return city.garrison_defense()
 
 
 ## Defesa extra contra um ataque vindo da casa [param attacker_cell]: o rio

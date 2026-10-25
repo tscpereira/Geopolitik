@@ -73,7 +73,8 @@ extends Node2D
 
 signal changed
 
-enum Build { FARM, LUMBER_MILL, WARRIOR, WORKER, SETTLER, CITY_HALL, HEADQUARTERS, CARPENTRY, SPEAR, TEMPLE }
+## Novos itens entram no fim: o save guarda o número de cada um.
+enum Build { FARM, LUMBER_MILL, WARRIOR, WORKER, SETTLER, CITY_HALL, HEADQUARTERS, CARPENTRY, SPEAR, TEMPLE, WALLS }
 
 ## Humor de um cidadão (bem-estar social).
 enum Mood { UNHAPPY, CONTENT, HAPPY }
@@ -130,6 +131,8 @@ const CATEGORY_NAMES := {
 ##   idle_goods  bens duráveis do prédio parado: +1 ponto de alegria a cada
 ##               "idle_goods" trabalhadores (ver joy_points)
 ##   calms       infelizes que o prédio torna contentes (Templo; ver mood)
+##   garrison_defense  defesa a mais das unidades do dono dentro da cidade
+##               (Muralha; ver Unit.walls_defense_bonus)
 ##   tech        tecnologia (Technology.Tech) que o jogador precisa ter pesquisado
 ##   requires    prédio que produz a unidade ou a arma (a cidade precisa tê-lo)
 ##   native      prédio que toda cidade já tem ao nascer (não aparece na lista)
@@ -189,6 +192,12 @@ const BUILDS := {
 		"cost": 20, "gold": 50, "wood": 30, "on_tile": false, "calms": 2,
 		"tech": Technology.Tech.MYSTICISM,
 		"description": "Torna 2 cidadãos infelizes em contentes. Exige Misticismo; gasta 30 de madeira.",
+	},
+	Build.WALLS: {
+		"name": "Muralha", "article": "a", "category": Category.BUILDING,
+		"cost": 20, "gold": 50, "wood": 20, "on_tile": false, "garrison_defense": 2,
+		"tech": Technology.Tech.CONSTRUCTION,
+		"description": "Muros de pedra: +2 de defesa para as unidades dentro da cidade. Exige Construção; gasta 20 de madeira.",
 	},
 	Build.SPEAR: {
 		"name": "Lança", "article": "a", "category": Category.WEAPON,
@@ -596,10 +605,18 @@ func rank() -> Rank:
 	return result
 
 
-## Tem muralha? Escolhe o desenho com muralha (CITY_SPRITES) e o das ruínas
-## (RuinsLayer). Por enquanto sempre não: a construção Muralha ainda não existe.
+## Tem a Muralha (prédio)? Escolhe o desenho com muralha (CITY_SPRITES) e o
+## das ruínas (RuinsLayer), e dá defesa à guarnição (Unit.walls_defense_bonus).
 func has_walls() -> bool:
-	return false
+	return has_building(Build.WALLS)
+
+
+## Defesa a mais das unidades do dono dentro da cidade (Muralha: 2).
+func garrison_defense() -> int:
+	var total := 0
+	for building in buildings:
+		total += BUILDS[building].get("garrison_defense", 0)
+	return total
 
 
 ## "Povoado", "Vila (capital)"...

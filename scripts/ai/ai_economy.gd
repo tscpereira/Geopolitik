@@ -20,6 +20,8 @@ extends RefCounted
 ##                 contentes de base (City.base_content);
 ##        prédios  Marcenaria e depois Quartel General (na capital e em
 ##                 cidades grandes), guardando a madeira para eles;
+##        muralha  Muralha (com Construção e o Quartel) na capital e nas
+##                 cidades com inimigo por perto;
 ##        armas    Lanças até spears_per_city por cidade;
 ##        exército Guerreiros até army_to_attack fora das cidades;
 ##   3. cidadãos, do zero (_distribute_workers): fazendas e casas sem
@@ -102,6 +104,12 @@ func _plan(city: City) -> void:
 			else:
 				reserve = City.BUILDS[building].get("wood", 0)
 			break
+
+	# Muralha (exige Construção): na capital e nas cidades com inimigo por perto,
+	# depois do Quartel General (a madeira dos prédios vem antes)
+	if city.has_building(City.Build.HEADQUARTERS) \
+			and (city == _player.cities[0] or _enemy_near(city.cell, _p.threat_radius)):
+		_try_order(city, City.Build.WALLS)
 
 	# Armas
 	var spears: int = _player.arsenal[Arsenal.Weapon.SPEAR] + _player.weapons_in_production(Arsenal.Weapon.SPEAR)
@@ -242,6 +250,8 @@ func _job_priority(city: City, job: City.Construction) -> int:
 			return 4
 		City.Build.TEMPLE:
 			return 1 if city.mood()["unhappy"] > 0 else 4
+		City.Build.WALLS:
+			return 1 if _enemy_near(city.cell, _p.threat_radius) else 4
 		City.Build.SETTLER:
 			return 3
 	return 8

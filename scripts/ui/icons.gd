@@ -44,6 +44,7 @@ static func build_icon(build: int, player_color: Color, size := ICON_SIZE) -> Co
 ##   Quartel General espada;
 ##   Marcenaria      serrote;
 ##   Templo          zigurate com chama;
+##   Muralha         trecho de muralha com ameias e portão;
 ##   armas           o desenho da arma (Lança: lança).
 static func draw_build(canvas: CanvasItem, build: int, rect: Rect2, player_color: Color) -> void:
 	var info: Dictionary = City.BUILDS[build]
@@ -67,6 +68,8 @@ static func draw_build(canvas: CanvasItem, build: int, rect: Rect2, player_color
 			draw_saw(canvas, rect)
 		City.Build.TEMPLE:
 			draw_temple(canvas, rect)
+		City.Build.WALLS:
+			draw_walls(canvas, rect)
 	if info.has("weapon"):
 		draw_weapon(canvas, info["weapon"], rect)
 
@@ -165,6 +168,29 @@ static func draw_temple(canvas: CanvasItem, rect: Rect2) -> void:
 	canvas.draw_colored_polygon(flame, Color8(255, 150, 30))
 	canvas.draw_circle(o + Vector2(w * 0.5, h * 0.22), w * 0.04, Color8(255, 230, 120))
 	canvas.draw_polyline(flame, Color.BLACK, line)
+
+
+## Muralha: trecho de muro de pedra com ameias, duas torres e um portão.
+static func draw_walls(canvas: CanvasItem, rect: Rect2) -> void:
+	var o := rect.position
+	var w := rect.size.x
+	var h := rect.size.y
+	var line := maxf(1.0, w / 24.0)
+	# Muro do meio, com ameias
+	_draw_block(canvas, Rect2(o + Vector2(w * 0.2, h * 0.42), Vector2(w * 0.6, h * 0.5)), STONE_SHADE, line)
+	for i in 3:
+		_draw_block(canvas, Rect2(o + Vector2(w * (0.26 + i * 0.18), h * 0.32), Vector2(w * 0.1, h * 0.1)), STONE_SHADE, line)
+	# Torres dos lados, mais altas, com ameias
+	for x in [0.04, 0.74]:
+		_draw_block(canvas, Rect2(o + Vector2(w * x, h * 0.22), Vector2(w * 0.22, h * 0.7)), STONE_COLOR, line)
+		_draw_block(canvas, Rect2(o + Vector2(w * x, h * 0.1), Vector2(w * 0.07, h * 0.12)), STONE_COLOR, line)
+		_draw_block(canvas, Rect2(o + Vector2(w * (x + 0.15), h * 0.1), Vector2(w * 0.07, h * 0.12)), STONE_COLOR, line)
+	# Portão em arco
+	var gate := PackedVector2Array([o + Vector2(w * 0.4, h * 0.92), o + Vector2(w * 0.4, h * 0.66),
+			o + Vector2(w * 0.5, h * 0.56), o + Vector2(w * 0.6, h * 0.66), o + Vector2(w * 0.6, h * 0.92)])
+	canvas.draw_colored_polygon(gate, Color(0.12, 0.1, 0.1))
+	gate.append(gate[0])
+	canvas.draw_polyline(gate, Color.BLACK, line)
 
 
 ## Rosto de um cidadão (bem-estar social): feliz (dourado, sorrindo), contente

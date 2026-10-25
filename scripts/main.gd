@@ -214,8 +214,10 @@ func territory_owner(cell: Vector2i) -> City:
 func refresh_territories() -> void:
 	_territory = {}
 	game_map.city_owners = {}
+	game_map.cities = {}
 	for city in cities():
 		game_map.city_owners[city.cell] = city.owner_player
+		game_map.cities[city.cell] = city
 		for cell in city.territory:
 			_territory[cell] = city
 	territory_overlay.set_territories(_territory)
@@ -1925,6 +1927,8 @@ func _update_info() -> void:
 			defense_notes.append("fortificada")
 		if unit.terrain_defense_bonus() > 0:
 			defense_notes.append("+%d %s" % [unit.terrain_defense_bonus(), Terrain.NAMES[game_map.get_terrain(unit.cell)].to_lower()])
+		if unit.walls_defense_bonus() > 0:
+			defense_notes.append("+%d muralha" % unit.walls_defense_bonus())
 		lines.append("%s (%s) - Ataque %d | Defesa %d%s | Movimento %d/%d | Energia %d/%d" % [
 			unit.type.display_name, unit.owner_player.display_name,
 			unit.attack, unit.defense, " (%s)" % ", ".join(defense_notes) if not defense_notes.is_empty() else "",

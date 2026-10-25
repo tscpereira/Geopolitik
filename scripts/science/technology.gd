@@ -24,7 +24,7 @@ enum Tech { CONSTRUCTION, MYSTICISM, ALPHABET }
 const DATA := {
 	Tech.CONSTRUCTION: {
 		"name": "Construção", "cost": 30, "requires": [],
-		"description": "Técnicas de construção com pedra e madeira.",
+		"description": "Técnicas de construção com pedra e madeira. Libera a Muralha, que dá +2 de defesa às unidades dentro da cidade.",
 		"image": "res://assets/tech/construcao.png",
 	},
 	Tech.MYSTICISM: {

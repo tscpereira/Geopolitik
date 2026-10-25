@@ -774,12 +774,10 @@ CIDADES (scripts/cities/city.gd)
     muralha  só a cidade com muralha (City.has_walls()) mostra os
              muros, em QUALQUER classe (decisão do usuário: a
              Muralha pode ser construída já no povoado, e o desenho
-             continua com muros quando a cidade cresce). A
-             construção Muralha ainda não existe, então
-             has_walls() devolve sempre falso e hoje NENHUMA cidade
-             aparece com muralha: as versões _muralha ficam
-             prontas para quando ela existir (basta has_walls()
-             olhar a construção).
+             continua com muros quando a cidade cresce). Desde
+             25/10/2026, has_walls() olha o prédio Muralha (ver
+             PRÉDIOS): pronta a Muralha, a cidade passa a ser
+             desenhada com os muros na hora.
   Tabela (normal | capital | normal com muralha | capital com
   muralha):
     Povoado    povoado.png | povoado.png | povoado_muralha.png |
@@ -883,6 +881,8 @@ CIDADES (scripts/cities/city.gd)
                 madeira                     (exige Misticismo; só
                                             aparece na lista depois
                                             dele)
+    Muralha     20 de produção + 20 de      prédio da cidade
+                madeira                     (exige Construção)
   Todos custam 50 de ouro para comprar na hora.
 
 CONSTRUÇÕES QUE GASTAM RECURSOS (campos "wood" e "weapons" em City.BUILDS)
@@ -953,6 +953,22 @@ PRÉDIOS (City.buildings)
                      + 30 de madeira). Exige a tecnologia
                      Misticismo. Torna 2 infelizes em contentes
                      (ver BEM-ESTAR SOCIAL).
+    Muralha          20 de produção + 20 de madeira (ou 50 de ouro
+                     + 20 de madeira). Exige a tecnologia
+                     Construção (desde 25/10/2026, pedido do
+                     usuário). Dá +2 de defesa às unidades do dono
+                     DENTRO da cidade, fortificadas ou não (campo
+                     "garrison_defense"; Unit.walls_defense_bonus).
+                     Soma com a fortificação, o terreno e o rio:
+                     Guerreiro fortificado na cidade murada tem
+                     defesa 1 + 1 + 2 = 4. Casas vizinhas não
+                     contam. Pronta, a cidade aparece com muralha
+                     no mapa (has_walls) e, se for destruída, vira
+                     ruína com muralha. O painel de informações
+                     mostra "+2 muralha". Ícone: trecho de muralha
+                     com torres e portão. A máquina a constrói na
+                     capital e nas cidades com inimigo por perto,
+                     depois do Quartel General.
 - UNIDADES E ARMAS SÃO PRODUZIDAS NOS PRÉDIOS: cada uma só pode
   ser feita se a cidade tiver o prédio dela (campo "requires" em
   City.BUILDS). Sem ele, a linha fica desabilitada com "Precisa de
@@ -1220,10 +1236,11 @@ INVASÃO E CONQUISTA (Game.check_invasion, occupy_city, raze_city)
   RuinsLayer.RUIN_SPRITES, PNGs de 128x128 em
   assets/sprites/cities/<classe>[_muralha]_ruinas.png:
     povoado_ruinas, vila_ruinas, cidade_ruinas, metropole_ruinas
-                                   (sem muralha: o caso de hoje)
+                                   (sem muralha)
     povoado_muralha_ruinas, vila_muralha_ruinas,
     cidade_muralha_ruinas, metropole_muralha_ruinas
-                                   (com muralha: quando existir)
+                                   (com muralha: cidade com a
+                                   Muralha)
   Capital e cidade normal viram a mesma ruína (o desmoronamento
   leva justamente o alto, onde ficava o templo). O save guarda a
   muralha de cada ruína; save antigo carrega como sem muralha.
@@ -1781,13 +1798,14 @@ CIÊNCIA E PESQUISA (scripts/science/technology.gd, Player.research)
       Construção  30 pontos
       Misticismo  20 pontos
       Alfabeto    40 pontos
-  O que libera: Misticismo -> Templo (campo "tech" em City.BUILDS).
+  O que libera: Misticismo -> Templo; Construção -> Muralha (campo
+  "tech" em City.BUILDS).
   Desde 24/10/2026, o que depende de uma tecnologia NÃO aparece na
   lista "Construir" enquanto ela não for pesquisada
   (City.has_tech_for); antes aparecia desabilitado com "Precisa da
   tecnologia Misticismo.", motivo que City.build_error ainda
-  devolve (proteção para a máquina e para compras). Construção e
-  Alfabeto ainda não liberam nada.
+  devolve (proteção para a máquina e para compras). O Alfabeto
+  ainda não libera nada.
 - JANELA DE PESQUISA (scripts/ui/research_dialog.gd): as
   tecnologias disponíveis, cada uma com o custo, os pontos já
   feitos, a estimativa de turnos e o botão "Pesquisar"; embaixo, a
@@ -2026,9 +2044,9 @@ Screenshots também confirmaram o visual.
     delas por código
 [x] Variantes das cidades: capital (com templo/Palácio) e normal,
     com e sem muralha, e as ruínas com e sem muralha (24/10/2026)
-[ ] Construção Muralha (em qualquer classe): City.has_walls()
-    passa a olhar a construção e as cidades e ruínas com muralha
-    aparecem sozinhas
+[x] Construção Muralha (em qualquer classe, exige Construção): +2
+    de defesa para quem está na cidade; cidades e ruínas com
+    muralha aparecem sozinhas (25/10/2026)
 [x] Povoado reduzido: casas do mesmo tamanho das outras classes
     (24/10/2026)
 [x] Povoado mais perto do centro da casa (vão menor até a barra de
@@ -2097,7 +2115,7 @@ Screenshots também confirmaram o visual.
 [x] Ícones das construções e unidades nas janelas
 [x] Tooltips com fundo sólido (tema do jogo)
 [ ] Ícones desenhados à mão (PNG) no lugar dos desenhos do código
-[ ] Mais prédios (ex.: celeiro, mercado, muralha)
+[ ] Mais prédios (ex.: celeiro, mercado)
 [x] IA: construir prédios, armas e unidades; expandir com Colonos
 [ ] Comprar melhorias de terreno com ouro
 [ ] Comprar com ouro uma obra que já está em andamento (pagar
@@ -2955,6 +2973,24 @@ Screenshots também confirmaram o visual.
   Equilibrada 8 de 9 (o mesmo e uma segunda cidade). As cidades
   ficaram pequenas (máximo de 4 de população): o crescimento é lento
   e as unidades custam população (ver PRÓXIMOS PASSOS).
+- MURALHA (pedido do usuário, depois de uma partida equilibrada
+  contra a máquina): novo prédio, exige Construção, 20 de produção +
+  20 de madeira (ou 50 de ouro + a madeira). Dá +2 de defesa às
+  unidades do dono dentro da cidade (fortificadas ou não). Com ela,
+  City.has_walls() deixa de ser sempre falso: a cidade aparece com os
+  muros que já estavam desenhados, e a ruína dela sai com muralha.
+  Novo GameMap.cities (cidade em cada casa, mantido pelo Game) para a
+  unidade saber se está numa cidade murada. A Construção agora diz
+  que libera a Muralha. A máquina constrói a Muralha na capital e
+  onde há inimigo por perto, depois do Quartel General.
+- Validação: teste com 20 verificações (sem Construção não aparece
+  nem pode; com ela, falta madeira e depois pode; custo 20 + 20;
+  em obra ainda sem muralha; pronta com +2 e o desenho com muralha;
+  defesa 3 e 4 fortificado, sem bônus na casa vizinha nem para
+  unidade de outro jogador; dano menor contra a cidade murada; painel
+  "+2 muralha"; save; a máquina pede a Muralha; ruína com muralha),
+  mais screenshots (lista Construir com o ícone, cidade murada ao
+  lado de uma sem muralha, janela da cidade, ruínas).
 
 --------------------------------------------------------------
 7. BACKLOG (ideias para depois)
@@ -2981,7 +3017,7 @@ histórico):
     do saque sai do perdedor, proporcional à população; ocupar
     custa 1 de população e a fila; destruir deixa ruínas sem dono;
     só unidades militares invadem). Ideias para depois:
-    - muralha (prédio) que dá defesa à guarnição;
+    - [x] muralha (prédio) que dá defesa à guarnição (25/10/2026);
     - resistência/insatisfação na cidade recém-ocupada;
     - libertar uma cidade ocupada de volta para o dono original.
 

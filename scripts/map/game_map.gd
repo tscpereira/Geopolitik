@@ -32,6 +32,9 @@ var height := 0
 ## Dono de cada casa com cidade: {casa: Player}. Mantido pelo Game
 ## (refresh_territories); o Movement usa para as regras de invasão.
 var city_owners := {}
+## Cidade em cada casa com cidade: {casa: City}. Também mantido pelo Game; a
+## unidade usa para a defesa da Muralha (Unit.walls_defense_bonus).
+var cities := {}
 
 var _terrain := PackedByteArray()
 ## Rios: cada um é a lista dos cantos da grade por onde passa (ver Rivers).
