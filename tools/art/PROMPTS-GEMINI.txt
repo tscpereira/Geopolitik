@@ -13,7 +13,7 @@ granular demais. Por isso há UM PEDIDO POR TEMA:
 
     01_unidades           9 unidades (3x3)               FEITO 26/10/2026
     02_cidades_povoado    povoado: normal e com muralha
-    03_cidades_vila       vila: normal, palácio, muralha, os dois
+    03_cidades_vila       vila: normal, palácio, muralha, os dois  FEITO 26/10/2026
     04_cidades_cidade     cidade: as mesmas 4 versões
     05_cidades_metropole  metrópole: as mesmas 4 (palácio = acrópole)
     06_ruinas             8 ruínas (4x2)
@@ -52,5 +52,7 @@ LÓGICA DOS DESENHOS DAS CIDADES
 DEPOIS (importar)
   Unidades (folha 3x3):
     godot_console.cmd --headless --path . --script tools/art/import_folha_unidades.gd -- <resultado.png> grade
-  As outras folhas também voltam em grade, com fundo verde: os
-  importadores serão adaptados quando os resultados chegarem.
+  Cidades e ruínas (acha cada ilha sozinho; nomes na ordem, "-" pula):
+    godot_console.cmd --headless --path . --script tools/art/import_cidades_gemini.gd -- <resultado.png> <nome1|-> <nome2|-> ...
+    ex.: ... -- vila.png - - - vila vila_capital vila_muralha vila_capital_muralha
+  Terrenos, melhorias e tecnologias: importadores a fazer quando chegarem.

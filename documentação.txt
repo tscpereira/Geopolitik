@@ -3939,6 +3939,22 @@ Screenshots também confirmaram o visual.
   usuário salvar em tools/art/gemini/pedidos/06_ruinas/resultado.png.
   Validação: consolidado das 10 unidades nas duas cores.
 
+- VILA DO GEMINI: as 4 vilas (normal, capital com palácio, com muralha,
+  capital com muralha) vieram do pedido 03_cidades_vila e foram
+  instaladas pelo importador novo tools/art/import_cidades_gemini.gd:
+  acha cada ilha sozinho (grupos de pixels; pedaços soltos perto entram
+  no desenho mais próximo), numera por linhas, recebe os nomes na ordem
+  ("-" pula: a folha veio com uma linha extra de 3 tentativas), tira o
+  fundo verde e o verde vazado na borda (3 passadas, só na borda: as
+  árvores são verdes de verdade), separa o azul do time na máscara e
+  grava 128x128 com a mesma escala para as versões da mesma cidade (a
+  maior com 122 px de largura; o povoado, 74), centralizado, com a base
+  na linha 124 (como os desenhos antigos). Prévia em
+  tools/art/gemini/<nome>_previa.png. As folhas da cidade e das ruínas
+  chegaram no meio de uma tarefa e não ficaram salvas no disco: o
+  usuário vai mandá-las de novo. Validação: prévia em vermelho e
+  screenshot no jogo (vila capital e vila capital murada).
+
 --------------------------------------------------------------
 7. BACKLOG (ideias para depois)
 --------------------------------------------------------------
