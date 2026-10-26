@@ -429,7 +429,14 @@ const CITY_SPRITES := {
 const SPRITE_SIZE := GameMap.TILE_SIZE * 1.6
 const SPRITE_BOTTOM_OVERFLOW := GameMap.TILE_SIZE * 0.12
 const SPRITE_TOP_GAP := GameMap.TILE_SIZE * 0.25
-const SPRITE_LIFT := {Rank.SETTLEMENT: GameMap.TILE_SIZE * 0.3}
+## Os desenhos crescem a cada nível (desde 26/10/2026: largura de 74, 92, 108
+## e 122 px no quadro de 128; tools/art/ajusta_tamanho_cidades.gd): os menores
+## sobem na proporção, para não ficarem afundados na base da casa.
+const SPRITE_LIFT := {
+	Rank.SETTLEMENT: GameMap.TILE_SIZE * 0.3,
+	Rank.TOWN: GameMap.TILE_SIZE * 0.19,
+	Rank.CITY: GameMap.TILE_SIZE * 0.09,
+}
 
 ## Desenho das melhorias destruídas (pilhadas), no mapa e na janela da cidade.
 ## PNGs de 80x80 em assets/sprites/improvements/ (dá para redesenhar).
@@ -1814,8 +1821,8 @@ func _draw() -> void:
 	var sprite := sprite_rect(rank())
 	draw_city_sprite(self, sprite, owner_player.color, rank(), is_capital, has_walls())
 	# Barra de alimentos e avisos acima do desenho (no lugar de sempre, mesmo
-	# com o povoado mais alto)
-	var top := Rect2(-tile.x / 2.0 + MARGIN, sprite_rect(Rank.TOWN).position.y + SPRITE_TOP_GAP, tile.x - MARGIN * 2.0, tile.y)
+	# com os desenhos menores mais altos: a referência é a metrópole, que não sobe)
+	var top := Rect2(-tile.x / 2.0 + MARGIN, sprite_rect(Rank.METROPOLIS).position.y + SPRITE_TOP_GAP, tile.x - MARGIN * 2.0, tile.y)
 	_draw_food_bar(top)
 	if free_citizens() > 0 and not owner_player.is_ai:
 		_draw_idle_warning(top, free_citizens(), IDLE_COLOR)

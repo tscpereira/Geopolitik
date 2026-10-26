@@ -183,6 +183,8 @@ C:\ProjetoGame
 |       |-- folha_assets.gd        Folha com todos os desenhos e os
 |       |                          nomes (tools/art/gemini/), para
 |       |                          pedir a refação no Gemini
+|       |-- ajusta_tamanho_cidades.gd  Deixa cada nível de cidade na sua
+|       |                          largura (74/92/108/122 px)
 |       |-- evolucao_cidades.gd    Folha das cidades lado a lado (níveis
 |       |                          x versões), marcando as do Gemini
 |       |-- pedidos_gemini.gd      Um pedido por tema para o Gemini
@@ -3963,9 +3965,20 @@ Screenshots também confirmaram o visual.
   vila, cidade, metrópole), linhas = versões (normal, capital, muralha,
   capital com muralha), na escala real do jogo (2x) sobre a pradaria,
   com borda verde nas que já são do Gemini (lista GEMINI no script,
-  atualizar a cada importação). Mostra que, fora o povoado (74 px),
-  vila, cidade e metrópole ocupam o mesmo tamanho (122 px): o nível só
-  aparece no número de casas.
+  atualizar a cada importação). Mostrou que, fora o povoado (74 px),
+  vila, cidade e metrópole ocupavam o mesmo tamanho (122 px).
+- CIDADES CRESCEM A CADA NÍVEL (pedido do usuário): largura do desenho no
+  quadro de 128 = povoado 74, vila 92, cidade 108, metrópole 122 px,
+  centralizado e com a base na linha 124. As ruínas seguem a largura
+  da classe. tools/art/ajusta_tamanho_cidades.gd mede e redimensiona os
+  desenhos (e as máscaras) até a largura da classe; rodar de novo não
+  muda nada (tolerância de 3 px, porque as versões da mesma cidade do
+  Gemini variam 1-2 px). O importador do Gemini (MAX_WIDTH) já grava
+  nessas larguras; a vila foi reimportada da folha guardada. No mapa,
+  os desenhos menores sobem proporcionalmente (City.SPRITE_LIFT:
+  povoado 0,3 casa, vila 0,19, cidade 0,09) e a barra de alimentos fica
+  no lugar de sempre (referência: a metrópole). Validação: screenshot
+  dos 4 níveis lado a lado no mapa e a folha da evolução.
 
 --------------------------------------------------------------
 7. BACKLOG (ideias para depois)

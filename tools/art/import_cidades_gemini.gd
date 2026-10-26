@@ -21,8 +21,9 @@ const GEMINI := "res://tools/art/gemini/"
 const SIZE := 128
 const BOTTOM := 124
 const MAX_HEIGHT := 120
-## Largura máxima por classe: o povoado é menor (como antes, ~60%).
-const MAX_WIDTH := {"povoado": 74, "vila": 122, "cidade": 122, "metropole": 122}
+## Largura máxima por classe: as cidades crescem a cada nível (26/10/2026; a
+## mesma tabela de tools/art/ajusta_tamanho_cidades.gd).
+const MAX_WIDTH := {"povoado": 74, "vila": 92, "cidade": 108, "metropole": 122}
 ## Fundo: resíduo máximo de p - k x fundo e a faixa de k (como import_folha_unidades.gd).
 const KEY_RESIDUAL := 14.0 / 255.0
 const KEY_K := Vector2(0.55, 1.2)
