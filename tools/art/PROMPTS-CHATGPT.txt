@@ -22,8 +22,10 @@ Desde 25/10/2026 as 9 unidades vêm de UMA folha do ChatGPT (fundo verde
 liso, linha de cima em azul, linha de baixo em vermelho), guardada em
 tools/art/chatgpt/folha_unidades.png e importada com:
   godot_console.cmd --headless --path . --script tools/art/import_folha_unidades.gd -- <folha.png>
-(ele também tira o escudo solto do Guerreiro de Espada Curta; essas
-coordenadas valem só para esta folha). Os prompts B1 e B2 abaixo ficaram
+Para trocar UMA unidade por um desenho avulso (fundo verde):
+  ... import_folha_unidades.gd -- <imagem.png> <nome>
+(o nome precisa estar em AVULSAS, com a altura no jogo; hoje o Guerreiro
+de Espada Curta usa guerreiro_espada_avulsa.png). Os prompts B1 e B2 abaixo ficaram
 como modelo de pedido avulso.
 
 Como pedir:

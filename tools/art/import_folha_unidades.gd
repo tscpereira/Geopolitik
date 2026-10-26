@@ -15,12 +15,22 @@ extends SceneTree
 ##      pessoa, cavalo, biga), cabendo em 76x70, pés em y = 73, e grava em
 ##      assets/sprites/units/, em tools/art/chatgpt/unidades/ (grande) e em
 ##      prontos/ (80x80 e prévia nas cores de dois jogadores).
+## Desenho avulso (mesmo fundo verde) para trocar uma unidade da folha:
+##   ... import_folha_unidades.gd -- <imagem.png> <nome>
+## A imagem fica em tools/art/chatgpt/<nome>_avulsa.png e passa a valer
+## também quando a folha for importada de novo. A altura no jogo vem de
+## AVULSAS; o vermelho forte vira cor do time (o ChatGPT pintou o scutum de
+## vermelho).
 
 const NAMES := ["trabalhador", "colono", "guerreiro", "lanceiro", "guerreiro_espada", "arqueiro", "cavalaria_leve", "bigas", "catapulta"]
 const UNITS := "res://assets/sprites/units/"
 const GRANDES := "res://tools/art/chatgpt/unidades/"
 const PRONTOS := "res://tools/art/chatgpt/prontos/"
 const ORIGINAL := "res://tools/art/chatgpt/folha_unidades.png"
+const AVULSA := "res://tools/art/chatgpt/%s_avulsa.png"
+## Unidade avulsa -> altura do desenho no jogo, em pixels (a da folha, na
+## mesma pose: o guerreiro em investida tinha 55).
+const AVULSAS := {"guerreiro_espada": 55}
 const SIZE := 80
 const MAX_SIZE := Vector2(76, 70)
 const FEET := 73
@@ -39,13 +49,25 @@ const ARM_RADIUS := Vector2(5.6, 4.4)
 func _initialize() -> void:
 	var args := OS.get_cmdline_user_args()
 	if args.is_empty():
-		print("uso: -- <folha.png>")
+		print("uso: -- <folha.png>   ou   -- <imagem.png> <nome>")
 		quit(1)
+		return
+	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(GRANDES))
+	if args.size() >= 2:
+		var unit_name: String = args[1]
+		if not AVULSAS.has(unit_name):
+			print("%s não está em AVULSAS (altura no jogo)" % unit_name)
+			quit(1)
+			return
+		var image := Image.load_from_file(args[0])
+		image.convert(Image.FORMAT_RGBA8)
+		image.save_png(ProjectSettings.globalize_path(AVULSA % unit_name))
+		_avulsa(unit_name)
+		quit()
 		return
 	var sheet := Image.load_from_file(args[0])
 	sheet.convert(Image.FORMAT_RGBA8)
 	sheet.save_png(ProjectSettings.globalize_path(ORIGINAL))
-	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(GRANDES))
 	_remove_backdrop(sheet)
 	_remove_shield(sheet)
 	var boxes := _split(sheet, Rect2i(0, 0, sheet.get_width(), sheet.get_height() / 2))
@@ -58,8 +80,31 @@ func _initialize() -> void:
 		scale = minf(scale, minf(MAX_SIZE.x / box.size.x, MAX_SIZE.y / box.size.y))
 	print("escala comum: %.3f" % scale)
 	for i in NAMES.size():
-		_install(sheet.get_region(boxes[i]), NAMES[i], scale)
+		if FileAccess.file_exists(ProjectSettings.globalize_path(AVULSA % NAMES[i])):
+			_avulsa(NAMES[i])
+		else:
+			_install(sheet.get_region(boxes[i]), NAMES[i], scale)
 	quit()
+
+
+func _avulsa(unit_name: String) -> void:
+	var image := Image.load_from_file(ProjectSettings.globalize_path(AVULSA % unit_name))
+	image.convert(Image.FORMAT_RGBA8)
+	_remove_backdrop(image)
+	var box := Rect2i()
+	var first := true
+	for y in image.get_height():
+		for x in image.get_width():
+			var p := image.get_pixel(x, y)
+			if p.a < 0.5:
+				continue
+			box = Rect2i(x, y, 1, 1) if first else box.expand(Vector2i(x, y))
+			first = false
+			# Vermelho forte -> azul do time (mesmo brilho e saturação)
+			if (p.h < 0.03 or p.h > 0.95) and p.s > 0.55 and p.v > 0.15:
+				image.set_pixel(x, y, Color.from_hsv(0.64, p.s, p.v, p.a))
+	box.size += Vector2i.ONE
+	_install(image.get_region(box), unit_name, float(AVULSAS[unit_name]) / box.size.y)
 
 
 func _remove_backdrop(img: Image) -> void:

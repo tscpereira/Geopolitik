@@ -165,8 +165,9 @@ C:\ProjetoGame
 |       |                          direto para assets/sprites/units/
 |       |-- import_folha_unidades.gd  Importa a folha das 9 unidades
 |       |                          do ChatGPT (fundo verde, escala
-|       |                          comum; tira o escudo solto do
-|       |                          Guerreiro de Espada Curta)
+|       |                          comum); "-- <imagem> <nome>": um
+|       |                          desenho avulso que substitui o da
+|       |                          folha (AVULSAS)
 |       |-- consolidado.gd         Consolidado da arte das unidades
 |       |                          (todas no jogo, nas duas cores) e a
 |       |                          referência para anexar no ChatGPT
@@ -3547,6 +3548,16 @@ Screenshots também confirmaram o visual.
   só como histórico (rodar de novo sobrescreveria a arte nova).
   Validação: consolidado nas duas cores, o braço revisado ampliado e
   screenshot no jogo das 9 unidades de dois jogadores.
+- GUERREIRO DE ESPADA CURTA, DESENHO NOVO (o usuário trouxe a figura
+  certa: gládio erguido e scutum curvo com águia dourada). Novo modo
+  de import_folha_unidades.gd, "-- <imagem> <nome>": guarda a imagem
+  em tools/art/chatgpt/<nome>_avulsa.png, que passa a valer também
+  quando a folha for importada de novo; a altura no jogo vem de
+  AVULSAS (55 px, a do guerreiro em investida da folha). O scutum veio
+  vermelho fixo: o vermelho forte vira cor do time (águia e raios
+  dourados ficam), para não parecer do jogador vermelho. Validação:
+  prévias em azul, vermelho e amarelo, consolidado e screenshot no
+  jogo.
 
 --------------------------------------------------------------
 7. BACKLOG (ideias para depois)
