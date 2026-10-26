@@ -116,6 +116,78 @@ the frame. No crew, no ground, no shadow. About as tall as the attached
 standing figures and no wider than about 1.3 times its height.
 
 
+------------------------------------------------------------------------
+B3  ->  gale.png   (GEMINI; 25/10/2026)
+------------------------------------------------------------------------
+A Galé foi pedida no Gemini depois que o desenho por código e a imagem
+pequena trazida pelo usuário ficaram fora do padrão (pixelados, sem o
+estilo pintado das outras 9). O Gemini não gera transparência: o prompt
+pede FUNDO VERDE LISO, o mesmo que o importador da folha já remove.
+Como pedir:
+  1. Conversa nova no Gemini; anexe tools/art/chatgpt/referencia_unidades.png.
+  2. Cole o prompt abaixo (inteiro, já tem o estilo e o pedido).
+  3. Baixe o PNG e importe como desenho avulso (precisa de "gale" em
+     AVULSAS de import_folha_unidades.gd, com a altura no jogo):
+     godot_console.cmd --headless --path . --script tools/art/import_folha_unidades.gd -- <imagem.png> gale
+Correções comuns: "Redo it: no water, no waves, no reflection under the
+ship", "Redo it: the background must be one flat green #00B140, no
+gradient", "Redo it: same painted style and detail as the attached
+figures, not cartoon", "Redo it: more compact, three-quarter view".
+
+PROMPT (Gemini):
+
+I am making unit sprites for a 2D turn-based strategy game set in ancient
+Greece. The attached image shows the units already in the game. Create ONE
+new unit, an ancient Greek war galley, that looks like it belongs to the
+same set: same artist, same painted style, same level of detail, same
+camera and same light.
+
+STYLE (copy it from the attached figures):
+- Detailed painted digital illustration, realistic proportions. Not
+  cartoon, not chibi, not pixel art, no thick black outlines, no flat
+  colors. Soft painted shading, warm earthy palette: warm brown wood,
+  bronze, off-white linen.
+- Strong, clean silhouette that stays readable when shrunk to 80x80
+  pixels: few big shapes, no thin clutter.
+
+CAMERA AND LIGHT:
+- Three-quarter view, the bow pointing to the RIGHT and slightly toward
+  the viewer, seen from slightly above (about 20-30 degrees), like the
+  attached figures. Not a flat side view, not a top-down view.
+- Soft daylight from the TOP-LEFT.
+
+THE SHIP:
+- A single-deck ancient Greek galley (a small trireme/penteconter): long
+  curved wooden hull of warm brown planks, a bronze ram at the waterline
+  of the bow, the stern curving up into a tall decorative tail.
+- One mast with a large square linen sail, full of wind; the sail has
+  wide VERTICAL stripes alternating off-white and team blue.
+- A row of round shields along the side rail, their faces painted team
+  blue with a bronze rim.
+- One row of oars (about 6) coming out of the hull, angled down and back.
+- A painted eye on the bow, in bronze and white (no blue).
+- No crew visible (or at most a couple of helmeted heads above the rail).
+
+SCALE AND FRAMING:
+- One ship only, whole, never cropped, centered, small empty margin.
+- Keep it compact: the whole ship, sail included, about 1.3 to 1.5 times
+  wider than tall. Square image, 1:1.
+- The bottom of the hull and the oar tips sit on one invisible line at
+  the bottom, as if on the ground line of the attached figures.
+
+TEAM COLOR:
+- The player's parts (the sail stripes and the shield faces) are ONE
+  vivid royal blue (#1E50FF), only in lighter and darker shades of that
+  blue, exactly like the attached figures. No other blue, cyan, teal or
+  purple anywhere: NO water, no waves, no sky, no blue shadows.
+
+BACKGROUND:
+- One flat, solid chroma-key green (#00B140) filling the whole
+  background, with no gradient, no texture and no vignette. No water, no
+  waves, no splash, no reflection, no cast shadow, no ground, no frame,
+  no text, no signature.
+
+
 VERSÃO RÁPIDA: TUDO EM UM PROMPT SÓ (tente esta primeiro)
 --------------------------------------------------------
 Uma única imagem com as 5 unidades e as 4 cidades lado a lado (uma "folha de
