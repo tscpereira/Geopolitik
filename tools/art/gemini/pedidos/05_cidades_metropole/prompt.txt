@@ -1,0 +1,32 @@
+I am remaking the art of a 2D turn-based strategy game set in ancient Greece. The attached image has two parts:
+- LEFT, "ESTILO": a galley. It is the STYLE REFERENCE: paint everything in exactly this style.
+- RIGHT, "ATUAL": the current, low-quality versions of the items I need, numbered, in the same grid I want back. Use them only to know WHAT to draw (content and composition), not how they look.
+- Paint everything NEW. Do not copy or paste any part of the attached image into the result: no galley, no old drawings, no labels, no numbers.
+
+Create ONE image: a sprite sheet with 4 versions of the same Greek town map icon: a large city.
+
+STYLE (copy it from the galley):
+- Detailed painted digital illustration with realistic proportions: soft painted shading, visible wood grain and texture, warm earthy palette (warm brown wood, off-white linen and plaster, terracotta roof tiles, bronze, olive greens). Not cartoon, not chibi, not pixel art, no thick black outlines, no flat colors, not a photo.
+- Strong, clean silhouettes that stay readable when shrunk to small game sprites: few big shapes, no thin clutter.
+- Soft daylight from the TOP-LEFT. All items in the sheet share the same light, scale and camera.
+
+CAMERA AND LOOK:
+- Three-quarter view from above (about 40 degrees), like a small diorama: the whole town sits on a small round island of dusty ground with a few olive trees and cypresses around its edge. Whitewashed houses with terracotta tile roofs.
+- All versions in the row are the SAME town: same island, same houses in the same places, same size and camera. They differ ONLY in what the list adds (the ruler's palace temple, the city wall).
+- The houses are small compared with the island (about the size of the houses of a village seen from a hill): many houses filling a big island, a stoa and a small theatre.
+
+SHEET LAYOUT:
+- A grid of 4 columns x 1 rows, evenly spaced, each item centered in its own cell, never touching or overlapping its neighbours, never cropped.
+- Order, left to right, top to bottom (the numbers match the right side of the attached image):
+  Row 1:
+    1. City, plain: many houses filling the island, a stoa and a small theatre.
+    2. The same city plus an ACROPOLIS: a large columned temple on a high rocky terrace (the ruler's palace).
+    3. The same city (without the acropolis) surrounded by a tall stone wall with four big towers and a monumental gate.
+    4. The same city with both the acropolis and the wall.
+- No numbers, labels or text in the image.
+
+TEAM COLOR:
+- The player's color is ONE vivid royal blue (#1E50FF), used ONLY on: banners on the towers, market awnings and the temple roof trim. Use lighter and darker shades of that blue there, nowhere else. No other blue, cyan, teal or purple anywhere: no blue sky, no water, no blue shadows.
+
+BACKGROUND:
+- One flat, solid chroma-key green (#00B140) filling the whole background and the space between the cells: no gradient, no texture, no vignette, no cast shadow on the background, no ground, no frame, no text, no signature.

@@ -342,8 +342,9 @@ MAPA (scripts/map/)
   (a cor do time aparece no azul padrão #1E50FF), só para consulta.
   PEDIDOS POR TEMA (tudo de uma vez o Gemini se perdeu; um por desenho
   ficou granular demais): tools/art/gemini/pedidos/<NN>_<tema>/, 6
-  temas (unidades 3x3, cidades 4x4, ruínas 4x2, terrenos 3x2,
-  melhorias e ferro 4x2, tecnologias 4x4), gerados COM janela por
+  pedidos (unidades 3x3; cidades, uma classe por pedido: povoado,
+  vila, cidade, metrópole; ruínas 4x2; terrenos 3x2; melhorias e ferro
+  4x2; tecnologias 4x4), gerados COM janela por
     godot_console.cmd --path . --script tools/art/pedidos_gemini.gd
   Cada pasta tem referencia.png (a Galé, o ESTILO, à esquerda; os
   desenhos atuais do tema, numerados, na grade pedida, à direita) e
@@ -3920,6 +3921,23 @@ Screenshots também confirmaram o visual.
   atuais numerados na grade pedida, ao lado da Galé) e o prompt da
   folha inteira. As 61 pastas antigas foram apagadas; as referências
   (poucas agora) voltaram para o Git.
+
+- UNIDADES DO GEMINI: as 9 unidades foram refeitas pelo Gemini numa folha
+  3x3 (pedido 01_unidades), no padrão da Galé, e instaladas pelo modo
+  novo "grade" de import_folha_unidades.gd:
+    ... import_folha_unidades.gd -- <folha.png> grade
+  (recorta cada célula na ordem de NAMES, tira o fundo verde e o verde
+  vazado nas partes finas, apaga manchas soltas, uma escala comum para
+  todas: as pessoas ficam com ~61-64 px e a lança do Lanceiro com 70).
+  A folha fica em tools/art/gemini/folha_unidades.png; ela substitui a
+  folha do ChatGPT (rodar o modo antigo voltaria aos desenhos antigos).
+  CIDADES: a folha com as 14 voltou errada (o Gemini copiou a
+  referência, com os nomes, e só desenhou 3 cidades novas), então o
+  pedido das cidades foi dividido em 4, uma classe por pedido, e todos
+  os prompts ganharam a regra de não copiar a referência. As RUÍNAS
+  voltaram boas (4x2), mas a imagem não ficou salva no disco: falta o
+  usuário salvar em tools/art/gemini/pedidos/06_ruinas/resultado.png.
+  Validação: consolidado das 10 unidades nas duas cores.
 
 --------------------------------------------------------------
 7. BACKLOG (ideias para depois)

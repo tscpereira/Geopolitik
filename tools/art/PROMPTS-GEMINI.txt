@@ -11,12 +11,17 @@ granular demais. Por isso há UM PEDIDO POR TEMA:
                      grade e ordem que o prompt pede
     prompt.txt       o prompt inteiro, com o estilo embutido
 
-    01_unidades      9 unidades (3x3)
-    02_cidades       14 cidades (4x4; o povoado sem as versões de capital)
-    03_ruinas        8 ruínas (4x2)
-    04_terrenos      6 texturas (3x2)
-    05_melhorias     7 melhorias + o ícone do ferro (4x2)
-    06_tecnologias   16 ilustrações (4x4, opcional)
+    01_unidades           9 unidades (3x3)               FEITO 26/10/2026
+    02_cidades_povoado    povoado: normal e com muralha
+    03_cidades_vila       vila: normal, palácio, muralha, os dois
+    04_cidades_cidade     cidade: as mesmas 4 versões
+    05_cidades_metropole  metrópole: as mesmas 4 (palácio = acrópole)
+    06_ruinas             8 ruínas (4x2)
+    07_terrenos           6 texturas (3x2)
+    08_melhorias          7 melhorias + o ícone do ferro (4x2)
+    09_tecnologias        16 ilustrações (4x4, opcional)
+  As 14 cidades numa folha só o Gemini não conseguiu (copiou a
+  referência): por isso uma classe de cidade por pedido.
 
   Como usar (detalhes em tools/art/gemini/pedidos/LEIA-ME.txt): conversa
   NOVA no Gemini para cada tema; anexe referencia.png, cole prompt.txt e
@@ -45,6 +50,7 @@ LÓGICA DOS DESENHOS DAS CIDADES
   templo e sem cor do time.
 
 DEPOIS (importar)
-  As folhas voltam em grade, com fundo verde: os importadores serão
-  adaptados para recortar cada célula na ordem do prompt quando os
-  resultados chegarem.
+  Unidades (folha 3x3):
+    godot_console.cmd --headless --path . --script tools/art/import_folha_unidades.gd -- <resultado.png> grade
+  As outras folhas também voltam em grade, com fundo verde: os
+  importadores serão adaptados quando os resultados chegarem.

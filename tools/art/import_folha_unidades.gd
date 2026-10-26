@@ -15,6 +15,8 @@ extends SceneTree
 ##      pessoa, cavalo, biga), cabendo em 76x70, pés em y = 73, e grava em
 ##      assets/sprites/units/, em tools/art/chatgpt/unidades/ (grande) e em
 ##      prontos/ (80x80 e prévia nas cores de dois jogadores).
+## Folha do Gemini em grade 3x3 (desde 26/10/2026, a fonte atual):
+##   ... import_folha_unidades.gd -- <folha.png> grade
 ## Desenho avulso (mesmo fundo verde) para trocar uma unidade da folha:
 ##   ... import_folha_unidades.gd -- <imagem.png> <nome>
 ## A imagem fica em tools/art/chatgpt/<nome>_avulsa.png e passa a valer
@@ -28,6 +30,8 @@ const GRANDES := "res://tools/art/chatgpt/unidades/"
 const PRONTOS := "res://tools/art/chatgpt/prontos/"
 const ORIGINAL := "res://tools/art/chatgpt/folha_unidades.png"
 const AVULSA := "res://tools/art/chatgpt/%s_avulsa.png"
+## Folha das unidades do Gemini (modo "grade").
+const GEMINI_SHEET := "res://tools/art/gemini/folha_unidades.png"
 ## Unidade avulsa -> altura do desenho no jogo, em pixels (a da folha, na
 ## mesma pose: o guerreiro em investida tinha 55).
 const AVULSAS := {"guerreiro_espada": 55, "gale": 66}
@@ -53,6 +57,10 @@ func _initialize() -> void:
 		quit(1)
 		return
 	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(GRANDES))
+	if args.size() >= 2 and args[1] == "grade":
+		_grid(args[0])
+		quit()
+		return
 	if args.size() >= 2:
 		var unit_name: String = args[1]
 		if not AVULSAS.has(unit_name):
@@ -85,6 +93,75 @@ func _initialize() -> void:
 		else:
 			_install(sheet.get_region(boxes[i]), NAMES[i], scale)
 	quit()
+
+
+## Folha do Gemini em grade 3x3 (26/10/2026; tools/art/gemini/pedidos/
+## 01_unidades): as 9 unidades de NAMES na ordem do prompt, fundo verde liso.
+## Cada uma é recortada na sua célula; todas com a mesma escala (a folha já
+## tem as proporções certas: pessoa, cavalo, biga). Guarda a folha em
+## GEMINI_SHEET.
+func _grid(path: String) -> void:
+	var sheet := Image.load_from_file(path)
+	sheet.convert(Image.FORMAT_RGBA8)
+	sheet.save_png(ProjectSettings.globalize_path(GEMINI_SHEET))
+	_remove_backdrop(sheet)
+	# Verde vazado nas partes finas (rédeas, cordas, hastes): nenhuma unidade
+	# tem verde de verdade, então o verde nunca passa do maior entre R e B
+	for y in sheet.get_height():
+		for x in sheet.get_width():
+			var p := sheet.get_pixel(x, y)
+			if p.a > 0.0 and p.g > maxf(p.r, p.b):
+				sheet.set_pixel(x, y, Color(p.r, maxf(p.r, p.b), p.b, p.a))
+	var cell := Vector2i(sheet.get_width() / 3, sheet.get_height() / 3)
+	var boxes: Array[Rect2i] = []
+	for i in NAMES.size():
+		boxes.append(_clean_cell(sheet, Rect2i(Vector2i(i % 3, i / 3) * cell, cell)))
+	var scale := INF
+	for box: Rect2i in boxes:
+		scale = minf(scale, minf(MAX_SIZE.x / box.size.x, MAX_SIZE.y / box.size.y))
+	print("escala comum: %.3f" % scale)
+	for i in NAMES.size():
+		_install(sheet.get_region(boxes[i]), NAMES[i], scale)
+
+
+## Apaga as manchas soltas da célula (restos de sombra: grupos de pixels com
+## menos de 2% do maior grupo) e devolve a caixa do que sobrou.
+func _clean_cell(sheet: Image, area: Rect2i) -> Rect2i:
+	var groups: Array[PackedInt32Array] = []
+	var seen := {}
+	for y in range(area.position.y, area.end.y):
+		for x in range(area.position.x, area.end.x):
+			var start := Vector2i(x, y)
+			if seen.has(start) or sheet.get_pixel(x, y).a <= 0.5:
+				continue
+			var group := PackedInt32Array()
+			var stack: Array[Vector2i] = [start]
+			seen[start] = true
+			while not stack.is_empty():
+				var p: Vector2i = stack.pop_back()
+				group.append(p.y * sheet.get_width() + p.x)
+				for d in [Vector2i(1, 0), Vector2i(-1, 0), Vector2i(0, 1), Vector2i(0, -1)]:
+					var q: Vector2i = p + d
+					if area.has_point(q) and not seen.has(q) and sheet.get_pixel(q.x, q.y).a > 0.5:
+						seen[q] = true
+						stack.append(q)
+			groups.append(group)
+	var biggest := 0
+	for group in groups:
+		biggest = maxi(biggest, group.size())
+	var box := Rect2i()
+	var first := true
+	for group in groups:
+		var keep := group.size() >= biggest * 0.02
+		for index in group:
+			var p := Vector2i(index % sheet.get_width(), index / sheet.get_width())
+			if not keep:
+				sheet.set_pixel(p.x, p.y, Color(0, 0, 0, 0))
+				continue
+			box = Rect2i(p, Vector2i.ONE) if first else box.expand(p)
+			first = false
+	box.size += Vector2i.ONE
+	return box
 
 
 func _avulsa(unit_name: String) -> void:

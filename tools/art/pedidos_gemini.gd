@@ -20,6 +20,7 @@ const CARD := Color8(70, 76, 84)
 const INTRO := """I am remaking the art of a 2D turn-based strategy game set in ancient Greece. The attached image has two parts:
 - LEFT, "ESTILO": a galley. It is the STYLE REFERENCE: paint everything in exactly this style.
 - RIGHT, "ATUAL": the current, low-quality versions of the items I need, numbered, in the same grid I want back. Use them only to know WHAT to draw (content and composition), not how they look.
+- Paint everything NEW. Do not copy or paste any part of the attached image into the result: no galley, no old drawings, no labels, no numbers.
 
 Create ONE image: a sprite sheet with %s."""
 
@@ -102,7 +103,7 @@ func _themes() -> Array:
 	var c := "res://assets/sprites/cities/"
 	var t := "res://assets/tiles/"
 	var m := "res://assets/sprites/improvements/"
-	return [
+	var list := [
 		{"name": "unidades", "what": "9 game units", "columns": 3, "cell": 150, "team_tint": true,
 		"camera": """CAMERA:
 - Every unit in three-quarter view facing RIGHT, seen from slightly above (about 20-30 degrees), like the galley.
@@ -118,31 +119,6 @@ func _themes() -> Array:
 			["cavalaria_leve", u + "cavalaria_leve", "Light cavalry: a brown horse in mid trot, the rider with a crested bronze helmet and a cloak, holding a spear."],
 			["bigas", u + "bigas", "Two-horse war chariot: two brown horses side by side, a light wooden chariot with two spoked wheels and its painted front panel, one charioteer in a crested helmet holding the reins."],
 			["catapulta", u + "catapulta", "Wooden torsion catapult (onager) on four solid wheels with bronze hubs, twisted rope at the base of the arm, a sling cup with a round stone, a small pennant at the back; no crew."],
-		]},
-		{"name": "cidades", "what": "14 Greek town map icons: 4 town sizes (rows) x 4 versions (columns)", "columns": 4, "cell": 150, "team_tint": true,
-		"rows": ["hamlet", "village", "town", "city"],
-		"camera": """CAMERA AND LOOK:
-- Every town in three-quarter view from above (about 40 degrees), like a small diorama: the whole town sits on a small round island of dusty ground with a few olive trees and cypresses around its edge. Whitewashed houses with terracotta tile roofs.
-- The 4 versions in a row are the SAME town (same houses, same island): column 1 plain; column 2 plus the ruler's palace temple on the highest point; column 3 plus a stone city wall with towers and a gate; column 4 with both the temple and the wall.
-- The rows grow: hamlet (4-5 houses, the hamlet has no palace version), village (about 10 houses), town (about 20 houses on two levels), city (houses filling the island, a stoa and a small theatre; its palace is an ACROPOLIS: a big columned temple on a high rocky terrace). Houses have the same size in every row; only their number grows.""",
-		"team": "banners on the towers, market awnings and the temple roof trim",
-		"items": [
-			["povoado", c + "povoado", "Hamlet, plain: a few houses, a market awning, a well, olive trees, a low dry-stone garden wall."],
-			["", "", ""],
-			["povoado_muralha", c + "povoado_muralha", "Hamlet with a short stone wall, a gate and two small towers with banners."],
-			["", "", ""],
-			["vila", c + "vila", "Village, plain: houses around a square with a well, a fountain and a market."],
-			["vila_capital", c + "vila_capital", "Village + a small temple with white columns on the highest point."],
-			["vila_muralha", c + "vila_muralha", "Village + a stone wall with square towers and a gate."],
-			["vila_capital_muralha", c + "vila_capital_muralha", "Village + temple + wall."],
-			["cidade", c + "cidade", "Town, plain: about 20 houses on two levels, a market square."],
-			["cidade_capital", c + "cidade_capital", "Town + a bigger temple on a raised stone terrace."],
-			["cidade_muralha", c + "cidade_muralha", "Town + a wall with several towers and a big gate."],
-			["cidade_capital_muralha", c + "cidade_capital_muralha", "Town + temple + wall."],
-			["metropole", c + "metropole", "City, plain: many houses filling the island, a stoa, a small theatre."],
-			["metropole_capital", c + "metropole_capital", "City + an acropolis: a large columned temple on a high rocky terrace."],
-			["metropole_muralha", c + "metropole_muralha", "City + a tall wall with four big towers and a monumental gate."],
-			["metropole_capital_muralha", c + "metropole_capital_muralha", "City + acropolis + wall."],
 		]},
 		{"name": "ruinas", "what": "8 map icons of Greek towns after being sacked and burned", "columns": 4, "cell": 150,
 		"rows": ["without a wall", "with a wall"],
@@ -212,7 +188,47 @@ func _themes() -> Array:
 			["pao_e_circo", "res://assets/tech/pao_e_circo", "Bread and circuses: games in an arena, a cheering crowd, bread handed out."],
 		]},
 	]
+	# As cidades, uma classe por pedido (as 14 juntas o Gemini não conseguiu)
+	return list.slice(0, 1) + _city_themes(c) + list.slice(1)
 
+
+
+## Um pedido por classe de cidade: as versões da MESMA cidade lado a lado
+## (normal, com palácio, com muralha, com os dois; o povoado não tem palácio).
+func _city_themes(c: String) -> Array:
+	var camera := """CAMERA AND LOOK:
+- Three-quarter view from above (about 40 degrees), like a small diorama: the whole town sits on a small round island of dusty ground with a few olive trees and cypresses around its edge. Whitewashed houses with terracotta tile roofs.
+- All versions in the row are the SAME town: same island, same houses in the same places, same size and camera. They differ ONLY in what the list adds (the ruler's palace temple, the city wall).
+- The houses are small compared with the island (about the size of the houses of a village seen from a hill): %s"""
+	var team := "banners on the towers, market awnings and the temple roof trim"
+	var classes := [
+		["povoado", "a hamlet", "a hamlet has only 4 or 5 houses, so its island is small.",
+			[["", "Hamlet, plain: 4-5 houses, a market awning, a well, olive trees, a low dry-stone garden wall."],
+			["_muralha", "The same hamlet surrounded by a short stone wall with a gate and two small towers with banners."]]],
+		["vila", "a village", "about 10 houses around a small square.",
+			[["", "Village, plain: about 10 houses around a square with a well, a fountain and a market."],
+			["_capital", "The same village plus a small Greek temple with white columns on its highest point (the ruler's palace temple)."],
+			["_muralha", "The same village (without the temple) surrounded by a stone wall with square towers and a gate."],
+			["_capital_muralha", "The same village with both the temple and the wall."]]],
+		["cidade", "a town", "about 20 houses on two levels.",
+			[["", "Town, plain: about 20 houses on two levels, a market square with a fountain."],
+			["_capital", "The same town plus a bigger Greek temple on a raised stone terrace (the ruler's palace temple)."],
+			["_muralha", "The same town (without the temple) surrounded by a stone wall with several towers and a big gate."],
+			["_capital_muralha", "The same town with both the temple and the wall."]]],
+		["metropole", "a large city", "many houses filling a big island, a stoa and a small theatre.",
+			[["", "City, plain: many houses filling the island, a stoa and a small theatre."],
+			["_capital", "The same city plus an ACROPOLIS: a large columned temple on a high rocky terrace (the ruler's palace)."],
+			["_muralha", "The same city (without the acropolis) surrounded by a tall stone wall with four big towers and a monumental gate."],
+			["_capital_muralha", "The same city with both the acropolis and the wall."]]],
+	]
+	var themes := []
+	for k: Array in classes:
+		var items := []
+		for v: Array in k[3]:
+			items.append([k[0] + v[0], c + k[0] + v[0], v[1]])
+		themes.append({"name": "cidades_" + k[0], "what": "%d versions of the same Greek town map icon: %s" % [items.size(), k[1]],
+			"columns": items.size(), "cell": 170, "team_tint": true, "camera": camera % k[2], "team": team, "items": items})
+	return themes
 
 # --- Imagem de referência -----------------------------------------------------------
 
@@ -308,16 +324,20 @@ func _label(text: String, font_size: int) -> Label:
 func _readme() -> void:
 	var text := """PEDIDOS PARA O GEMINI: UM POR TEMA
 ==================================
-Cada pasta é um pedido, com uma folha do tema inteiro:
-  01_unidades     9 unidades (3x3; a Galé já está pronta)
-  02_cidades      14 cidades (4x4: linhas = povoado, vila, cidade,
-                  metrópole; colunas = normal, capital com palácio,
-                  com muralha, capital com muralha; o povoado não tem
-                  as versões de capital: células vazias)
-  03_ruinas       8 ruínas (4x2: sem muralha / com muralha)
-  04_terrenos     6 texturas (3x2)
-  05_melhorias    7 melhorias + o ícone do ferro (4x2)
-  06_tecnologias  16 ilustrações (4x4, opcional)
+Cada pasta é um pedido, com uma folha do tema:
+  01_unidades           9 unidades (3x3; a Galé já está pronta)
+  02_cidades_povoado    povoado: normal e com muralha (o povoado não
+                        tem palácio)
+  03_cidades_vila       vila: normal, capital (palácio), com muralha,
+                        capital com muralha
+  04_cidades_cidade     cidade: as mesmas 4 versões
+  05_cidades_metropole  metrópole: as mesmas 4 (o palácio é a acrópole)
+  06_ruinas             8 ruínas (4x2: sem muralha / com muralha)
+  07_terrenos           6 texturas (3x2)
+  08_melhorias          7 melhorias + o ícone do ferro (4x2)
+  09_tecnologias        16 ilustrações (4x4, opcional)
+  (As 14 cidades numa folha só o Gemini não conseguiu: copiou a
+  referência. Por isso uma classe por pedido.)
 
 Para cada pasta:
   1. Abra uma CONVERSA NOVA no Gemini.
@@ -329,8 +349,8 @@ Para cada pasta:
 
 Se a folha sair errada, peça para refazer na mesma conversa, citando o
 problema, ex.: "Redo it: keep the same 4x4 grid and order", "Redo it:
-the background must be one flat green #00B140", "Redo it: the 4 versions
-in a row must be the same town", "Redo it: same painted style as the
+the background must be one flat green #00B140", "Redo it: the versions
+must be the same town", "Redo it: same painted style as the
 galley".
 
 Lógica das cidades: classe pela população (povoado 1-5, vila 6-15,

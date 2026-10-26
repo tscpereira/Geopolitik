@@ -1,6 +1,7 @@
 I am remaking the art of a 2D turn-based strategy game set in ancient Greece. The attached image has two parts:
 - LEFT, "ESTILO": a galley. It is the STYLE REFERENCE: paint everything in exactly this style.
 - RIGHT, "ATUAL": the current, low-quality versions of the items I need, numbered, in the same grid I want back. Use them only to know WHAT to draw (content and composition), not how they look.
+- Paint everything NEW. Do not copy or paste any part of the attached image into the result: no galley, no old drawings, no labels, no numbers.
 
 Create ONE image: a sprite sheet with 9 game units.
 

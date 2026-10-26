@@ -1,15 +1,19 @@
 PEDIDOS PARA O GEMINI: UM POR TEMA
 ==================================
-Cada pasta é um pedido, com uma folha do tema inteiro:
-  01_unidades     9 unidades (3x3; a Galé já está pronta)
-  02_cidades      14 cidades (4x4: linhas = povoado, vila, cidade,
-                  metrópole; colunas = normal, capital com palácio,
-                  com muralha, capital com muralha; o povoado não tem
-                  as versões de capital: células vazias)
-  03_ruinas       8 ruínas (4x2: sem muralha / com muralha)
-  04_terrenos     6 texturas (3x2)
-  05_melhorias    7 melhorias + o ícone do ferro (4x2)
-  06_tecnologias  16 ilustrações (4x4, opcional)
+Cada pasta é um pedido, com uma folha do tema:
+  01_unidades           9 unidades (3x3; a Galé já está pronta)
+  02_cidades_povoado    povoado: normal e com muralha (o povoado não
+                        tem palácio)
+  03_cidades_vila       vila: normal, capital (palácio), com muralha,
+                        capital com muralha
+  04_cidades_cidade     cidade: as mesmas 4 versões
+  05_cidades_metropole  metrópole: as mesmas 4 (o palácio é a acrópole)
+  06_ruinas             8 ruínas (4x2: sem muralha / com muralha)
+  07_terrenos           6 texturas (3x2)
+  08_melhorias          7 melhorias + o ícone do ferro (4x2)
+  09_tecnologias        16 ilustrações (4x4, opcional)
+  (As 14 cidades numa folha só o Gemini não conseguiu: copiou a
+  referência. Por isso uma classe por pedido.)
 
 Para cada pasta:
   1. Abra uma CONVERSA NOVA no Gemini.
@@ -21,8 +25,8 @@ Para cada pasta:
 
 Se a folha sair errada, peça para refazer na mesma conversa, citando o
 problema, ex.: "Redo it: keep the same 4x4 grid and order", "Redo it:
-the background must be one flat green #00B140", "Redo it: the 4 versions
-in a row must be the same town", "Redo it: same painted style as the
+the background must be one flat green #00B140", "Redo it: the versions
+must be the same town", "Redo it: same painted style as the
 galley".
 
 Lógica das cidades: classe pela população (povoado 1-5, vila 6-15,

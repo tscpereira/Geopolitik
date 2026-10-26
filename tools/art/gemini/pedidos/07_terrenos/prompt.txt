@@ -1,32 +1,34 @@
 I am remaking the art of a 2D turn-based strategy game set in ancient Greece. The attached image has two parts:
 - LEFT, "ESTILO": a galley. It is the STYLE REFERENCE: paint everything in exactly this style.
 - RIGHT, "ATUAL": the current, low-quality versions of the items I need, numbered, in the same grid I want back. Use them only to know WHAT to draw (content and composition), not how they look.
+- Paint everything NEW. Do not copy or paste any part of the attached image into the result: no galley, no old drawings, no labels, no numbers.
 
-Create ONE image: a sprite sheet with 7 terrain improvements for map tiles and 1 resource icon.
+Create ONE image: a sprite sheet with 6 square terrain textures.
 
 STYLE (copy it from the galley):
 - Detailed painted digital illustration with realistic proportions: soft painted shading, visible wood grain and texture, warm earthy palette (warm brown wood, off-white linen and plaster, terracotta roof tiles, bronze, olive greens). Not cartoon, not chibi, not pixel art, no thick black outlines, no flat colors, not a photo.
 - Strong, clean silhouettes that stay readable when shrunk to small game sprites: few big shapes, no thin clutter.
 - Soft daylight from the TOP-LEFT. All items in the sheet share the same light, scale and camera.
 
-CAMERA:
-- Improvements seen from above (about 60-70 degrees, almost top-down), because each one sits on top of the terrain of a square map tile; each fills most of its cell.
-- The destroyed versions show the same place as the intact one, burned or collapsed, with a little smoke.
+THESE ARE TERRAIN TEXTURES, not objects:
+- Each one seen straight from above (top-down) and filling its whole square cell edge to edge.
+- Each one SEAMLESS: it must tile perfectly when repeated side by side and top to bottom.
+- No object in the middle, no horizon, no border inside the squares.
 
 SHEET LAYOUT:
-- A grid of 4 columns x 2 rows, evenly spaced, each item centered in its own cell, never touching or overlapping its neighbours, never cropped.
+- A grid of 3 columns x 2 rows, evenly spaced, each item centered in its own cell, never touching or overlapping its neighbours, never cropped.
 - Order, left to right, top to bottom (the numbers match the right side of the attached image):
   Row 1:
-    1. Farm: a patchwork of four small fields (golden wheat, green vegetable rows, brown ploughed soil) with low wooden fences.
-    2. Farm being prepared: bare ploughed brown furrows, a few stakes and a fence, nothing grown.
-    3. The same farm burned and trampled: scorched black patches, broken fences.
-    4. Lumber camp in a clearing: a stack of cut logs, a sawhorse with a log, an axe in a stump, a few trees.
+    1. Grassland: short green grass with small tufts and a few tiny flowers.
+    2. Dry savanna: yellow-tan dry grass and dusty soil, a few small low bushes.
+    3. Forest canopy from above: dense round tree crowns in deep greens, soft shadows between them.
   Row 2:
-    5. The same lumber camp burned: charred logs, a collapsed sawhorse.
-    6. Mine: a dark tunnel mouth framed by wooden beams, cut into a grey rocky mound, a small ore cart.
-    7. The same mine collapsed: fallen beams and rubble blocking the tunnel.
-    8. Resource icon: an iron anvil, dark grey metal with a soft highlight, three-quarter view.
+    4. Green rolling hills from above: soft grassy mounds with gentle light and shade.
+    5. Rocky grey mountains from above: sharp rock ridges and scree, no snow.
+    6. Sea from above: deep dark teal water with small painted wave crests (dark teal is fine here, clearly different from royal blue).
 - No numbers, labels or text in the image.
+
+The squares are separated by thin flat green (#00B140) gutters.
 
 TEAM COLOR: none in this sheet (no blue at all).
 
