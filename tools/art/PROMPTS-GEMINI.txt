@@ -1,271 +1,49 @@
-PROMPTS PARA REFAZER TODOS OS DESENHOS NO GEMINI (mesmo padrão da Galé)
-=======================================================================
+PROMPTS PARA REFAZER OS DESENHOS NO GEMINI (padrão da Galé)
+===========================================================
 
-Por quê: a Galé feita no Gemini (26/10/2026) ficou com o melhor acabamento
-do jogo: pintura digital detalhada, madeira quente, luz suave. A ideia é
-refazer tudo nesse padrão, para o jogo inteiro parecer do mesmo artista.
+A Galé feita no Gemini (26/10/2026) virou o padrão de acabamento do jogo.
+Pedir tudo de uma vez não funcionou: o Gemini se perdeu. Por isso cada
+desenho tem o SEU pedido, numa pasta própria:
 
-O QUE ANEXAR
-  - tools/art/gemini/assets_<categoria>.png: o que existe hoje, com os nomes
-    (gerado por tools/art/folha_assets.gd; assets_todos.png tem tudo);
-  - tools/art/chatgpt/gale_avulsa.png: a Galé, a REFERÊNCIA DE ESTILO.
-  Refaça a folha depois de trocar desenhos:
+  tools/art/gemini/pedidos/<NN>_<nome>/
+    referencia.png   à esquerda a Galé (o ESTILO), à direita o desenho
+                     atual (só o CONTEÚDO; o terreno aparece repetido 3x3)
+    prompt.txt       o prompt inteiro, com o estilo embutido
+
+  Como usar (detalhes em tools/art/gemini/pedidos/LEIA-ME.txt):
+    1. conversa NOVA no Gemini para cada pedido;
+    2. anexe referencia.png e cole prompt.txt;
+    3. salve a imagem na pasta como resultado.png.
+  Cidades com _capital, _muralha e _ruinas são EDIÇÕES: anexe também o
+  resultado.png da versão anterior (o prompt diz qual), na ordem das pastas.
+
+  61 pedidos: 01-09 unidades, 10-31 cidades (14) e ruínas (8), 32-37
+  terrenos, 38-44 melhorias, 45 ferro, 46-61 tecnologias (opcional).
+
+  Para regerar (depois de trocar desenhos ou mudar os textos):
+    godot_console.cmd --path . --script tools/art/pedidos_gemini.gd   (COM janela)
+  Os textos dos prompts ficam no próprio pedidos_gemini.gd.
+
+  Folhas com tudo junto (só para consulta, não para o Gemini):
     godot_console.cmd --path . --script tools/art/folha_assets.gd
+    -> tools/art/gemini/assets_*.png
 
-COMO PEDIR
-  - Um desenho por pedido (o Gemini erra mais em folhas com muitos itens).
-  - Mesma conversa para a mesma categoria: depois do primeiro, diga "same
-    style and scale as the previous one" para manter o padrão.
-  - Para as variantes das cidades e para as ruínas, EDITE a imagem anterior
-    ("Edit this image: ..."), em vez de pedir do zero: assim a cidade com
-    muralha é a mesma cidade, só que murada.
-  - Cole o ESTILO COMUM e, embaixo, o bloco do desenho.
+LÓGICA DOS DESENHOS DAS CIDADES
+  O desenho depende de 3 coisas (City.city_sprite):
+    CLASSE   pela população: povoado (1-5), vila (6-15), cidade (16-30),
+             metrópole (31+);
+    PALÁCIO  "_capital": só a capital tem o templo no alto (na metrópole,
+             a acrópole). Se a capital cai, a nova passa a mostrar o
+             templo. O povoado não tem versão de capital;
+    MURALHA  "_muralha": só com o prédio Muralha (exige Construção), em
+             qualquer classe.
+  Arquivo <classe>[_capital][_muralha].png, 128x128, com a máscara
+  _time.png da cor do dono (estandartes, toldo do mercado, telhado do
+  templo): 14 desenhos. Ruínas: <classe>[_muralha]_ruinas.png (8), sem
+  templo e sem cor do time.
 
 DEPOIS (importar)
-  - Unidades: import_folha_unidades.gd -- <imagem> <nome> (o nome precisa
-    estar em AVULSAS, com a altura no jogo; a Galé já está).
-  - Cidades, ruínas, terrenos, melhorias: os importadores atuais esperam o
-    xadrez do ChatGPT ou recortes da folha antiga. Quando as imagens
-    chegarem, o importador é adaptado ao fundo verde (mesma lógica do
-    _remove_backdrop de import_folha_unidades.gd).
-
-
-========================================================================
-LÓGICA DOS DESENHOS DAS CIDADES (o que pedir e por quê)
-========================================================================
-O desenho da cidade depende de 3 coisas (City.city_sprite):
-  CLASSE pela população: povoado (1-5), vila (6-15), cidade (16-30),
-         metrópole (31+). Cresce o número de casas e o tamanho.
-  PALÁCIO (_capital): só a CAPITAL tem o templo/acrópole no alto, que faz o
-         papel do Palácio. Se a capital cai, a nova capital passa a mostrar o
-         templo. O POVOADO não tem versão de capital (usa o mesmo desenho).
-  MURALHA (_muralha): só a cidade que construiu a Muralha (prédio, exige
-         Construção). Vale para qualquer classe, inclusive o povoado.
-Arquivo: <classe>[_capital][_muralha].png, 128x128, mais a máscara
-<nome>_time.png (as partes na cor do dono: estandartes, toldo do mercado,
-telhado do templo). Total: 15 desenhos (4 classes x 4, menos as 2 capitais
-do povoado). No mapa, a cidade aparece com 1,6 casa de largura, sobre uma
-"ilha" de chão com árvores em volta; o povoado sai menor.
-RUÍNAS: <classe>[_muralha]_ruinas.png (8), a cidade saqueada e destruída
-(sem templo: o palácio cai junto).
-Ordem sugerida no Gemini (sempre editando a anterior da mesma classe):
-  1. <classe>                (normal)
-  2. <classe>_capital        "add the palace temple on the high ground"
-  3. <classe>_muralha        "the same town (without the temple), now
-                              surrounded by a stone wall"
-  4. <classe>_capital_muralha
-  5. <classe>_ruinas / _muralha_ruinas
-
-
-========================================================================
-ESTILO COMUM (cole sempre, antes do bloco do desenho)
-========================================================================
-
-I am remaking all the art of a 2D turn-based strategy game set in ancient
-Greece. The attached "gale" image is the STYLE REFERENCE: every new image
-must look like it was painted by the same artist. The other attached image
-shows the current art with names, so you know what each item is.
-
-STYLE:
-- Detailed painted digital illustration with realistic proportions, like
-  the galley: soft painted shading, visible wood grain and texture, warm
-  earthy palette (warm brown wood, off-white linen and plaster, terracotta
-  roof tiles, bronze, olive greens). Not cartoon, not chibi, not pixel art,
-  no thick black outlines, no flat colors, no photo realism.
-- Strong, clean silhouette that stays readable when shrunk to a small
-  game sprite: few big shapes, no thin clutter.
-- Soft daylight from the TOP-LEFT.
-
-TEAM COLOR:
-- The player's color is ONE vivid royal blue (#1E50FF), used ONLY on the
-  parts listed in the request (banners, sail stripes, shields, crests,
-  awnings...), in lighter and darker shades of that blue. No other blue,
-  cyan, teal or purple anywhere: no blue sky, no water, no blue shadows.
-
-BACKGROUND (unless the request says it is a full-bleed texture):
-- One flat, solid chroma-key green (#00B140) filling the whole background,
-  no gradient, no texture, no vignette. No cast shadow on the background, no
-  frame, no text, no signature, no watermark.
-- One subject only, whole, never cropped, centered, small empty margin,
-  square image (1:1).
-
-
-========================================================================
-A. UNIDADES (vista 3/4, virada para a DIREITA, de leve por cima)
-========================================================================
-Acrescente ao estilo comum, para todas as unidades:
-"CAMERA: three-quarter view facing RIGHT, seen from slightly above (about
-20-30 degrees). One common ground line at the bottom for feet, hooves and
-wheels. People are life-size relative to each other; horses, chariots and
-machines at the same scale as the people."
-
-A1 trabalhador
-UNIT: A Greek laborer: bare arms, short off-white tunic with a team-blue
-belt and trim, leather sandals, carrying a heavy axe on his right shoulder.
-
-A2 colono
-UNIT: A Greek settler: wide straw hat, off-white tunic with team-blue trim,
-a big bundle/sack on his back, a shovel in his hand, walking.
-
-A3 guerreiro
-UNIT: A rustic ancient warrior: bare chest, short off-white kilt with a
-team-blue sash, a team-blue headband, a stone-headed club over the
-shoulder and a small round wicker shield painted team blue.
-
-A4 lanceiro
-UNIT: A Greek hoplite: bronze Corinthian helmet with a team-blue horsehair
-crest, bronze muscle cuirass, off-white chiton with team-blue trim, a tall
-spear held upright and a large round aspis shield painted team blue with a
-bronze rim and a white lambda.
-
-A5 guerreiro_espada
-UNIT: A legionary-style swordsman in an attack pose: bronze helmet with a
-team-blue crest, segmented armor, short gladius raised, a curved
-rectangular scutum shield painted team blue with a gold eagle.
-
-A6 arqueiro
-UNIT: A Greek archer drawing a long wooden bow: off-white tunic with
-team-blue trim, team-blue headband, a quiver of arrows on the back.
-
-A7 cavalaria_leve
-UNIT: Light cavalry: a brown horse in mid trot, the rider with a bronze
-crested helmet (team-blue crest) and a team-blue cloak, holding a spear.
-Horse and rider no wider than about 1.2 times their height.
-
-A8 bigas
-UNIT: A two-horse war chariot: two brown horses side by side in mid trot, a
-light wooden chariot with two spoked wheels, the front panel painted team
-blue with a bronze rim, one charioteer in a crested bronze helmet (team-blue
-crest) holding the reins. Compact: no wider than 1.3 times its height.
-
-A9 catapulta
-UNIT: A wooden torsion catapult (onager) on four solid wooden wheels with
-bronze hubs, thick twisted rope at the base of the arm, a leather sling cup
-holding a round stone, a small team-blue pennant on a pole at the back and a
-team-blue painted band on the frame. No crew.
-
-(A Galé já está pronta: é a referência.)
-
-
-========================================================================
-B. CIDADES (15) E RUÍNAS (8)
-========================================================================
-Acrescente ao estilo comum, para todas as cidades:
-"CAMERA: three-quarter view seen from above (about 40 degrees), like a
-diorama: the whole town sits on a small round island of dusty ground with
-a few olive trees and cypresses around its edge. Greek town: whitewashed
-houses with terracotta tile roofs. The team blue appears ONLY on banners,
-market awnings and the temple roof trim. The picture must read well at
-128x128 pixels."
-
-B1 povoado
-TOWN: A small hamlet: 4 or 5 whitewashed houses, one market awning (team
-blue), a well, olive trees, a low dry-stone wall around the gardens.
-(Smaller than the village: the houses have the same size as in the other
-towns, there are just fewer of them.)
-
-B2 povoado_muralha
-EDIT: "Edit this image: the same hamlet, now surrounded by a short stone
-wall with a gate and two small towers flying team-blue banners."
-
-B3 vila
-TOWN: A village: about 10 houses around a small square with a well, a
-fountain and a market with team-blue awnings; cypresses between the houses.
-
-B4 vila_capital
-EDIT: "Edit this image: add on the highest point a small Greek temple with
-white columns and a team-blue roof trim (the ruler's palace temple)."
-
-B5 vila_muralha / B6 vila_capital_muralha
-EDIT: "Edit this image: the same village, now surrounded by a stone wall with
-square towers, a gate and team-blue banners on the towers." (B5 from B3,
-B6 from B4.)
-
-B7 cidade, B8 cidade_capital, B9 cidade_muralha, B10 cidade_capital_muralha
-Same steps as the village, with a bigger town: about 20 houses on two
-levels, a larger market square. The capital temple is bigger, on a raised
-terrace. The wall has more towers.
-
-B11 metropole, B12 metropole_capital, B13 metropole_muralha,
-B14 metropole_capital_muralha
-Same steps, with a large city: many houses filling the island, a theatre or
-stoa. The capital has an ACROPOLIS: a large columned temple on a high
-rocky terrace. The wall is taller, with four big towers.
-
-B15.. RUÍNAS (8: povoado, vila, cidade, metropole, cada uma com e sem
-muralha)
-EDIT: "Edit this image: the same town after being sacked and burned: roofs
-collapsed, blackened walls, broken columns, rubble and a little smoke, no
-people, no banners, no blue. Keep the same island, size and camera." (Use
-the version without the temple: the palace is destroyed too.)
-
-
-========================================================================
-C. TERRENOS (6) - TEXTURAS QUE SE REPETEM
-========================================================================
-Acrescente ao estilo comum, SUBSTITUINDO o fundo verde:
-"This is a FULL-BLEED TERRAIN TEXTURE, not an object: seen straight from
-above (top-down), filling the whole square edge to edge, SEAMLESS (it must
-tile perfectly when repeated side by side and top to bottom), no object in
-the middle, no horizon, no shadow from a single big object, no border. Same
-painted style and palette as the reference."
-
-C1 pradaria   grassland: short green grass with small tufts and a few tiny
-              flowers, olive-green palette.
-C2 cerrado    dry savanna: yellow-tan dry grass and dusty soil, a few small
-              low bushes.
-C3 floresta   forest seen from above: a dense canopy of round deciduous tree
-              crowns in deep greens, with shadows between them.
-C4 colinas    green rolling hills seen from above: soft grassy mounds with
-              gentle painted light and shade (the light from the top-left).
-C5 montanhas  rocky grey mountains seen from above: sharp rock ridges and
-              scree, light grey and warm grey, no snow.
-C6 agua       sea seen from above: deep teal-blue water with small painted
-              wave crests. (Exception: water may be blue, but a dark teal
-              blue, clearly different from the team blue #1E50FF.)
-
-
-========================================================================
-D. MELHORIAS DE TERRENO (7) E ÍCONE DO FERRO
-========================================================================
-Acrescente ao estilo comum:
-"CAMERA: seen from above (about 60-70 degrees, almost top-down), so it sits
-on top of the terrain texture of a map tile. Green chroma-key background
-(#00B140) around it. Fill most of the square."
-
-D1 fazenda          a farm plot seen from above: a patchwork of four small
-                    fields (golden wheat, green rows of vegetables, brown
-                    ploughed soil) with low wooden fences between them.
-D2 fazenda_obra     the same plot just being prepared: bare ploughed brown
-                    furrows, a few stakes and a wooden fence, nothing grown.
-D3 fazenda_destruida EDIT D1: "the same farm burned and trampled: scorched
-                    black patches, broken fences, a little smoke."
-D4 madeireira       a lumber camp in a clearing: a stack of cut logs, a
-                    sawhorse with a log, an axe in a stump, a few trees.
-D5 madeireira_destruida EDIT D4: "the same camp burned: charred logs,
-                    collapsed sawhorse, smoke."
-D6 mina             a mine entrance cut into a grey rocky mound: a dark
-                    tunnel mouth framed by wooden beams, a small ore cart.
-D7 mina_destruida   EDIT D6: "the same mine collapsed: fallen beams, rubble
-                    blocking the entrance, a little smoke."
-D8 ferro (ícone)    an iron anvil, dark grey metal with a soft highlight,
-                    three-quarter view, as a small resource icon.
-
-
-========================================================================
-E. ILUSTRAÇÕES DAS TECNOLOGIAS (16, opcional)
-========================================================================
-Hoje são pinturas e fotos de época, de estilos diferentes. Para ficarem no
-mesmo padrão, peça cada uma como pintura horizontal (16:10), SEM o fundo
-verde e SEM a regra do azul do time:
-"A painted illustration in the same style as the reference, landscape 16:10,
-showing <tema> in ancient Greece. Warm palette, soft light, no text."
-Temas: alfabeto (Escrita: a scribe writing Greek letters on a wax tablet),
-construcao (masons building a stone wall), misticismo (priests at an altar
-before a temple), bronze (a smith casting bronze), montaria (riders taming
-horses), guerra_a_distancia (archers training), navegacao (a galley at sea),
-literatura (a poet reading to listeners), matematica (geometers drawing on
-sand), trabalho_em_ferro (a blacksmith forging iron), moeda (minting silver
-drachmas), guerra_de_movimento (war chariots charging), direito (citizens
-voting with pebbles), engenharia_civil (a paved road and an aqueduct),
-republica (an assembly on the Pnyx), pao_e_circo (games in an arena).
+  Unidades: import_folha_unidades.gd -- <resultado.png> <nome> (o nome em
+  AVULSAS, com a altura no jogo). Cidades, ruínas, terrenos e melhorias:
+  os importadores serão adaptados ao fundo verde quando as imagens
+  chegarem.

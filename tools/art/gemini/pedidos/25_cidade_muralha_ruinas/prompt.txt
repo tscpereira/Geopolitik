@@ -1,0 +1,13 @@
+I am remaking the art of a 2D turn-based strategy game set in ancient Greece. The attached image has two parts:
+- LEFT, "ESTILO": a galley that is the STYLE REFERENCE. Paint in exactly this style.
+- RIGHT, "ATUAL": the current, low-quality version of the item I need. Use it only to know WHAT to draw (content and composition), not how it looks.
+Create ONE image: an edited version of a town map icon (details below).
+
+EDIT, do not redraw: I am ALSO attaching the image you generated before for "cidade_muralha". Edit THAT image: the same walled town after being sacked and burned: broken walls and towers, collapsed roofs, rubble and a little smoke; no people, no banners and NO blue at all. Keep the same island, size and camera.
+Keep exactly the same painted style, camera, island, size and the green background (#00B140).
+
+TEAM COLOR: none in this image (ruins have no banners).
+
+BACKGROUND:
+- One flat, solid chroma-key green (#00B140) filling the whole background: no gradient, no texture, no vignette, no cast shadow on the background, no ground, no frame, no text, no signature.
+- One subject only, whole, never cropped, centered, with a small empty margin. Square image (1:1).

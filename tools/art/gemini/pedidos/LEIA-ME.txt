@@ -1,0 +1,26 @@
+PEDIDOS PARA O GEMINI: UM DESENHO POR VEZ (61 pedidos)
+==============================================================
+Cada pasta é um pedido. Para cada uma:
+  1. Abra uma CONVERSA NOVA no Gemini (assim ele não mistura os pedidos).
+  2. Anexe referencia.png (à esquerda o ESTILO, a Galé; à direita o
+     desenho ATUAL, que mostra só o que desenhar).
+  3. Cole o texto de prompt.txt inteiro.
+  4. Baixe a imagem e salve na própria pasta como resultado.png.
+
+Cidades e ruínas (pastas com _capital, _muralha, _ruinas): são EDIÇÕES.
+Anexe também o resultado.png da pasta indicada no prompt (ex.: para
+vila_muralha, o resultado de "vila"). Por isso faça na ordem das pastas.
+
+Lógica das cidades: classe pela população (povoado 1-5, vila 6-15,
+cidade 16-30, metrópole 31+); "_capital" = só a capital, com o templo
+no alto (o Palácio; o povoado não tem); "_muralha" = só com o prédio
+Muralha, em qualquer classe; "_ruinas" = cidade destruída.
+
+Se sair fora do padrão, peça para refazer na mesma conversa, citando o
+problema: "Redo it: the background must be one flat green #00B140",
+"Redo it: no water and no blue except the listed parts", "Redo it: same
+painted style as the galley, not cartoon".
+
+Ordem sugerida: unidades (01-09), cidades e ruínas, terrenos,
+melhorias, ferro e, por último (opcional), as tecnologias.
+Gerado por tools/art/pedidos_gemini.gd.

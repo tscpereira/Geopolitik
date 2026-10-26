@@ -1,0 +1,18 @@
+I am remaking the art of a 2D turn-based strategy game set in ancient Greece. The attached image has two parts:
+- LEFT, "ESTILO": a galley that is the STYLE REFERENCE. Paint in exactly this style.
+- RIGHT, "ATUAL": the current, low-quality version of the item I need. Use it only to know WHAT to draw (content and composition), not how it looks.
+Create ONE image: a terrain improvement for a map tile: a farm plot just being prepared: bare ploughed brown furrows, a few stakes and a wooden fence, nothing grown yet.
+
+STYLE (copy it from the LEFT image, the galley):
+- Detailed painted digital illustration with realistic proportions: soft painted shading, visible wood grain and texture, warm earthy palette (warm brown wood, off-white linen and plaster, terracotta roof tiles, bronze, olive greens). Not cartoon, not chibi, not pixel art, no thick black outlines, no flat colors, not a photo.
+- Strong, clean silhouette that stays readable when shrunk to a small game sprite: few big shapes, no thin clutter.
+- Soft daylight from the TOP-LEFT.
+
+CAMERA:
+- Seen from above (about 60-70 degrees, almost top-down), because it sits on top of the terrain of a square map tile. Fill most of the square.
+
+TEAM COLOR: none (no blue at all).
+
+BACKGROUND:
+- One flat, solid chroma-key green (#00B140) filling the whole background: no gradient, no texture, no vignette, no cast shadow on the background, no ground, no frame, no text, no signature.
+- One subject only, whole, never cropped, centered, with a small empty margin. Square image (1:1).

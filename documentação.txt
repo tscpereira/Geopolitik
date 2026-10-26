@@ -183,8 +183,10 @@ C:\ProjetoGame
 |       |-- folha_assets.gd        Folha com todos os desenhos e os
 |       |                          nomes (tools/art/gemini/), para
 |       |                          pedir a refação no Gemini
-|       |-- PROMPTS-GEMINI.txt     Prompts para refazer tudo no Gemini
-|       |                          no padrão da Galé
+|       |-- pedidos_gemini.gd      Um pedido por desenho para o Gemini
+|       |                          (gemini/pedidos/: referência + prompt)
+|       |-- PROMPTS-GEMINI.txt     Índice dos pedidos ao Gemini e a
+|       |                          lógica dos desenhos das cidades
 |       |-- PROMPTS-CHATGPT.txt    Prompts para gerar os desenhos
 |       `-- chatgpt/               Referência, folha gerada, recortes
 |                                  grandes (grandes/) e os desenhos
@@ -337,14 +339,21 @@ MAPA (scripts/map/)
   assets_unidades, assets_cidades, assets_terreno,
   assets_tecnologias), geradas COM janela por
     godot_console.cmd --path . --script tools/art/folha_assets.gd
-  (a cor do time aparece no azul padrão #1E50FF). Os prompts estão em
-  tools/art/PROMPTS-GEMINI.txt: um ESTILO COMUM (o da Galé, anexada
-  como referência; fundo verde #00B140; azul do time só nas partes
-  pedidas) e um bloco por desenho: A unidades (9), B cidades (15) e
-  ruínas (8), pedidas EDITANDO a imagem anterior da mesma classe para
-  manter a mesma cidade, C terrenos (texturas sem emenda, vistas de
-  cima), D melhorias e o ícone do ferro, E ilustrações das tecnologias
-  (opcional). Os importadores de cidade, terreno e melhoria ainda
+  (a cor do time aparece no azul padrão #1E50FF), só para consulta.
+  PEDIDOS: o Gemini se perdeu com tudo de uma vez, então cada desenho
+  tem o seu pedido em tools/art/gemini/pedidos/<NN>_<nome>/ (61:
+  9 unidades, 14 cidades, 8 ruínas, 6 terrenos, 7 melhorias, o ferro
+  e 16 tecnologias), gerados COM janela por
+    godot_console.cmd --path . --script tools/art/pedidos_gemini.gd
+  Cada pasta tem referencia.png (a Galé, o ESTILO, à esquerda; o
+  desenho atual, o CONTEÚDO, à direita; terreno repetido 3x3) e
+  prompt.txt (o prompt inteiro, com o estilo, o fundo verde #00B140 e
+  onde vai o azul do time). Uma conversa nova por pedido; as variantes
+  de cidade e as ruínas EDITAM o resultado da versão anterior (anexar
+  o resultado.png dela). Os textos ficam em pedidos_gemini.gd; as
+  referencia.png não vão para o Git (.gitignore: são regeradas).
+  Índice e lógica das cidades: tools/art/PROMPTS-GEMINI.txt; passo a
+  passo: tools/art/gemini/pedidos/LEIA-ME.txt. Os importadores de cidade, terreno e melhoria ainda
   esperam o fundo do ChatGPT: serão adaptados ao fundo verde quando as
   imagens chegarem.
 - ESTILO PINTADO (desde 23/10/2026, a partir de uma referência
@@ -3898,6 +3907,13 @@ Screenshots também confirmaram o visual.
   desenhos das cidades (palácio = templo só na capital; muralha só com
   o prédio). Corrigido também tools/art/consolidado.gd, que tinha sido
   gravado com a acentuação quebrada (PowerShell) no commit da Galé.
+
+- PEDIDOS SEPARADOS PARA O GEMINI (o Gemini não entendeu tudo de uma
+  vez, avaliação do usuário): tools/art/pedidos_gemini.gd gera 61
+  pastas em tools/art/gemini/pedidos/, uma por desenho, cada uma com a
+  referência (estilo da Galé + desenho atual) e o prompt completo;
+  LEIA-ME.txt com a ordem. PROMPTS-GEMINI.txt virou o índice. Correção:
+  as cidades são 14 (não 15).
 
 --------------------------------------------------------------
 7. BACKLOG (ideias para depois)
