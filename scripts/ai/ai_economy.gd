@@ -26,7 +26,8 @@ extends RefCounted
 ##        era antiga Escola, Mercado, Biblioteca, Forja e Arena (com as
 ##                 tecnologias), um de cada vez, na capital e em cidades de 4+;
 ##        armas    Lanças até spears_per_city por cidade (só com o Lanceiro);
-##        exército Guerreiros até army_to_attack fora das cidades;
+##        exército soldados até army_to_attack fora das cidades, 1 em cada
+##                 ranged_share de ataque à distância (Catapulta ou Arqueiro);
 ##   3. cidadãos, do zero (_distribute_workers): fazendas e casas sem
 ##      melhoria até a cidade não passar fome, festividades até sair da
 ##      desordem civil, 1 em cada madeireira (se falta madeira), a RESERVA das
@@ -48,6 +49,11 @@ extends RefCounted
 const WOOD_RESERVE := 40
 ## Prédios da era antiga, na ordem em que a máquina os pede.
 const ANCIENT_BUILDINGS: Array[int] = [City.Build.SCHOOL, City.Build.MARKET, City.Build.LIBRARY, City.Build.FORGE, City.Build.ARENA]
+## Distância somada aos Arqueiros e Catapultas na escolha da guarnição
+## (_nearest_soldier): maior que qualquer mapa, então só vão se não houver outro.
+const RANGED_GARRISON_PENALTY := 10000
+## Unidades que a máquina faz para o exército (ver _army_unit).
+const ARMY_BUILDS: Array[int] = [City.Build.WARRIOR, City.Build.SPEARMAN, City.Build.ARCHER, City.Build.CATAPULT]
 
 var _game: Game
 var _player: Player
@@ -131,10 +137,32 @@ func _plan(city: City) -> void:
 			and _player.wood - City.BUILDS[City.Build.SPEAR]["wood"] >= reserve:
 		_try_order(city, City.Build.SPEAR)
 
-	# Exército (fora das cidades)
+	# Exército (fora das cidades), com 1 em cada ranged_share atacando à distância
+	var queued_army := 0
+	for build: int in ARMY_BUILDS:
+		queued_army += _count_queued(build)
 	if _p.army_to_attack > 0 and city.population >= 3 \
-			and _count_units(_is_field_soldier) + _count_queued(City.Build.WARRIOR) + _count_queued(City.Build.SPEARMAN) < _p.army_to_attack:
-		_try_order(city, _soldier())
+			and _count_units(_is_field_soldier) + queued_army < _p.army_to_attack:
+		_try_order(city, _army_unit(reserve))
+
+
+## Unidade do exército que falta: uma de ataque à distância enquanto houver
+## menos que army_to_attack / ranged_share (Catapulta, se der para pagar a
+## madeira sem mexer na [param reserve] dos prédios; senão Arqueiro), ou o
+## soldado de corpo a corpo (_soldier).
+func _army_unit(reserve: int) -> int:
+	if _p.ranged_share <= 0:
+		return _soldier()
+	var ranged := _count_units(func(unit: Unit) -> bool: return _is_field_soldier(unit) and unit.is_ranged()) \
+			+ _count_queued(City.Build.ARCHER) + _count_queued(City.Build.CATAPULT)
+	if ranged >= _p.army_to_attack / _p.ranged_share:
+		return _soldier()
+	if _player.researched.has(Technology.Tech.MATHEMATICS) \
+			and _player.wood - City.BUILDS[City.Build.CATAPULT]["wood"] >= reserve:
+		return City.Build.CATAPULT
+	if _player.researched.has(Technology.Tech.RANGED_WARFARE):
+		return City.Build.ARCHER
+	return _soldier()
 
 
 ## Pede a obra se as regras deixarem e se ainda não houver uma igual na fila.
@@ -263,6 +291,8 @@ func _job_priority(city: City, job: City.Construction) -> int:
 			return 0 if city.food_per_turn() < _p.food_surplus else 5
 		City.Build.SPEAR, City.Build.WARRIOR, City.Build.SPEARMAN:
 			return 1 if defense_short else 6
+		City.Build.ARCHER, City.Build.CATAPULT:
+			return 6
 		City.Build.WORKER:
 			return 0 if _farm_jobs() > 0 else 1 if _rebuild_jobs() > 0 else 2 if wood_short else 7
 		City.Build.LUMBER_MILL:
@@ -758,13 +788,16 @@ func _garrison_post(city: City) -> Vector2i:
 	return best
 
 
+## Soldado de campo mais perto de [param target] para a guarnição. Arqueiro e
+## Catapulta (Defesa 1) só vão se não houver nenhum de corpo a corpo.
 func _nearest_soldier(target: Vector2i) -> Unit:
 	var best: Unit = null
 	var best_distance := 1 << 30
 	for unit in _player.units:
 		if not _is_field_soldier(unit):
 			continue
-		var distance := maxi(absi(unit.cell.x - target.x), absi(unit.cell.y - target.y))
+		var distance := maxi(absi(unit.cell.x - target.x), absi(unit.cell.y - target.y)) \
+				+ (RANGED_GARRISON_PENALTY if unit.is_ranged() else 0)
 		if distance < best_distance:
 			best_distance = distance
 			best = unit

@@ -12,9 +12,11 @@ extends RefCounted
 ##      uma floresta e fazem madeireiras;
 ##   3. guarnição: soldados se fortificam nas cidades (e ao redor);
 ##   4. ataques dos soldados de campo, sempre o de maior nota primeiro (a
-##      guarnição não sai da cidade);
+##      guarnição não sai da cidade; Arqueiro ou Catapulta da guarnição
+##      disparam do próprio posto e voltam a se fortificar);
 ##   5. avanço contra o inimigo, só com exército de army_to_attack soldados,
-##      mantendo a formação e sem parar na zona de ameaça do inimigo;
+##      mantendo a formação e sem parar na zona de ameaça do inimigo
+##      (Arqueiros e Catapultas atrás da linha de corpo a corpo);
 ##   6. novos ataques de quem chegou perto e ainda tem movimento.
 ## Depois dos ataques, os soldados de campo invadem as cidades inimigas sem
 ## guarnição que alcançam (ocupam ou, com max_cities cidades, saqueiam e
@@ -134,8 +136,14 @@ func _attack_phase(game: Game, player: Player) -> void:
 		var best := _best_attack(game, player)
 		if best.is_empty():
 			return
-		await _focus(game, best["unit"])
-		await game.attack(best["unit"], best["target"])
+		var unit: Unit = best["unit"]
+		var was_garrison := _economy.is_garrison(unit)
+		await _focus(game, unit)
+		await game.attack(unit, best["target"])
+		if was_garrison and is_instance_valid(unit) and player.units.has(unit):
+			# Disparou da guarnição sem sair do lugar: volta a se fortificar
+			unit.fortify()
+			unit.hidden_in_city = game.get_city_at(unit.cell) != null
 
 
 ## Move as unidades na direção do inimigo, das mais atrasadas para as mais
@@ -165,11 +173,16 @@ func _best_attack(game: Game, player: Player) -> Dictionary:
 	var best := {}
 	var occupants := game.occupants()
 	for unit in player.units:
-		if unit.moves_left <= 0 or not _is_field_soldier(unit):
+		if unit.moves_left <= 0 or unit.attack <= 0:
+			continue
+		var garrison := _economy.is_garrison(unit)
+		if garrison and not unit.is_ranged():
 			continue # a guarnição não sai da cidade para atacar
 		var reachable := Movement.find_reachable(game.game_map, unit, occupants)
 		var targets := Movement.attack_targets(game.game_map, unit, reachable, occupants)
 		for target: Vector2i in targets:
+			if garrison and targets[target] != unit.cell:
+				continue # a guarnição só dispara do próprio posto
 			var score := _attack_score(unit, occupants[target], targets[target])
 			if score > 0.0 and (best.is_empty() or score > best["score"]):
 				best = {"unit": unit, "target": target, "score": score}
@@ -244,15 +257,22 @@ func _threatened_cells(game: Game, player: Player) -> Dictionary:
 
 
 ## Menor distância ao inimigo que a unidade pode ter sem ficar mais de
-## MAX_SPREAD casas à frente da aliada mais avançada.
+## MAX_SPREAD casas à frente da aliada mais avançada. Arqueiro e Catapulta
+## ficam atrás (ou ao lado) da linha de corpo a corpo e não chegam mais perto
+## do que o próprio alcance (a Catapulta para a 2 casas).
 func _front_limit(player: Player, unit: Unit, distance: Dictionary) -> int:
 	var closest_ally := UNREACHABLE
+	var closest_melee := UNREACHABLE
 	for ally in player.units:
 		if ally != unit:
-			closest_ally = mini(closest_ally, distance.get(ally.cell, UNREACHABLE))
-	if closest_ally == UNREACHABLE:
-		return 0
-	return closest_ally - MAX_SPREAD
+			var ally_distance: int = distance.get(ally.cell, UNREACHABLE)
+			closest_ally = mini(closest_ally, ally_distance)
+			if ally.attack > 0 and not ally.is_ranged():
+				closest_melee = mini(closest_melee, ally_distance)
+	var limit := 0 if closest_ally == UNREACHABLE else closest_ally - MAX_SPREAD
+	if unit.is_ranged():
+		return maxi(closest_melee if closest_melee != UNREACHABLE else limit, unit.type.attack_range)
+	return limit
 
 
 ## Distância (em casas de terra, 8 direções) de cada casa até o inimigo mais

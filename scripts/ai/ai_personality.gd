@@ -43,6 +43,9 @@ var spears_per_city := 2
 ## Guerreiros fora das cidades necessários para partir para o ataque
 ## (0 = nunca ataca; só se defende).
 var army_to_attack := 3
+## 1 em cada N soldados do exército ataca à distância (Catapulta com
+## Matemática, senão Arqueiro com Guerra a distância); 0 = nenhum.
+var ranged_share := 3
 ## Compra um Guerreiro com ouro quando há inimigo perto de uma cidade sem defesa.
 var buy_defense := true
 ## Distância (em casas) em que um inimigo é considerado uma ameaça à cidade.

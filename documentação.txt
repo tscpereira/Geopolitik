@@ -1981,8 +1981,23 @@ ATAQUE À DISTÂNCIA (desde 25/10/2026, pedido do usuário)
   só o alvo mostra o dano.
 - IA: o disparo entra na nota de ataque com dano recebido 0, e a zona
   de ameaça do inimigo considera o alcance dos disparos
-  (AIController._threatened_cells). A máquina ainda não constrói
-  Arqueiros nem Catapultas.
+  (AIController._threatened_cells). Desde 25/10/2026 a máquina também
+  CONSTRÓI e POSICIONA as unidades à distância:
+    * exército: 1 em cada "ranged_share" soldados (personalidade;
+      3 na Equilibrada: 1 de 3, 1 de 5 na Expansionista) ataca à
+      distância: Catapulta se tem Matemática e a madeira não faz falta
+      aos prédios, senão Arqueiro com Guerra a distância
+      (AIEconomy._army_unit). Sem as tecnologias, corpo a corpo;
+    * guarnição: prefere corpo a corpo (Arqueiro e Catapulta têm
+      Defesa 1); só vão para a cidade se não houver outro soldado
+      (AIEconomy._nearest_soldier);
+    * Arqueiro ou Catapulta que estejam na guarnição disparam do
+      próprio posto (sem sair da cidade) e voltam a se fortificar;
+    * no avanço, ficam atrás ou ao lado da linha de corpo a corpo
+      e não chegam mais perto do inimigo que o próprio alcance: a
+      Catapulta para a 2 casas (AIController._front_limit). Como
+      atacam antes de avançar, disparam de onde estão no início do
+      turno.
 - Números (energia cheia, pradaria): Arqueiro dispara em Guerreiro
   ~28 (destrói em 4 disparos); Catapulta em Guerreiro ~40 (3
   disparos); Catapulta em Lanceiro fortificado na floresta (defesa 4)
@@ -2469,8 +2484,8 @@ Screenshots também confirmaram o visual.
     população)
 [x] Cidades: produzir o Arqueiro (tecnologia Guerra a distância,
     25/10/2026; a Cavalaria Leve substituiu o Cavaleiro)
-[ ] Ilustração da tecnologia Guerra a distância
-    (assets/tech/guerra_a_distancia.png; a janela já a procura)
+[x] Ilustração da tecnologia Guerra a distância
+    (assets/tech/guerra_a_distancia.png, trazida pelo usuário)
 [x] IA: produzir unidades nas cidades
 [x] Terreno Floresta (+1 de defesa, movimento mais caro, sem
     fazenda) e Cerrado (floresta esgotada)
@@ -3650,6 +3665,25 @@ Screenshots também confirmaram o visual.
   (15 tecnologias, 6 raízes, Guerra a distância ainda sem
   ilustração); test_diag_attack já falhava no caso "ortogonal" antes
   desta mudança.
+- ILUSTRAÇÃO DE GUERRA A DISTÂNCIA (trazida pelo usuário: arqueiros
+  de túnica vermelha num pátio) em assets/tech/guerra_a_distancia.png.
+- IA COM ATAQUE À DISTÂNCIA (pedido do usuário): a máquina faz
+  Arqueiros e Catapultas (1 em cada ranged_share do exército, campo
+  novo da personalidade; saves antigos ficam com 3), prefere corpo a
+  corpo na guarnição, dispara da guarnição sem sair da cidade e, no
+  avanço, mantém as unidades à distância atrás da linha de corpo a
+  corpo (a Catapulta para a 2 casas). Validação: teste dirigido
+  (escolha da unidade com e sem as tecnologias e com a madeira
+  reservada, pedido da Catapulta na fila, escolha da guarnição,
+  Catapulta da guarnição disparando e se fortificando de novo,
+  limites do avanço); batalha de 15 rodadas entre duas máquinas com
+  Guerreiro, Lanceiro, Arqueiro e Catapulta de cada lado (os dois
+  lados disparam, a Catapulta enfraquece e o Lanceiro ataca, e as
+  unidades à distância só ficaram à frente da linha quando o
+  Guerreiro da frente morreu: a IA ainda não recua); 100 rodadas de
+  máquina contra máquina sem erros (nesse ritmo nenhuma monta
+  exército, ver "Balancear o ritmo do jogo"); screenshot da janela da
+  tecnologia com a ilustração.
 
 --------------------------------------------------------------
 7. BACKLOG (ideias para depois)
@@ -3729,9 +3763,12 @@ histórico):
     como tecnologia, sem efeito
 [ ] Preço em ouro proporcional ao custo (hoje tudo custa 50, até a
     Arena)
-[ ] IA: fazer as unidades novas (Arqueiro, Catapulta, Cavalaria
-    Leve, Bigas) e estradas; posicionar Arqueiros e Catapultas atrás
-    da linha de frente
+[x] IA: fazer Arqueiros e Catapultas e posicioná-los atrás da linha
+    de frente (25/10/2026)
+[ ] IA: fazer as outras unidades novas (Cavalaria Leve, Bigas,
+    Guerreiro de Espada Curta) e estradas
+[ ] IA: recuar Arqueiros e Catapultas que ficaram à frente da linha
+    (ex.: quando o soldado da frente morre)
 [x] Arte definitiva das Bigas e da Catapulta (folha do ChatGPT com as
     9 unidades, 25/10/2026)
 [ ] Ritmo da ciência: em 100 rodadas a máquina só pesquisa as
