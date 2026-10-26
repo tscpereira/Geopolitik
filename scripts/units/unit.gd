@@ -123,6 +123,11 @@ func apply_dict(data: Dictionary) -> void:
 	_update_exhausted_look()
 
 
+## Ataca à distância (UnitType.attack_range > 0: Arqueiro, Catapulta).
+func is_ranged() -> bool:
+	return type.attack_range > 0
+
+
 ## Defesa extra do terreno em que a unidade está (Terrain.DEFENSE_BONUS).
 func terrain_defense_bonus() -> int:
 	return Terrain.DEFENSE_BONUS.get(_map.get_terrain(cell), 0) if _map else 0
@@ -228,6 +233,17 @@ func play_attack(target_position: Vector2) -> void:
 	tween.tween_property(self, "position", origin, 0.1)
 	await tween.finished
 	z_index = 0
+
+
+## Ataque à distância: um pequeno recuo e o projétil do tipo (flecha ou pedra)
+## voando até o alvo.
+func play_shot(target_position: Vector2) -> void:
+	var origin := position
+	var tween := create_tween()
+	tween.tween_property(self, "position", origin - (target_position - origin).normalized() * MARGIN * 2.0, 0.08)
+	tween.tween_property(self, "position", origin, 0.08)
+	await tween.finished
+	await Projectile.fire(get_parent(), type.projectile, origin, target_position)
 
 
 func play_death() -> void:

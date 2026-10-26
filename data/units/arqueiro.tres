@@ -10,4 +10,5 @@ symbol = "A"
 attack = 2
 defense = 1
 movement = 1
+attack_range = 1
 sprite = ExtResource("2")

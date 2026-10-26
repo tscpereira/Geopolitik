@@ -10,4 +10,6 @@ symbol = "K"
 attack = 4
 defense = 1
 movement = 1
+attack_range = 2
+projectile = 1
 sprite = ExtResource("2")

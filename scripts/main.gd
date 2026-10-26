@@ -880,7 +880,8 @@ func select_unit(unit: Unit) -> void:
 		var current := occupants()
 		_reachable = Movement.find_reachable(game_map, unit, current)
 		_attack_targets = Movement.attack_targets(game_map, unit, _reachable, current)
-		move_overlay.show_moves(unit.cell, Movement.destinations(_reachable, current), _attack_targets.keys())
+		move_overlay.show_moves(unit.cell, Movement.destinations(_reachable, current), _attack_targets.keys(),
+				unit.is_ranged())
 		if unit.has_goto():
 			_show_goto_path(unit, unit.goto_target)
 	else:
@@ -899,7 +900,8 @@ func move_unit(unit: Unit, target: Vector2i) -> void:
 
 ## Anda até a casa de ataque (se precisar) e ataca o inimigo em [param target_cell].
 ## O ataque encerra os movimentos do atacante; se o defensor for destruído,
-## o atacante ocupa a casa dele.
+## o atacante ocupa a casa dele. Quem ataca à distância (Arqueiro, Catapulta)
+## dispara um projétil, não leva dano e fica onde está.
 func attack(attacker: Unit, target_cell: Vector2i) -> void:
 	move_overlay.clear()
 	attacker.fortified = false
@@ -910,18 +912,25 @@ func attack(attacker: Unit, target_cell: Vector2i) -> void:
 	if from_cell != attacker.cell:
 		await attacker.move_along(Movement.build_path(reachable, from_cell), game_map)
 
-	await attacker.play_attack(defender.position)
+	if attacker.is_ranged():
+		await attacker.play_shot(defender.position)
+	else:
+		await attacker.play_attack(defender.position)
 	var result := Combat.resolve(attacker, defender, _rng)
 	attacker.skip_turn()
 	_show_damage(defender, result.damage_to_defender)
-	_show_damage(attacker, result.damage_to_attacker, 0.45)
-	print("%s (%s) ataca %s (%s): causa %d, recebe %d -> energia %d x %d" % [
+	if not attacker.is_ranged():
+		_show_damage(attacker, result.damage_to_attacker, 0.45)
+	print("%s (%s) %s %s (%s): causa %d, recebe %d -> energia %d x %d" % [
 		attacker.type.display_name, attacker.owner_player.display_name,
+		"dispara em" if attacker.is_ranged() else "ataca",
 		defender.type.display_name, defender.owner_player.display_name,
 		result.damage_to_defender, result.damage_to_attacker, attacker.energy, defender.energy,
 	])
 
-	if result.defender_destroyed:
+	if result.defender_destroyed and attacker.is_ranged():
+		await _destroy_unit(defender)
+	elif result.defender_destroyed:
 		await _destroy_unit(defender)
 		await attacker.advance_to(target_cell, game_map)
 		await check_invasion(attacker) # derrotou a guarnição e entrou na cidade
@@ -1171,6 +1180,13 @@ func _no_attack_reason(unit: Unit, enemy: Unit) -> String:
 	if unit.moves_left <= 0:
 		return "%s está sem movimentos neste turno: dá para atacar o %s no próximo turno." % [
 				unit.type.display_name, enemy.type.display_name]
+	if unit.is_ranged() and Movement.grid_distance(unit.cell, enemy.cell) <= unit.type.attack_range \
+			and not Movement.has_line_of_fire(game_map, unit.cell, enemy.cell):
+		return "Floresta, colina ou montanha no caminho: %s não tem linha de tiro até o %s." % [
+				unit.type.display_name, enemy.type.display_name]
+	if unit.is_ranged():
+		return "%s está fora do alcance de disparo (%d %s)." % [enemy.type.display_name,
+				unit.type.attack_range, "casa" if unit.type.attack_range == 1 else "casas"]
 	return "%s está fora do alcance de ataque neste turno." % enemy.type.display_name
 
 
@@ -2109,9 +2125,9 @@ func _update_info() -> void:
 			defense_notes.append("+%d %s" % [unit.terrain_defense_bonus(), Terrain.NAMES[game_map.get_terrain(unit.cell)].to_lower()])
 		if unit.walls_defense_bonus() > 0:
 			defense_notes.append("+%d muralha" % unit.walls_defense_bonus())
-		lines.append("%s (%s) - Ataque %d | Defesa %d%s | Movimento %s/%d | Energia %d/%d" % [
+		lines.append("%s (%s) - Ataque %d%s | Defesa %d%s | Movimento %s/%d | Energia %d/%d" % [
 			unit.type.display_name, unit.owner_player.display_name,
-			unit.attack, unit.defense, " (%s)" % ", ".join(defense_notes) if not defense_notes.is_empty() else "",
+			unit.attack, " à distância (alcance %d)" % unit.type.attack_range if unit.is_ranged() else "", unit.defense, " (%s)" % ", ".join(defense_notes) if not defense_notes.is_empty() else "",
 			unit.moves_text(), unit.movement, unit.energy, unit.max_energy,
 		])
 		if unit.has_goto():
@@ -2127,15 +2143,17 @@ func _update_info() -> void:
 		var attack_note := ", +%d contra cavalaria" % Combat.anti_cavalry(selected_unit, defender) \
 				if Combat.anti_cavalry(selected_unit, defender) > 0 else ""
 		var target_notes := []
-		if defender.river_defense_bonus(from_cell) > 0:
+		if Combat.river_bonus(selected_unit, defender, from_cell) > 0:
 			target_notes.append("+%d atrás do rio" % Terrain.RIVER_DEFENSE_BONUS)
 		if Combat.anti_cavalry(defender, selected_unit) > 0:
 			target_notes.append("+%d contra cavalaria" % Combat.anti_cavalry(defender, selected_unit))
-		lines.append("Atacar: %s (força %.2f%s) x %s (força %.2f%s) - dano estimado: causa ~%d | recebe ~%d" % [
+		lines.append("%s: %s (força %.2f%s) x %s (força %.2f%s) - dano estimado: causa ~%d | recebe %s" % [
+			"Disparar" if selected_unit.is_ranged() else "Atacar",
 			selected_unit.type.display_name, Combat.attack_strength(selected_unit, defender), attack_note,
 			defender.type.display_name, Combat.defense_strength(selected_unit, defender, from_cell),
 			", " + ", ".join(target_notes) if not target_notes.is_empty() else "",
-			roundi(expected["to_defender"]), roundi(expected["to_attacker"]),
+			roundi(expected["to_defender"]),
+			"0" if selected_unit.is_ranged() else "~%d" % roundi(expected["to_attacker"]),
 		])
 	hud.set_info("\n".join(lines))
 

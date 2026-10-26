@@ -223,7 +223,8 @@ func _best_advance(game: Game, player: Player, unit: Unit, distance: Dictionary,
 
 
 ## Casas que algum inimigo consegue atacar no próximo turno dele: vizinhas de
-## qualquer casa aonde ele chega guardando 1 movimento para o ataque.
+## qualquer casa aonde ele chega guardando 1 movimento para o ataque (ou, para
+## quem ataca à distância, as casas ao alcance do disparo dali).
 func _threatened_cells(game: Game, player: Player) -> Dictionary:
 	var threatened := {}
 	var occupants := game.occupants()
@@ -237,8 +238,8 @@ func _threatened_cells(game: Game, player: Player) -> Dictionary:
 			for cell: Vector2i in reachable:
 				if cell != enemy.cell and occupants.has(cell):
 					continue # casa com aliado dele: atravessa, mas não para
-				for direction in Movement.DIRECTIONS:
-					threatened[cell + direction] = true
+				for offset in Movement.attack_offsets(enemy):
+					threatened[cell + offset] = true
 	return threatened
 
 

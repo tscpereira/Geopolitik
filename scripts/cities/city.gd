@@ -79,6 +79,7 @@ signal changed
 enum Build {
 	FARM, LUMBER_MILL, WARRIOR, WORKER, SETTLER, CITY_HALL, HEADQUARTERS, CARPENTRY, SPEAR, TEMPLE, WALLS, SPEARMAN, MINE,
 	SCHOOL, LIBRARY, MARKET, FORGE, ARENA, SHORT_SWORD, CATAPULT, LIGHT_CAVALRY, CHARIOT, SWORDSMAN,
+	ARCHER,
 }
 
 ## Humor de um cidadão (bem-estar social).
@@ -201,7 +202,7 @@ const BUILDS := {
 	Build.HEADQUARTERS: {
 		"name": "Quartel General", "article": "o", "category": Category.BUILDING,
 		"cost": 15, "gold": 50, "wood": 15, "on_tile": false,
-		"description": "Prédio militar: faz as unidades militares (Guerreiro, Lanceiro, Guerreiro de Espada Curta, Catapulta, Cavalaria Leve, Bigas). Gasta 15 de madeira.",
+		"description": "Prédio militar: faz as unidades militares (Guerreiro, Lanceiro, Arqueiro, Guerreiro de Espada Curta, Catapulta, Cavalaria Leve, Bigas). Gasta 15 de madeira.",
 	},
 	Build.CARPENTRY: {
 		"name": "Marcenaria", "article": "a", "category": Category.BUILDING,
@@ -276,7 +277,14 @@ const BUILDS := {
 		"cost": 20, "gold": 50, "wood": 10, "on_tile": false,
 		"unit": preload("res://data/units/catapulta.tres"), "population": 1,
 		"requires": Build.HEADQUARTERS, "tech": Technology.Tech.MATHEMATICS,
-		"description": "Máquina de cerco (Ataque 4, Defesa 1, Movimento 1). Exige Matemática; gasta 10 de madeira.",
+		"description": "Máquina de cerco: ataque à distância 4, alcance 2 (floresta e colinas no meio bloqueiam o tiro); Defesa 1, Movimento 1. Exige Matemática; gasta 10 de madeira.",
+	},
+	Build.ARCHER: {
+		"name": "Arqueiro", "article": "o", "category": Category.UNIT,
+		"cost": 12, "gold": 50, "wood": 5, "on_tile": false,
+		"unit": preload("res://data/units/arqueiro.tres"), "population": 1,
+		"requires": Build.HEADQUARTERS, "tech": Technology.Tech.RANGED_WARFARE,
+		"description": "Atira flechas na casa vizinha: ataque à distância 2, alcance 1, sem levar dano; Defesa 1, Movimento 1. Exige Guerra a distância; gasta 5 de madeira (arco e flechas).",
 	},
 	Build.LIGHT_CAVALRY: {
 		"name": "Cavalaria Leve", "article": "a", "category": Category.UNIT,

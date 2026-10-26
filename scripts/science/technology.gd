@@ -17,6 +17,7 @@ extends RefCounted
 ##   Trabalho em Bronze -> Trabalho em Ferro -> Pão e Circo
 ##   Montaria + Trabalho em Bronze -> Guerra de movimento
 ##   Misticismo (sem sucessora por enquanto)
+##   Guerra a distância (sem sucessora por enquanto; entrou em 25/10/2026)
 ## O que cada uma libera fica onde é usado: o campo "tech" de City.BUILDS
 ## (prédios, unidades), has_tech nas regras (Direito, Trabalho em Ferro,
 ## Engenharia Civil). Para uma tecnologia nova: entre no fim do enum e em DATA.
@@ -26,6 +27,7 @@ extends RefCounted
 enum Tech {
 	CONSTRUCTION, MYSTICISM, WRITING, BRONZE_WORKING, HORSEBACK_RIDING, LITERATURE, MATHEMATICS,
 	IRON_WORKING, CURRENCY, MOBILE_WARFARE, LAW, CIVIL_ENGINEERING, REPUBLIC, BREAD_AND_CIRCUSES,
+	RANGED_WARFARE,
 }
 
 ##   name      nome mostrado
@@ -60,6 +62,11 @@ const DATA := {
 		"description": "Domar e montar cavalos. Libera a Cavalaria Leve (Movimento 4; leva 1 Lança).",
 		"image": "res://assets/tech/montaria.png",
 	},
+	Tech.RANGED_WARFARE: {
+		"name": "Guerra a distância", "cost": 35, "requires": [],
+		"description": "Arcos e flechas: atacar sem chegar perto. Libera o Arqueiro (ataque à distância 2, alcance 1).",
+		"image": "res://assets/tech/guerra_a_distancia.png",
+	},
 	Tech.LITERATURE: {
 		"name": "Literatura", "cost": 70, "requires": [Tech.WRITING],
 		"description": "Obras escritas e copiadas. Libera a Biblioteca (até 2 cidadãos, +1 de ciência cada).",
@@ -67,7 +74,7 @@ const DATA := {
 	},
 	Tech.MATHEMATICS: {
 		"name": "Matemática", "cost": 60, "requires": [Tech.CONSTRUCTION],
-		"description": "Números e geometria aplicados às máquinas. Libera a Catapulta (Ataque 4).",
+		"description": "Números e geometria aplicados às máquinas. Libera a Catapulta (ataque à distância 4, alcance 2).",
 		"image": "res://assets/tech/matematica.png",
 	},
 	Tech.IRON_WORKING: {

@@ -47,6 +47,8 @@ static func destinations(reachable: Dictionary, occupants: Dictionary) -> Array[
 ## Atacar encerra os movimentos, então a unidade precisa chegar a uma casa
 ## vizinha ao inimigo com algum movimento sobrando (meio movimento basta). Usa a casa de ataque mais próxima.
 ## Unidades com Ataque 0 não atacam.
+## Ataque à distância (Unit.is_ranged): o alvo pode estar a até attack_range
+## casas da casa de onde ela dispara, com a linha de tiro livre (has_line_of_fire).
 static func attack_targets(map: GameMap, unit: Unit, reachable: Dictionary, occupants: Dictionary) -> Dictionary:
 	if unit.attack <= 0:
 		return {} # unidades sem ataque (ex.: Colono) não atacam
@@ -60,15 +62,80 @@ static func attack_targets(map: GameMap, unit: Unit, reachable: Dictionary, occu
 		var distance := path_cost(map, unit, build_path(reachable, cell))
 		if distance >= unit.moves_left:
 			continue
-		for direction in DIRECTIONS:
-			var target: Vector2i = cell + direction
+		for offset in attack_offsets(unit):
+			var target: Vector2i = cell + offset
 			var occupant: Unit = occupants.get(target)
-			if occupant == null or occupant.owner_player == unit.owner_player:
+			if occupant == null or occupant.owner_player == unit.owner_player \
+					or not in_attack_range(map, unit, cell, target):
 				continue
 			if not best_distance.has(target) or distance < best_distance[target]:
 				targets[target] = cell
 				best_distance[target] = distance
 	return targets
+
+
+## Deslocamentos até as casas que a unidade pode atingir: as vizinhas
+## (DIRECTIONS) ou, à distância, o quadrado de lado 2 × attack_range + 1.
+static func attack_offsets(unit: Unit) -> Array[Vector2i]:
+	if not unit.is_ranged():
+		return DIRECTIONS
+	var reach := unit.type.attack_range
+	var offsets: Array[Vector2i] = []
+	for y in range(-reach, reach + 1):
+		for x in range(-reach, reach + 1):
+			if x != 0 or y != 0:
+				offsets.append(Vector2i(x, y))
+	return offsets
+
+
+## Distância em casas, contando a diagonal como 1 (o grid tem 8 direções).
+static func grid_distance(a: Vector2i, b: Vector2i) -> int:
+	return maxi(absi(a.x - b.x), absi(a.y - b.y))
+
+
+## Se a unidade, parada em [param from], alcança o alvo em [param target]:
+## corpo a corpo, só a casa vizinha; à distância, até attack_range casas e com
+## a linha de tiro livre.
+static func in_attack_range(map: GameMap, unit: Unit, from: Vector2i, target: Vector2i) -> bool:
+	var distance := grid_distance(from, target)
+	if distance == 0:
+		return false
+	if not unit.is_ranged():
+		return distance == 1
+	return distance <= unit.type.attack_range and (unit.type.indirect_fire or has_line_of_fire(map, from, target))
+
+
+## Terrenos que bloqueiam o disparo quando estão ENTRE quem atira e o alvo (o
+## alvo pode estar neles).
+const BLOCKS_FIRE: Array[Terrain.Type] = [Terrain.Type.FOREST, Terrain.Type.HILLS, Terrain.Type.MOUNTAINS]
+
+
+## Linha de tiro de [param from] até [param target]: em cada passo da reta entre
+## as duas casas, a casa por onde ela passa não pode ser floresta, colina nem
+## montanha. Quando a reta passa bem entre duas casas (ex.: 2 para o lado e 1
+## para baixo), basta uma delas estar livre. Casas vizinhas sempre se veem.
+static func has_line_of_fire(map: GameMap, from: Vector2i, target: Vector2i) -> bool:
+	var delta := target - from
+	var steps := grid_distance(from, target)
+	for i in range(1, steps):
+		var point := Vector2(from) + Vector2(delta) * i / steps
+		var clear := false
+		for x in _nearest(point.x):
+			for y in _nearest(point.y):
+				var cell := Vector2i(x, y)
+				if map.is_in_bounds(cell) and not BLOCKS_FIRE.has(map.get_terrain(cell)):
+					clear = true
+		if not clear:
+			return false
+	return true
+
+
+## Coordenada inteira mais perto de [param value]; as duas, se ele estiver bem
+## no meio (ex.: 0,5 -> 0 e 1).
+static func _nearest(value: float) -> Array[int]:
+	if is_equal_approx(value - floorf(value), 0.5):
+		return [floori(value), ceili(value)]
+	return [roundi(value)]
 
 
 ## Caminho mais barato até uma casa distante, sem limite de movimentos (para a
@@ -118,12 +185,13 @@ static func path_cost(map: GameMap, unit: Unit, path: Array[Vector2i], from := U
 	return total
 
 
-## Cidades inimigas: só unidades militares entram (para invadir; ver
-## Game.check_invasion), e a unidade para nelas (não atravessa).
+## Cidades inimigas: só unidades militares de corpo a corpo entram (para
+## invadir; ver Game.check_invasion), e a unidade para nelas (não atravessa).
+## Arqueiro e Catapulta derrubam a guarnição de longe, mas não tomam a cidade.
 static func can_enter(map: GameMap, unit: Unit, cell: Vector2i, occupants: Dictionary) -> bool:
 	if not map.is_in_bounds(cell) or not Terrain.is_walkable(map.get_terrain(cell)):
 		return false
-	if is_enemy_city(map, unit, cell) and unit.attack <= 0:
+	if is_enemy_city(map, unit, cell) and (unit.attack <= 0 or unit.is_ranged()):
 		return false
 	var occupant: Unit = occupants.get(cell)
 	return occupant == null or occupant.owner_player == unit.owner_player

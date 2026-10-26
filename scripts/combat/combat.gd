@@ -15,9 +15,15 @@ extends RefCounted
 ##   razão           = força de ataque / força de defesa
 ##   dano ao defensor = BASE_DAMAGE × √razão × sorte
 ##   dano ao atacante = BASE_DAMAGE ÷ √razão × sorte
+## Ataque à distância (UnitType.attack_range > 0: Arqueiro, Catapulta): o dano
+## ao defensor usa RANGED_DAMAGE no lugar de BASE_DAMAGE, o atacante não leva
+## dano e o rio não dá defesa (ele atrapalha a investida, não o disparo).
 
 ## Dano trocado entre duas unidades de mesma força.
 const BASE_DAMAGE := 30.0
+## Dano de um disparo entre unidades de mesma força. Menor que BASE_DAMAGE
+## porque quem dispara não leva dano de volta.
+const RANGED_DAMAGE := 20.0
 ## Variação aleatória do dano: 0.1 = ±10%.
 const LUCK := 0.10
 ## Fração da força com que a unidade luta quando está com energia 0
@@ -54,9 +60,17 @@ static func attack_strength(attacker: Unit, defender: Unit) -> float:
 
 
 static func defense_strength(attacker: Unit, defender: Unit, from_cell := Unit.NO_TARGET) -> float:
-	var origin := attacker.cell if from_cell == Unit.NO_TARGET else from_cell
-	return (defender.defense + defender.river_defense_bonus(origin) + anti_cavalry(defender, attacker)) \
+	return (defender.defense + river_bonus(attacker, defender, from_cell) + anti_cavalry(defender, attacker)) \
 			* energy_factor(defender) * defense_bonus(attacker, defender)
+
+
+## Defesa que o rio dá a [param defender] contra o ataque vindo de
+## [param from_cell] (a casa do atacante, se não for dada). O disparo não sofre
+## com o rio.
+static func river_bonus(attacker: Unit, defender: Unit, from_cell := Unit.NO_TARGET) -> int:
+	if attacker.is_ranged():
+		return 0
+	return defender.river_defense_bonus(attacker.cell if from_cell == Unit.NO_TARGET else from_cell)
 
 
 ## Bônus de [param unit] por lutar contra [param enemy] de cavalaria
@@ -69,6 +83,8 @@ static func anti_cavalry(unit: Unit, enemy: Unit) -> int:
 static func expected_damage(attacker: Unit, defender: Unit, from_cell := Unit.NO_TARGET) -> Dictionary:
 	var ratio := sqrt(maxf(attack_strength(attacker, defender), MIN_STRENGTH)
 			/ maxf(defense_strength(attacker, defender, from_cell), MIN_STRENGTH))
+	if attacker.is_ranged():
+		return {"to_defender": RANGED_DAMAGE * ratio, "to_attacker": 0.0}
 	return {
 		"to_defender": BASE_DAMAGE * ratio,
 		"to_attacker": BASE_DAMAGE / ratio,
@@ -81,7 +97,7 @@ static func resolve(attacker: Unit, defender: Unit, rng: RandomNumberGenerator) 
 	var expected := expected_damage(attacker, defender)
 	var result := Result.new()
 	result.damage_to_defender = _roll(expected["to_defender"], rng)
-	result.damage_to_attacker = _roll(expected["to_attacker"], rng)
+	result.damage_to_attacker = 0 if attacker.is_ranged() else _roll(expected["to_attacker"], rng)
 
 	var attacker_energy_before := attacker.energy
 	defender.energy -= result.damage_to_defender

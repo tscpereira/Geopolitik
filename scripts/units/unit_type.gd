@@ -20,6 +20,17 @@ extends Resource
 @export var is_mounted := false
 ## Bônus de ataque E de defesa quando luta contra cavalaria (Lanceiro: +1).
 @export_range(0, 9) var anti_cavalry_bonus := 0
+## Alcance do ataque à distância, em casas (Arqueiro: 1, só a vizinha;
+## Catapulta: 2). 0 = ataca corpo a corpo. Quem ataca à distância usa o Ataque
+## como força do disparo, não leva dano de volta, não avança para a casa do
+## alvo e não invade cidades (ver Combat e Movement.attack_targets).
+@export_range(0, 9) var attack_range := 0
+## Disparo por cima do terreno: floresta, colinas e montanhas entre a unidade e
+## o alvo não bloqueiam o tiro (ver Movement.has_line_of_fire). Ninguém tem
+## ainda; fica para os canhões das próximas eras.
+@export var indirect_fire := false
+## Desenho do projétil no ataque à distância: 0 = flecha, 1 = pedra.
+@export_enum("Flecha", "Pedra") var projectile := 0
 ## Pode construir uma nova cidade (tecla B), sendo consumida no processo.
 @export var can_found_city := false
 ## Pode construir madeireiras (tecla M): no território de uma cidade sua, a

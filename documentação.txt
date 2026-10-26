@@ -116,7 +116,8 @@ C:\ProjetoGame
 |   |   `-- lumber_mill.gd         Madeireira remota (do Trabalhador)
 |   |-- units/
 |   |   |-- unit_type.gd           Definição de um tipo de unidade
-|   |   `-- unit.gd                Unidade no mapa
+|   |   |-- unit.gd                Unidade no mapa
+|   |   `-- projectile.gd          Flecha/pedra do ataque à distância
 |   |-- camera/
 |   |   `-- map_camera.gd          Câmera (mover, zoom, arrastar)
 |   |-- ai/
@@ -459,7 +460,9 @@ JOGADORES (scripts/players/player.gd)
   são restaurados.
 
 UNIDADES (scripts/units/)
-- Atributos básicos: Ataque, Defesa, Movimento e Energia.
+- Atributos básicos: Ataque, Defesa, Movimento e Energia. O Arqueiro
+  e a Catapulta têm também Alcance (ataque à distância; ver ATAQUE À
+  DISTÂNCIA, em COMBATE).
 - Energia: todas as unidades começam com 100. Ela é gasta nas
   batalhas, e a unidade é destruída ao chegar a 0. Só se recupera
   com a unidade fortificada (ver FORTIFICAR).
@@ -471,18 +474,21 @@ UNIDADES (scripts/units/)
     Tipo        Símbolo  Ataque  Defesa  Movimento  Energia
     Guerreiro   G        1       1       1          100
     Lanceiro    L        1       2       1          100
-    Arqueiro    A        2       1       1          100
-    Colono      S        0       0       1          100
+    Arqueiro    A        2       1       1          100  (Guerra a distância;
+                                                         à distância, alcance 1)
+    Colono     S        0       0       1          100
     Trabalhador T        0       0       1          100
     Gr. Espada  E        2       2       1          100  (Trabalho em Ferro;
                                                          leva 1 Espada Curta)
-    Catapulta   K        4       1       1          100  (Matemática)
+    Catapulta   K        4       1       1          100  (Matemática;
+                                                         à distância, alcance 2)
     Cav. Leve   V        1       1       4          100  (Montaria; cavalaria)
     Bigas       B        2       1       3          100  (Guerra de movimento;
                                                          cavalaria)
 - UNIDADES DA ERA ANTIGA (desde 25/10/2026, árvore do usuário; feitas
-  no Quartel General): Catapulta (20 de produção + 1 de população +
-  10 de madeira), Cavalaria Leve (15 + 1 de população + 1 Lança) e
+  no Quartel General): Arqueiro (12 de produção + 1 de população + 5
+  de madeira; exige Guerra a distância), Catapulta (20 de produção + 1
+  de população + 10 de madeira), Cavalaria Leve (15 + 1 de população + 1 Lança) e
   Bigas (20 + 1 de população + 5 de madeira + 1 Espada Curta). A
   Cavalaria Leve e as Bigas são cavalaria (o Lanceiro tem +1 contra
   elas). A Cavalaria Leve usa o desenho do ChatGPT trazido pelo
@@ -1928,8 +1934,61 @@ energia dos dois lados.
   mantém a unidade selecionada (Game._no_attack_reason).
 - Atacar custa 1 movimento e encerra os movimentos da unidade
   no turno.
-- Todas as unidades atacam corpo a corpo. O ataque à distância
-  do Arqueiro fica para depois.
+- As unidades atacam corpo a corpo, menos o Arqueiro e a Catapulta,
+  que atacam à distância (ver ATAQUE À DISTÂNCIA, logo abaixo).
+
+ATAQUE À DISTÂNCIA (desde 25/10/2026, pedido do usuário)
+- Campos do UnitType (.tres): "Attack Range" (alcance em casas; 0 =
+  corpo a corpo), "Indirect Fire" (tiro por cima do terreno) e
+  "Projectile" (desenho do projétil: flecha ou pedra). Unit.is_ranged
+  diz se a unidade ataca à distância.
+    Arqueiro   ataque à distância 2, alcance 1 (só a casa vizinha),
+               flecha
+    Catapulta  ataque à distância 4, alcance 2 (a casa vizinha e a
+               seguinte), pedra
+  A distância conta a diagonal como 1 casa (Movement.grid_distance):
+  a Catapulta alcança as 24 casas em volta dela, menos as bloqueadas.
+- O disparo usa o Ataque como força e a mesma fórmula do corpo a
+  corpo, mas com RANGED_DAMAGE (20) no lugar de BASE_DAMAGE (30), e
+  QUEM DISPARA NÃO LEVA DANO. O rio não dá defesa contra o disparo
+  (atrapalha a investida, não a flecha); a floresta, as colinas, a
+  fortificação e a Muralha dão. Combat.river_bonus.
+- O disparo pode destruir o alvo; quem dispara fica onde está (não
+  avança para a casa) e encerra os movimentos, como no ataque normal.
+  Como no corpo a corpo, a unidade pode andar e disparar no mesmo
+  turno se ainda sobrar movimento (ex.: meio movimento de estrada).
+  Não há "montagem": a Catapulta dispara assim que chega.
+- LINHA DE TIRO (Movement.has_line_of_fire): floresta, colinas e
+  montanhas ENTRE quem dispara e o alvo bloqueiam o tiro (o alvo
+  pode estar nelas). Em cada passo da reta entre as duas casas, a
+  casa por onde ela passa tem que estar livre; quando a reta passa
+  bem entre duas casas (ex.: 2 para o lado e 1 para baixo), basta
+  uma das duas estar livre. Casas vizinhas sempre se veem, então o
+  Arqueiro (alcance 1) nunca é bloqueado. Quem tem "Indirect Fire"
+  atira por cima (ninguém tem ainda; fica para os canhões das
+  próximas eras).
+- Arqueiro e Catapulta não entram em cidade inimiga
+  (Movement.can_enter): derrubam a guarnição de longe, mas quem toma a
+  cidade é a unidade de corpo a corpo.
+- Interface: os alvos ao alcance ficam em LARANJA (MoveOverlay) em
+  vez de vermelho; a prévia mostra "Disparar: Arqueiro (força 2.00)
+  x Guerreiro (força 1.00) - dano estimado: causa ~28 | recebe 0"; a
+  linha da unidade mostra "Ataque 2 à distância (alcance 1)". Clicar
+  num inimigo fora de alcance explica o motivo (fora do alcance de
+  disparo, ou "Floresta, colina ou montanha no caminho"). Animação:
+  um pequeno recuo e o projétil (scripts/units/projectile.gd) voando
+  em arco até o alvo, a pedra mais alta e mais lenta que a flecha;
+  só o alvo mostra o dano.
+- IA: o disparo entra na nota de ataque com dano recebido 0, e a zona
+  de ameaça do inimigo considera o alcance dos disparos
+  (AIController._threatened_cells). A máquina ainda não constrói
+  Arqueiros nem Catapultas.
+- Números (energia cheia, pradaria): Arqueiro dispara em Guerreiro
+  ~28 (destrói em 4 disparos); Catapulta em Guerreiro ~40 (3
+  disparos); Catapulta em Lanceiro fortificado na floresta (defesa 4)
+  ~20.
+- Ideias guardadas para depois: tiro por cima (canhões) e dano em
+  área nas casas vizinhas (splash), para unidades do futuro.
 
 Fórmula:
   fator de energia = 0,5 + 0,5 x (energia / energia máxima)
@@ -1959,17 +2018,18 @@ Resultado:
 
 Previsão: com uma unidade selecionada, passar o mouse sobre um
 inimigo em vermelho mostra as forças e o dano estimado.
-Exemplo: "Atacar: Arqueiro (força 2.00) x Guerreiro
-(força 1.00) - dano estimado: causa ~42 | recebe ~21".
+Exemplo: "Atacar: Guerreiro de Espada Curta (força 2.00) x
+Guerreiro (força 1.00) - dano estimado: causa ~42 | recebe ~21".
 
 Números conferidos em 2000 simulações por confronto (unidades
-com energia cheia):
+com energia cheia; feitos quando o Arqueiro ainda atacava corpo a
+corpo, com 2 de Ataque, o mesmo de qualquer unidade de Ataque 2):
   Guerreiro ataca Guerreiro: ~30 / ~30; destrói em ~3,6 ataques
-  Arqueiro ataca Guerreiro:  ~42 / ~21; destrói em ~3 ataques
+  Ataque 2 ataca Guerreiro:  ~42 / ~21; destrói em ~3 ataques
   Guerreiro ataca Arqueiro:  ~30 / ~30; destrói em ~3,6 ataques
 
-Ajustes: as constantes BASE_DAMAGE (30), LUCK (0,10) e
-MIN_ENERGY_FACTOR (0,5) ficam no topo de combat.gd.
+Ajustes: as constantes BASE_DAMAGE (30), RANGED_DAMAGE (20), LUCK
+(0,10) e MIN_ENERGY_FACTOR (0,5) ficam no topo de combat.gd.
 Bônus de terreno: quem defende na floresta ou nas colinas ganha +1
 de defesa (somado à Defesa, junto com a fortificação; ver FLORESTA e
 COLINAS E MONTANHAS), e quem
@@ -2084,6 +2144,7 @@ CIÊNCIA E PESQUISA (scripts/science/technology.gd, Player.research)
       Escrita     40 pontos (era o Alfabeto; mesmo número no save)
       Trabalho em Bronze  35 pontos
       Montaria    35 pontos
+      Guerra a distância  35 pontos (desde 25/10/2026)
   ERA ANTIGA (árvore desenhada pelo usuário em 25/10/2026,
   OneDrive/Documents/techtree.drawio; custos sugeridos):
     Tecnologia (custo)        Exige                  Libera
@@ -2092,6 +2153,7 @@ CIÊNCIA E PESQUISA (scripts/science/technology.gd, Player.research)
     Misticismo (20)           -                      Templo
     Trabalho em Bronze (35)   -                      Lanceiro
     Montaria (35)             -                      Cavalaria Leve
+    Guerra a distância (35)   -                      Arqueiro
     Literatura (70)           Escrita                Biblioteca
     Matemática (60)           Construção             Catapulta
     Trabalho em Ferro (70)    Bronze                 ferro no mapa,
@@ -2340,7 +2402,11 @@ Screenshots também confirmaram o visual.
 [ ] Mover: atacar ou parar ao encontrar um inimigo no caminho
 [ ] Mover: preferir caminhos mais retos (hoje pode fazer curvas
     com o mesmo número de casas)
-[ ] Ataque à distância do Arqueiro
+[x] Ataque à distância do Arqueiro (alcance 1) e da Catapulta
+    (alcance 2, bloqueada por floresta e colinas no meio), com
+    destaque laranja, prévia "Disparar" e projétil (25/10/2026)
+[ ] Tiro por cima do terreno (Indirect Fire) e dano em área
+    (splash) para os canhões e unidades das próximas eras
 [x] Condição de vitória: elimina o adversário (tela de vitória)
 [ ] Botão clicável de "Encerrar turno" (hoje só pelo Enter)
 [x] IA do Jogador 2 (ataques por nota, avanço em formação,
@@ -2401,8 +2467,10 @@ Screenshots também confirmaram o visual.
 [x] Observar a cidade do adversário (janela em modo leitura)
 [x] Cidades: produzir unidades (Guerreiro: 10 de produção + 1 de
     população)
-[ ] Cidades: produzir o Arqueiro (a Cavalaria Leve substituiu o
-    Cavaleiro em 25/10/2026)
+[x] Cidades: produzir o Arqueiro (tecnologia Guerra a distância,
+    25/10/2026; a Cavalaria Leve substituiu o Cavaleiro)
+[ ] Ilustração da tecnologia Guerra a distância
+    (assets/tech/guerra_a_distancia.png; a janela já a procura)
 [x] IA: produzir unidades nas cidades
 [x] Terreno Floresta (+1 de defesa, movimento mais caro, sem
     fazenda) e Cerrado (floresta esgotada)
@@ -3558,6 +3626,30 @@ Screenshots também confirmaram o visual.
   dourados ficam), para não parecer do jogador vermelho. Validação:
   prévias em azul, vermelho e amarelo, consolidado e screenshot no
   jogo.
+- ATAQUE À DISTÂNCIA (pedido do usuário, com a árvore atualizada:
+  nova tecnologia raiz "Guerra a distância", 35 pontos, que libera o
+  Arqueiro). Arqueiro: ataque à distância 2, defesa 1, movimento 1,
+  alcance 1; Catapulta: 4, 1, 1, alcance 2, sem montagem, e floresta,
+  colinas e montanhas no meio bloqueiam o tiro (o tiro por cima fica
+  guardado para os canhões, campo Indirect Fire; o dano em área, para
+  unidades futuras). Quem dispara não leva dano, não avança e não
+  invade cidades; o disparo pode destruir. Dano com RANGED_DAMAGE =
+  20 (sugestão; os 30 do corpo a corpo, sem revide, deixariam o
+  Arqueiro forte demais); o rio não protege do disparo. Alvos em
+  laranja, prévia "Disparar: ... recebe 0" e animação de flecha ou
+  pedra (scripts/units/projectile.gd). Arqueiro no Quartel General
+  (12 de produção + 1 de população + 5 de madeira, sugestão). Novos
+  campos do UnitType: attack_range, indirect_fire, projectile. Novos
+  itens entram no fim dos enums (Tech.RANGED_WARFARE, Build.ARCHER),
+  então os saves antigos continuam valendo. Validação: teste
+  automático (alcance, linha de tiro em reta, em L e na diagonal, alvo
+  dentro da floresta, disparo que destrói sem avançar, prévia, cidade,
+  rio, IA disparando) e screenshots dos alvos em laranja, da flecha e
+  da pedra no ar; testes do Bronze, dos rios e do ataque pelo modo
+  Mover passaram. O teste da era antiga falha só onde a regra mudou
+  (15 tecnologias, 6 raízes, Guerra a distância ainda sem
+  ilustração); test_diag_attack já falhava no caso "ortogonal" antes
+  desta mudança.
 
 --------------------------------------------------------------
 7. BACKLOG (ideias para depois)
@@ -3637,8 +3729,9 @@ histórico):
     como tecnologia, sem efeito
 [ ] Preço em ouro proporcional ao custo (hoje tudo custa 50, até a
     Arena)
-[ ] IA: fazer as unidades novas (Catapulta, Cavalaria Leve, Bigas) e
-    estradas
+[ ] IA: fazer as unidades novas (Arqueiro, Catapulta, Cavalaria
+    Leve, Bigas) e estradas; posicionar Arqueiros e Catapultas atrás
+    da linha de frente
 [x] Arte definitiva das Bigas e da Catapulta (folha do ChatGPT com as
     9 unidades, 25/10/2026)
 [ ] Ritmo da ciência: em 100 rodadas a máquina só pesquisa as
