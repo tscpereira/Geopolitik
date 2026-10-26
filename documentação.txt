@@ -180,6 +180,11 @@ C:\ProjetoGame
 |       |                          de Espada Curta a partir do hoplita
 |       |-- guerreiro_rustico.gd   (antigo, idem) montava o Guerreiro
 |       |                          rústico a partir do Trabalhador
+|       |-- folha_assets.gd        Folha com todos os desenhos e os
+|       |                          nomes (tools/art/gemini/), para
+|       |                          pedir a refação no Gemini
+|       |-- PROMPTS-GEMINI.txt     Prompts para refazer tudo no Gemini
+|       |                          no padrão da Galé
 |       |-- PROMPTS-CHATGPT.txt    Prompts para gerar os desenhos
 |       `-- chatgpt/               Referência, folha gerada, recortes
 |                                  grandes (grandes/) e os desenhos
@@ -326,6 +331,22 @@ MAPA (scripts/map/)
        a fazenda);
     6. godot_console.cmd --headless --path . --import e conferir
        mipmaps/generate=true nos .import novos.
+- REFAÇÃO NO GEMINI (desde 26/10/2026, pedido do usuário: a Galé do
+  Gemini ficou com o melhor acabamento e virou o padrão). Folhas com
+  todos os desenhos e os nomes, em tools/art/gemini/ (assets_todos,
+  assets_unidades, assets_cidades, assets_terreno,
+  assets_tecnologias), geradas COM janela por
+    godot_console.cmd --path . --script tools/art/folha_assets.gd
+  (a cor do time aparece no azul padrão #1E50FF). Os prompts estão em
+  tools/art/PROMPTS-GEMINI.txt: um ESTILO COMUM (o da Galé, anexada
+  como referência; fundo verde #00B140; azul do time só nas partes
+  pedidas) e um bloco por desenho: A unidades (9), B cidades (15) e
+  ruínas (8), pedidas EDITANDO a imagem anterior da mesma classe para
+  manter a mesma cidade, C terrenos (texturas sem emenda, vistas de
+  cima), D melhorias e o ícone do ferro, E ilustrações das tecnologias
+  (opcional). Os importadores de cidade, terreno e melhoria ainda
+  esperam o fundo do ChatGPT: serão adaptados ao fundo verde quando as
+  imagens chegarem.
 - ESTILO PINTADO (desde 23/10/2026, a partir de uma referência
   aprovada pelo usuário; hoje vale para terrenos, madeireira e
   fazenda, os desenhos que ainda são feitos por código): todos os
@@ -3866,6 +3887,17 @@ Screenshots também confirmaram o visual.
   desordem) e screenshot da janela. Testes antigos que esperam
   desordem na população 5 (test_workforce, test_arsenal) falham por
   mudança de regra.
+
+- FOLHA DE TODOS OS DESENHOS E PROMPTS DO GEMINI (pedido do usuário):
+  tools/art/folha_assets.gd gera em tools/art/gemini/ a folha com as 10
+  unidades, as 15 cidades (classe x capital x muralha, com o povoado
+  repetindo o desenho nas colunas de capital), as 8 ruínas, os 6
+  terrenos, as 7 melhorias, o ferro e as 16 ilustrações das
+  tecnologias, com os nomes; e uma folha por categoria. Prompts em
+  tools/art/PROMPTS-GEMINI.txt, no padrão da Galé, com a lógica dos
+  desenhos das cidades (palácio = templo só na capital; muralha só com
+  o prédio). Corrigido também tools/art/consolidado.gd, que tinha sido
+  gravado com a acentuação quebrada (PowerShell) no commit da Galé.
 
 --------------------------------------------------------------
 7. BACKLOG (ideias para depois)
