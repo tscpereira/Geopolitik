@@ -183,6 +183,9 @@ C:\ProjetoGame
 |       |-- folha_assets.gd        Folha com todos os desenhos e os
 |       |                          nomes (tools/art/gemini/), para
 |       |                          pedir a refação no Gemini
+|       |-- import_terrenos_gemini.gd  Texturas de terreno do Gemini (sem
+|       |                          emenda, 160x160)
+|       |-- import_cidades_gemini.gd   Cidades e ruínas do Gemini
 |       |-- ajusta_tamanho_cidades.gd  Deixa cada nível de cidade na sua
 |       |                          largura (74/92/108/122 px)
 |       |-- evolucao_cidades.gd    Folha das cidades lado a lado (níveis
@@ -3979,6 +3982,21 @@ Screenshots também confirmaram o visual.
   povoado 0,3 casa, vila 0,19, cidade 0,09) e a barra de alimentos fica
   no lugar de sempre (referência: a metrópole). Validação: screenshot
   dos 4 níveis lado a lado no mapa e a folha da evolução.
+
+- TERRENOS DO GEMINI: pradaria, cerrado, floresta e água vieram da folha
+  07_terrenos e foram instalados por tools/art/import_terrenos_gemini.gd:
+  acha os quadrados pelas faixas verdes, corta a margem, deixa cada
+  textura SEM EMENDA (mistura com a cópia deslocada pela metade, que
+  assume perto das bordas) e grava 160x160. O jogo agora aceita
+  texturas quadradas maiores que a casa (GameMap._load_tile_image): o
+  shader lê por coordenada, e 160 fica mais nítido no zoom. Colinas e
+  montanhas NÃO foram usadas: vieram com relevo pintado (picos e morros
+  meio de lado), e o shader já desenha o relevo; a imagem desses dois
+  é só o material. Novo pedido 08_terrenos_relevo, só com a superfície,
+  sem relevo nem sombra. O gerador dos pedidos agora guarda os arquivos
+  que o usuário salvar nas pastas (resultado.png) ao regerar, pelo nome
+  do tema. Validação: prévia 3x3 de cada textura e screenshots do mapa
+  (costa, de longe e de perto).
 
 --------------------------------------------------------------
 7. BACKLOG (ideias para depois)

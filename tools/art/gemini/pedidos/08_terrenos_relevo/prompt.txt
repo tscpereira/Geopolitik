@@ -1,0 +1,31 @@
+I am remaking the art of a 2D turn-based strategy game set in ancient Greece. The attached image has two parts:
+- LEFT, "ESTILO": a galley. It is the STYLE REFERENCE: paint everything in exactly this style.
+- RIGHT, "ATUAL": the current, low-quality versions of the items I need, numbered, in the same grid I want back. Use them only to know WHAT to draw (content and composition), not how they look.
+- Paint everything NEW. Do not copy or paste any part of the attached image into the result: no galley, no old drawings, no labels, no numbers.
+
+Create ONE image: a sprite sheet with 2 square surface textures for hills and mountains.
+
+STYLE (copy it from the galley):
+- Detailed painted digital illustration with realistic proportions: soft painted shading, visible wood grain and texture, warm earthy palette (warm brown wood, off-white linen and plaster, terracotta roof tiles, bronze, olive greens). Not cartoon, not chibi, not pixel art, no thick black outlines, no flat colors, not a photo.
+- Strong, clean silhouettes that stay readable when shrunk to small game sprites: few big shapes, no thin clutter.
+- Soft daylight from the TOP-LEFT. All items in the sheet share the same light, scale and camera.
+
+THESE ARE FLAT SURFACE TEXTURES, not landscapes:
+- The game already draws the hills and the mountain peaks with their own light and shadow. These images are ONLY the surface material that goes on top: seen straight from above, like a photo of the ground taken from a drone pointing straight down, completely FLAT lighting.
+- NO peaks, NO ridges, NO mounds, NO slopes, NO cast shadows, NO perspective, no horizon. Just an even, uniform surface pattern filling the whole square edge to edge.
+- Each one SEAMLESS: it must tile perfectly when repeated side by side and top to bottom.
+
+SHEET LAYOUT:
+- A grid of 2 columns x 1 rows, evenly spaced, each item centered in its own cell, never touching or overlapping its neighbours, never cropped.
+- Order, left to right, top to bottom (the numbers match the right side of the attached image):
+  Row 1:
+    1. Hill grass: short green-olive grass with small tufts, a few small grey stones and patches of bare earth; slightly drier and stonier than a meadow.
+    2. Mountain rock: grey and warm-grey stone surface with cracks, small loose pebbles and a few patches of lichen; even, no peaks.
+- No numbers, labels or text in the image.
+
+The squares are separated by thin flat green (#00B140) gutters.
+
+TEAM COLOR: none in this sheet (no blue at all).
+
+BACKGROUND:
+- One flat, solid chroma-key green (#00B140) filling the whole background and the space between the cells: no gradient, no texture, no vignette, no cast shadow on the background, no ground, no frame, no text, no signature.

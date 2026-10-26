@@ -17,9 +17,11 @@ granular demais. Por isso há UM PEDIDO POR TEMA:
     04_cidades_cidade     cidade: as mesmas 4 versões
     05_cidades_metropole  metrópole: as mesmas 4 (palácio = acrópole)
     06_ruinas             8 ruínas (4x2)
-    07_terrenos           6 texturas (3x2)
-    08_melhorias          7 melhorias + o ícone do ferro (4x2)
-    09_tecnologias        16 ilustrações (4x4, opcional)
+    07_terrenos           6 texturas (3x2)        FEITO 26/10/2026 (menos
+                                                  colinas e montanhas)
+    08_terrenos_relevo    colinas e montanhas, só a superfície, sem relevo
+    09_melhorias          7 melhorias + o ícone do ferro (4x2)
+    10_tecnologias        16 ilustrações (4x4, opcional)
   As 14 cidades numa folha só o Gemini não conseguiu (copiou a
   referência): por isso uma classe de cidade por pedido.
 
@@ -55,4 +57,7 @@ DEPOIS (importar)
   Cidades e ruínas (acha cada ilha sozinho; nomes na ordem, "-" pula):
     godot_console.cmd --headless --path . --script tools/art/import_cidades_gemini.gd -- <resultado.png> <nome1|-> <nome2|-> ...
     ex.: ... -- vila.png - - - vila vila_capital vila_muralha vila_capital_muralha
-  Terrenos, melhorias e tecnologias: importadores a fazer quando chegarem.
+  Terrenos (quadrados separados por faixas verdes; "-" pula):
+    godot_console.cmd --headless --path . --script tools/art/import_terrenos_gemini.gd -- <resultado.png> pradaria cerrado floresta - - agua
+    (08_terrenos_relevo: ... -- <resultado.png> colinas montanhas)
+  Melhorias e tecnologias: importadores a fazer quando chegarem.

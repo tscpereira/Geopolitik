@@ -32,7 +32,8 @@ const NAMES := {
 	Type.MOUNTAINS: "Montanhas",
 }
 
-## Imagem de cada terreno (TILE_SIZE x TILE_SIZE pixels, ver GameMap).
+## Imagem de cada terreno: um quadrado de pelo menos TILE_SIZE pixels (as do
+## Gemini têm 160x160), que o shader repete uma vez por casa (ver GameMap).
 ## Se o arquivo não existir, o terreno é desenhado com a cor de COLORS.
 const TEXTURE_PATHS := {
 	Type.WATER: "res://assets/tiles/agua.png",

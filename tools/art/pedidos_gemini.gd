@@ -52,7 +52,9 @@ func _initialize() -> void:
 
 
 func _run() -> void:
-	# Apaga os pedidos antigos (um por desenho)
+	# Guarda o que o usuário salvou nas pastas (ex.: resultado.png), pelo nome do
+	# tema (o número pode mudar), e apaga os pedidos antigos
+	var kept := _keep_user_files()
 	var dir := DirAccess.open(ProjectSettings.globalize_path("res://tools/art/gemini/"))
 	if dir and dir.dir_exists("pedidos"):
 		_remove_tree(ProjectSettings.globalize_path(OUT))
@@ -62,6 +64,11 @@ func _run() -> void:
 		n += 1
 		var folder := "%s%02d_%s/" % [OUT, n, theme["name"]]
 		DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(folder))
+		for file_name: String in kept.get(theme["name"], {}):
+			var saved := FileAccess.open(ProjectSettings.globalize_path(folder + file_name), FileAccess.WRITE)
+			saved.store_buffer(kept[theme["name"]][file_name])
+			saved.close()
+			print("  mantido %s/%s" % [theme["name"], file_name])
 		var file := FileAccess.open(ProjectSettings.globalize_path(folder + "prompt.txt"), FileAccess.WRITE)
 		file.store_string(_prompt(theme) + "\n")
 		file.close()
@@ -149,6 +156,19 @@ func _themes() -> Array:
 			["colinas", t + "colinas", "Green rolling hills from above: soft grassy mounds with gentle light and shade."],
 			["montanhas", t + "montanhas", "Rocky grey mountains from above: sharp rock ridges and scree, no snow."],
 			["agua", t + "agua", "Sea from above: deep dark teal water with small painted wave crests (dark teal is fine here, clearly different from royal blue)."],
+		]},
+		# Colinas e montanhas: o shader do mapa já desenha o relevo (morros e picos
+		# com luz e sombra); a imagem é só a superfície do material, sem relevo.
+		# A folha de 07_terrenos veio com relevo pintado e não serviu (26/10/2026).
+		{"name": "terrenos_relevo", "what": "2 square surface textures for hills and mountains", "columns": 2, "cell": 170, "tile": true,
+		"camera": """THESE ARE FLAT SURFACE TEXTURES, not landscapes:
+- The game already draws the hills and the mountain peaks with their own light and shadow. These images are ONLY the surface material that goes on top: seen straight from above, like a photo of the ground taken from a drone pointing straight down, completely FLAT lighting.
+- NO peaks, NO ridges, NO mounds, NO slopes, NO cast shadows, NO perspective, no horizon. Just an even, uniform surface pattern filling the whole square edge to edge.
+- Each one SEAMLESS: it must tile perfectly when repeated side by side and top to bottom.""",
+		"extra": "The squares are separated by thin flat green (#00B140) gutters.",
+		"items": [
+			["colinas", t + "colinas", "Hill grass: short green-olive grass with small tufts, a few small grey stones and patches of bare earth; slightly drier and stonier than a meadow."],
+			["montanhas", t + "montanhas", "Mountain rock: grey and warm-grey stone surface with cracks, small loose pebbles and a few patches of lichen; even, no peaks."],
 		]},
 		{"name": "melhorias", "what": "7 terrain improvements for map tiles and 1 resource icon", "columns": 4, "cell": 150,
 		"camera": """CAMERA:
@@ -333,9 +353,13 @@ Cada pasta é um pedido, com uma folha do tema:
   04_cidades_cidade     cidade: as mesmas 4 versões
   05_cidades_metropole  metrópole: as mesmas 4 (o palácio é a acrópole)
   06_ruinas             8 ruínas (4x2: sem muralha / com muralha)
-  07_terrenos           6 texturas (3x2)
-  08_melhorias          7 melhorias + o ícone do ferro (4x2)
-  09_tecnologias        16 ilustrações (4x4, opcional)
+  07_terrenos           6 texturas (3x2); FEITO: pradaria, cerrado,
+                        floresta e água (colinas e montanhas vieram com
+                        relevo pintado e não serviram)
+  08_terrenos_relevo    colinas e montanhas: só a superfície, SEM relevo
+                        (o mapa já desenha morros e picos)
+  09_melhorias          7 melhorias + o ícone do ferro (4x2)
+  10_tecnologias        16 ilustrações (4x4, opcional)
   (As 14 cidades numa folha só o Gemini não conseguiu: copiou a
   referência. Por isso uma classe por pedido.)
 
@@ -397,6 +421,25 @@ func _tiled(image: Image, times: int) -> Image:
 		for x in times:
 			tiled.blit_rect(image, Rect2i(Vector2i.ZERO, image.get_size()), Vector2i(x, y) * image.get_size())
 	return tiled
+
+
+## Arquivos das pastas de pedido que não são gerados aqui (o resultado.png que
+## o usuário salvou): {tema: {arquivo: bytes}}.
+func _keep_user_files() -> Dictionary:
+	var kept := {}
+	var root_dir := DirAccess.open(ProjectSettings.globalize_path(OUT))
+	if root_dir == null:
+		return kept
+	for folder in root_dir.get_directories():
+		var theme := folder.substr(folder.find("_") + 1)
+		var path := ProjectSettings.globalize_path(OUT).path_join(folder)
+		for file_name in DirAccess.get_files_at(path):
+			if file_name in ["prompt.txt", "referencia.png"]:
+				continue
+			if not kept.has(theme):
+				kept[theme] = {}
+			kept[theme][file_name] = FileAccess.get_file_as_bytes(path.path_join(file_name))
+	return kept
 
 
 func _remove_tree(path: String) -> void:

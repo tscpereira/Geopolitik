@@ -552,8 +552,11 @@ func _load_tile_image(type: Terrain.Type) -> Image:
 	if image.is_compressed():
 		image.decompress()
 	image.convert(Image.FORMAT_RGBA8)
-	if image.get_size() != Vector2i(TILE_SIZE, TILE_SIZE):
-		push_warning("%s tem %s pixels; esperado %dx%d. A imagem foi redimensionada."
+	# O shader lê a textura por coordenada (uma repetição por casa): ela pode ter
+	# mais pixels que a casa (as do Gemini têm 160x160, mais nítidas no zoom),
+	# desde que seja quadrada.
+	if image.get_width() != image.get_height() or image.get_width() < TILE_SIZE:
+		push_warning("%s tem %s pixels; esperado um quadrado de pelo menos %dx%d. A imagem foi redimensionada."
 				% [path, image.get_size(), TILE_SIZE, TILE_SIZE])
 		image.resize(TILE_SIZE, TILE_SIZE, Image.INTERPOLATE_BILINEAR)
 	return image

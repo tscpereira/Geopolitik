@@ -9,9 +9,13 @@ Cada pasta é um pedido, com uma folha do tema:
   04_cidades_cidade     cidade: as mesmas 4 versões
   05_cidades_metropole  metrópole: as mesmas 4 (o palácio é a acrópole)
   06_ruinas             8 ruínas (4x2: sem muralha / com muralha)
-  07_terrenos           6 texturas (3x2)
-  08_melhorias          7 melhorias + o ícone do ferro (4x2)
-  09_tecnologias        16 ilustrações (4x4, opcional)
+  07_terrenos           6 texturas (3x2); FEITO: pradaria, cerrado,
+                        floresta e água (colinas e montanhas vieram com
+                        relevo pintado e não serviram)
+  08_terrenos_relevo    colinas e montanhas: só a superfície, SEM relevo
+                        (o mapa já desenha morros e picos)
+  09_melhorias          7 melhorias + o ícone do ferro (4x2)
+  10_tecnologias        16 ilustrações (4x4, opcional)
   (As 14 cidades numa folha só o Gemini não conseguiu: copiou a
   referência. Por isso uma classe por pedido.)
 
