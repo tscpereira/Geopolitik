@@ -183,6 +183,8 @@ C:\ProjetoGame
 |       |-- folha_assets.gd        Folha com todos os desenhos e os
 |       |                          nomes (tools/art/gemini/), para
 |       |                          pedir a refação no Gemini
+|       |-- evolucao_cidades.gd    Folha das cidades lado a lado (níveis
+|       |                          x versões), marcando as do Gemini
 |       |-- pedidos_gemini.gd      Um pedido por tema para o Gemini
 |       |                          (gemini/pedidos/: referência + prompt)
 |       |-- PROMPTS-GEMINI.txt     Índice dos pedidos ao Gemini e a
@@ -3954,6 +3956,16 @@ Screenshots também confirmaram o visual.
   chegaram no meio de uma tarefa e não ficaram salvas no disco: o
   usuário vai mandá-las de novo. Validação: prévia em vermelho e
   screenshot no jogo (vila capital e vila capital murada).
+
+- FOLHA DA EVOLUÇÃO DAS CIDADES (pedido do usuário):
+  tools/art/evolucao_cidades.gd (COM janela) grava
+  tools/art/gemini/evolucao_cidades.png: colunas = níveis (povoado,
+  vila, cidade, metrópole), linhas = versões (normal, capital, muralha,
+  capital com muralha), na escala real do jogo (2x) sobre a pradaria,
+  com borda verde nas que já são do Gemini (lista GEMINI no script,
+  atualizar a cada importação). Mostra que, fora o povoado (74 px),
+  vila, cidade e metrópole ocupam o mesmo tamanho (122 px): o nível só
+  aparece no número de casas.
 
 --------------------------------------------------------------
 7. BACKLOG (ideias para depois)
