@@ -307,9 +307,10 @@ void fragment() {
 	open_land.rgb *= 1.0 - 0.18 * smoothstep(0.2, 0.5, forest_edge);
 	vec4 land_color = mix(open_land, tile_color(forest_tex, p, 0.58), trees);
 
-	// Fazendas: a imagem da fazenda (pronta ou em obra) na casa inteira, com
-	// borda suave só nos lados em que a casa vizinha não é fazenda (fazendas
-	// vizinhas se juntam numa colcha de lotes)
+	// Fazendas: a imagem da fazenda (pronta ou em obra) na casa, com borda suave
+	// só nos lados em que a casa vizinha não é fazenda. Desde 26/10/2026 a
+	// imagem tem transparência (4 canteiros com a "cruz" e a margem vazias): o
+	// terreno aparece onde ela é transparente.
 	if (draw_farms) {
 		vec2 f = fract(p);
 		float w = farm_edge_soft + fwidth(p.x);
@@ -317,10 +318,11 @@ void fragment() {
 				* (improvement_at(own_cell + ivec2(1, 0)) > 0 ? 1.0 : smoothstep(0.0, w, 1.0 - f.x))
 				* (improvement_at(own_cell + ivec2(0, -1)) > 0 ? 1.0 : smoothstep(0.0, w, f.y))
 				* (improvement_at(own_cell + ivec2(0, 1)) > 0 ? 1.0 : smoothstep(0.0, w, 1.0 - f.y));
-		vec3 planted = textureGrad(farm_tex, f, dFdx(p), dFdy(p)).rgb;
-		vec3 tilled = textureGrad(farm_new_tex, f, dFdx(p), dFdy(p)).rgb;
-		float in_farm = (own_improvement > 0 ? 1.0 : 0.0) * fade * (1.0 - trees);
-		land_color.rgb = mix(land_color.rgb, own_improvement == 1 ? planted : tilled, in_farm);
+		vec4 planted = textureGrad(farm_tex, f, dFdx(p), dFdy(p));
+		vec4 tilled = textureGrad(farm_new_tex, f, dFdx(p), dFdy(p));
+		vec4 farm = own_improvement == 1 ? planted : tilled;
+		float in_farm = (own_improvement > 0 ? 1.0 : 0.0) * fade * (1.0 - trees) * farm.a;
+		land_color.rgb = mix(land_color.rgb, farm.rgb, in_farm);
 	}
 	// Montanhas: rocha com as cristas iluminadas de um lado e na sombra do
 	// outro; o chão em volta fica um pouco sombreado (pé da montanha)

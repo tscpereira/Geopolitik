@@ -6,7 +6,7 @@ Tipo de jogo : Estratégia em turnos 2D
 Engine       : Godot 4.7.2 (versão padrão, GDScript)
 Linguagem    : GDScript
 Pasta        : C:\ProjetoGame
-Última atualização: 25/10/2026
+Última atualização: 26/10/2026
 
 
 --------------------------------------------------------------
@@ -2522,6 +2522,137 @@ Screenshots também confirmaram o visual.
 5. PRÓXIMOS PASSOS
 --------------------------------------------------------------
 
+==============================================================
+PLANO PARA 27/10/2026: ARTE NO GEMINI (onde paramos em 26/10)
+==============================================================
+Contexto: a Galé feita no Gemini virou o padrão de acabamento. Estamos
+refazendo os desenhos por TEMA (tools/art/gemini/pedidos/<NN>_<tema>/,
+cada pasta com referencia.png + prompt.txt; índice em
+tools/art/PROMPTS-GEMINI.txt; gerador tools/art/pedidos_gemini.gd).
+
+SITUAÇÃO DE CADA TEMA
+  01_unidades           FEITO (9 unidades, folha 3x3; a Galé já era)
+  02_cidades_povoado    FALTA pedir/receber
+  03_cidades_vila       FEITO (4 versões)
+  04_cidades_cidade     RECEBIDA, mas a imagem não ficou salva: salvar
+                        como resultado.png na pasta e importar (usar a
+                        linha de cima: veio com 2 linhas de 4 versões)
+  05_cidades_metropole  RECEBIDA, não salva (idem). Veio com 5 desenhos:
+                        usar 1º de cima (normal), 2º de cima (acrópole),
+                        1º de baixo (muralha), 2º de baixo (acrópole +
+                        muralha). A murada saiu bem maior que a sem
+                        muralha: com a escala comum, a sem muralha fica
+                        com ~95 px e a murada com 122. Ver se o usuário
+                        aceita ou se pede para refazer.
+  06_ruinas             RECEBIDA (boa, 4x2), não salva: salvar e importar
+                        com import_cidades_gemini.gd (nomes <classe>_ruinas
+                        e <classe>_muralha_ruinas)
+  07_terrenos           FEITO: pradaria, cerrado, floresta, água. Colinas
+                        e montanhas vieram com relevo pintado: não usar
+  08_terrenos_relevo    FALTA (colinas e montanhas só a superfície, sem
+                        relevo: o shader já desenha os morros e picos)
+  09_fazendas           RECEBIDA (tools/art/gemini/fazendas_folha.png),
+                        IMPORTAÇÃO FALHOU, ver abaixo
+  (melhorias)           madeireira, madeireira destruída, mina, mina
+                        destruída e a bigorna do ferro vieram BONS em
+                        tools/art/gemini/melhorias_folha.png: FALTA o
+                        importador (como o de cidades: acha cada desenho,
+                        tira o fundo, grava 80x80 em
+                        assets/sprites/improvements/ e o ferro 64x64 em
+                        assets/sprites/resources/)
+  10_tecnologias        ADIADO: o usuário não gostou das ilustrações;
+                        refazer outro dia
+
+FAZENDAS (pendência técnica)
+  - A folha veio com 18 canteiros soltos (3 grupos de 6: em produção, em
+    obra, queimada), não com 3 fazendas prontas. Ideia aprovada: montar
+    cada fazenda em 2x2 com 4 canteiros, com a "cruz" e a margem
+    TRANSPARENTES (tools/art/import_fazendas_gemini.gd, já escrito).
+  - O shader do mapa (terrain.gdshader) JÁ usa o alfa da fazenda (as
+    fazendas antigas são opacas: nada mudou na tela ainda).
+  - Por que falhou: o filtro que apaga a fumaça (cinza claro sem cor:
+    saturação < 0,14 e brilho > 0,5) apagou também as cinzas dos
+    canteiros queimados; eles se partiram em pedaços pequenos, que o
+    script descartou, e só sobraram 14 canteiros (o grupo queimado com
+    2). Corrigir: fumaça só com brilho > ~0,72 e saturação < ~0,08, ou
+    não apagar fumaça e só limitar a caixa do canteiro ao miolo marrom.
+  - O script é LENTO (mais de 5 minutos: várias passadas pixel a pixel
+    em GDScript); rodar em segundo plano. Com SCRIPT ERROR o Godot fica
+    preso aberto: encerrar o processo (era o 26300/13984 em 26/10).
+
+AVISO SOBRE AS IMAGENS
+  Imagens coladas na conversa enquanto o Claude ainda está trabalhando
+  NÃO ficam salvas no disco (só as enviadas no início de uma mensagem).
+  O caminho seguro: salvar como resultado.png na pasta do pedido.
+
+LIMPEZA DEPOIS
+  tools/art fica fora do jogo (.gdignore): nada dali entra na build.
+  Quando as cidades e ruínas do Gemini estiverem instaladas, apagar
+  tools/art/chatgpt/ e os scripts antigos que dependem dela
+  (import_sheet.gd, variantes_cidade.gd, guerreiro_*.gd, import_unit.gd,
+  import_gale... já apagado) e a seção "ChatGPT" de PROMPTS-CHATGPT.txt.
+  Tudo continua no histórico do Git.
+
+PRÓXIMO PASSO GRANDE 1: INTEGRAÇÃO COM A API DO GEMINI
+  Objetivo: o Claude dispara os pedidos e recebe as imagens sozinho, sem
+  o usuário abrir conversa, anexar, colar, baixar e salvar.
+  - O usuário: cria a chave em aistudio.google.com ("Get API key") e
+    grava no próprio terminal (NUNCA no chat):
+      setx GEMINI_API_KEY "sua-chave"
+    e reinicia o VS Code. Verificar se a geração de imagens pela API
+    exige faturamento ativo e o preço por imagem (centavos de dólar).
+  - O Claude: escreve tools/art/gemini_gerar.js (Node; Python não está
+    instalado): lê prompt.txt + referencia.png (+ a folha base nas
+    edições), chama a API (modelo de imagem configurável; listar os
+    modelos da chave primeiro, porque os nomes mudam), grava
+    resultado.png (ou resultado_2.png... para variações) na pasta.
+    Depois o Claude olha a imagem, repete se precisar, importa e mostra
+    no jogo; o usuário só aprova.
+  - Primeiro teste: 04_cidades_cidade (já sabemos o que esperar).
+
+PRÓXIMO PASSO GRANDE 2: CONJUNTOS CULTURAIS DE UNIDADES E CIDADES
+  Os desenhos atuais são GRECO-ROMANOS (gregos, romanos, talvez fenícios;
+  eras Antiga e Medieval dessas civilizações). Faltam os conjuntos
+  MEDIEVAL, EGÍPCIO e ORIENTAL, cada um com os mesmos arquivos (10
+  unidades, 14 cidades, 8 ruínas), mesmos nomes e formato.
+  - Como pedir: EDITAR a folha greco-romana já aprovada do tema ("repinte
+    esta mesma folha como <cultura>: mesma grade, ilha, tamanho e luz;
+    troque arquitetura e roupas"), para os importadores e tamanhos
+    funcionarem sem ajuste.
+  - Uma ÂNCORA por cultura: o primeiro pedido é a vila nas 4 versões;
+    aprovada, vira a referência da cultura nos pedidos seguintes (com a
+    Galé para o acabamento).
+  - Palácio (capital) e muralha por cultura:
+      Greco-Romana  templo / acrópole        pedra com torres
+      Medieval      CASTELO (torre de menagem; metrópole: castelo grande)
+                                             pedra com ameias, torres redondas
+      Egípcia       templo-palácio com pilones e obelisco (metrópole:
+                    pirâmide ao fundo)       adobe, portões de pilone
+      Oriental      palácio de telhados curvos, pagode
+                                             taipa/tijolo, portões de torre
+    Casas: caiadas/telha; enxaimel/telhado íngreme; adobe/terraço com
+    palmeiras; telhados curvos com jardins. Cor do time: o mesmo azul
+    (estandartes, toldos, telhado do palácio).
+  - Unidades: mesmas regras, só a aparência muda. Equivalências sugeridas
+    (Medieval / Egípcia / Oriental):
+      Lanceiro      piqueiro / lanceiro c/ escudo de couro / lanceiro com ji
+      Esp. Curta    homem de armas / guerreiro com khopesh / espadachim com jian
+      Arqueiro      besteiro ou arco longo / arco composto / arqueiro ou besteiro
+      Cav. Leve     cavaleiro leve / batedor / cavaleiro das estepes
+      Bigas         carroça de guerra / biga egípcia / carro chinês
+      Catapulta     trabuco / catapulta / catapulta de tração
+      Galé          barco de casco trincado ou coca / barco do Nilo / junco
+    DECISÃO PENDENTE do usuário: onde a unidade não existe na cultura
+    (ex.: biga medieval), adaptar como acima ou manter a greco-romana?
+  - Volume: ~7 pedidos por cultura (~20 no total). Ordem: terminar o
+    Greco-Romano, depois Medieval, Egípcio, Oriental.
+  - Código (pequeno): campo "cultura" no jogador (hoje não há
+    civilizações); assets/sprites/<cultura>/units|cities com os nomes de
+    hoje; unidade e cidade buscam o desenho da cultura e, se faltar, o
+    greco-romano; pedidos_gemini.gd com o parâmetro cultura.
+
+
+
 [x] Decidir o tipo de grid: quadrado (estilo Civilization 1)
 [x] Mapa em grid com TileMapLayer (terra e água)
 [x] Jogadores 1 e 2
@@ -4009,6 +4140,15 @@ Screenshots também confirmaram o visual.
   formato (canteiros 2x2 sobre o verde) em vez dos desenhos antigos.
   Ao importar, conferir que o shader do mapa (farm_tex) respeita a
   transparência.
+
+- FAZENDAS DO GEMINI (em andamento): a folha veio com canteiros soltos;
+  tools/art/import_fazendas_gemini.gd monta cada fazenda em 2x2 com a
+  "cruz" e a margem transparentes, e o shader do mapa passou a usar o
+  alfa da fazenda (as antigas são opacas: nada mudou na tela). A
+  importação FALHOU (o filtro de fumaça apagou as cinzas dos canteiros
+  queimados); diagnóstico e correção no PLANO PARA 27/10/2026, no topo
+  dos PRÓXIMOS PASSOS, junto com a integração com a API do Gemini e os
+  conjuntos culturais (Medieval, Egípcio, Oriental).
 
 --------------------------------------------------------------
 7. BACKLOG (ideias para depois)
