@@ -15,14 +15,16 @@ Consolidado da arte (refaça depois de trocar qualquer desenho):
   godot_console.cmd --headless --path . --script tools/art/consolidado.gd
   -> tools/art/chatgpt/consolidado_unidades.png  todas as unidades como
      estão no jogo, em azul e em vermelho (para comparar o padrão)
-  -> tools/art/chatgpt/referencia_unidades.png   só os desenhos do ChatGPT
-     (Trabalhador, Colono, Guerreiro, Lanceiro, Guerreiro de Espada Curta,
-     Arqueiro, Cavalaria Leve), em azul, na escala do jogo. É ESTA a imagem
-     para anexar no ChatGPT.
+  -> tools/art/chatgpt/referencia_unidades.png   as 9 unidades grandes, em
+     azul, na mesma escala. É ESTA a imagem para anexar no ChatGPT.
 
-Fora do padrão hoje: Bigas e Catapulta (desenhos provisórios feitos por
-código: traço chapado de desenho animado, sombra própria no chão, vista de
-lado pura e muito largos). Os prompts B1 e B2 abaixo substituem os 15 e 17.
+Desde 25/10/2026 as 9 unidades vêm de UMA folha do ChatGPT (fundo verde
+liso, linha de cima em azul, linha de baixo em vermelho), guardada em
+tools/art/chatgpt/folha_unidades.png e importada com:
+  godot_console.cmd --headless --path . --script tools/art/import_folha_unidades.gd -- <folha.png>
+(ele também tira o escudo solto do Guerreiro de Espada Curta; essas
+coordenadas valem só para esta folha). Os prompts B1 e B2 abaixo ficaram
+como modelo de pedido avulso.
 
 Como pedir:
   1. Conversa nova no ChatGPT; anexe referencia_unidades.png.

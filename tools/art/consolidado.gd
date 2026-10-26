@@ -5,32 +5,22 @@ extends SceneTree
 ## Grava em tools/art/chatgpt/:
 ##   consolidado_unidades.png: todas as unidades como estão no jogo (sprite
 ##     80x80 ampliado 3x), em azul e em vermelho, sobre a pradaria;
-##   referencia_unidades.png: só os desenhos do ChatGPT, grandes, em azul do
-##     time (#1E50FF), na mesma escala relativa do jogo. É a imagem para anexar
+##   referencia_unidades.png: os desenhos grandes do ChatGPT (unidades/, da
+##     folha importada por import_folha_unidades.gd), em azul do time
+##     (#1E50FF), na mesma escala relativa do jogo. É a imagem para anexar
 ##     ao pedir uma unidade nova (PROMPTS-CHATGPT.txt, "UNIDADE NOVA").
 
 const UNITS_DIR := "res://assets/sprites/units/"
-const GRANDES := "res://tools/art/chatgpt/grandes/"
+const GRANDES := "res://tools/art/chatgpt/unidades/"
 const OUT := "res://tools/art/chatgpt/"
 ## Ordem do consolidado (a mesma da lista de unidades do jogo).
 const UNITS := ["trabalhador", "colono", "guerreiro", "lanceiro", "guerreiro_espada", "arqueiro", "cavalaria_leve", "bigas", "catapulta"]
-## Unidade do jogo -> desenho grande do ChatGPT (o hoplita da folha virou o
-## Lanceiro; o Guerreiro é o rústico montado por código a partir do Trabalhador).
-const REFERENCIA := {
-	"trabalhador": "trabalhador",
-	"colono": "colono",
-	"guerreiro": "guerreiro_rustico",
-	"lanceiro": "guerreiro",
-	"guerreiro_espada": "guerreiro_espada",
-	"arqueiro": "arqueiro",
-	"cavalaria_leve": "cavalaria_leve",
-}
 const TEAM_BLUE := Color8(30, 80, 255)
 const TEAM_RED := Color8(220, 40, 40)
 const CELL := 240
-## Referência: cada desenho cabe em BOX (o MAX_SIZE 76x70 do importador x 4),
-## pés na mesma linha, como no jogo.
-const BOX := Vector2(304, 280)
+## Referência: os desenhos no tamanho da folha (a escala já é a mesma para
+## todos), cada um numa caixa BOX, pés na mesma linha.
+const BOX := Vector2(250, 245)
 const MARGIN := 24
 
 
@@ -54,15 +44,13 @@ func _consolidado() -> void:
 
 
 func _referencia() -> void:
-	var w := int(BOX.x) * REFERENCIA.size() + MARGIN * (REFERENCIA.size() + 1)
+	var w := int(BOX.x) * UNITS.size() + MARGIN * (UNITS.size() + 1)
 	var h := int(BOX.y) + MARGIN * 2
 	var sheet := Image.create(w, h, false, Image.FORMAT_RGBA8)
 	sheet.fill(Color8(240, 238, 232))
 	var x := MARGIN
-	for unit in REFERENCIA:
-		var img := _tinted(GRANDES + REFERENCIA[unit], TEAM_BLUE)
-		var s := minf(BOX.x / img.get_width(), BOX.y / img.get_height())
-		img.resize(int(img.get_width() * s), int(img.get_height() * s), Image.INTERPOLATE_LANCZOS)
+	for unit in UNITS:
+		var img := _tinted(GRANDES + unit, TEAM_BLUE)
 		var pos := Vector2i(x + (int(BOX.x) - img.get_width()) / 2, MARGIN + int(BOX.y) - img.get_height())
 		sheet.blend_rect(img, Rect2i(Vector2i.ZERO, img.get_size()), pos)
 		x += int(BOX.x) + MARGIN

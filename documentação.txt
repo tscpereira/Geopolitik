@@ -163,21 +163,29 @@ C:\ProjetoGame
 |       |-- import_unit.gd         Importa UM desenho de unidade do
 |       |                          ChatGPT (fundo xadrez, azul do time)
 |       |                          direto para assets/sprites/units/
+|       |-- import_folha_unidades.gd  Importa a folha das 9 unidades
+|       |                          do ChatGPT (fundo verde, escala
+|       |                          comum; tira o escudo solto do
+|       |                          Guerreiro de Espada Curta)
 |       |-- consolidado.gd         Consolidado da arte das unidades
 |       |                          (todas no jogo, nas duas cores) e a
 |       |                          referência para anexar no ChatGPT
 |       |-- variantes_cidade.gd    Monta as variantes das cidades
 |       |                          (capital/normal, com/sem muralha)
-|       |-- guerreiro_espada.gd    Monta o Guerreiro de Espada Curta
-|       |                          (o hoplita com scutum e gládio)
-|       |-- guerreiro_rustico.gd   Monta o Guerreiro rústico (a partir
-|       |                          do Trabalhador do ChatGPT)
+|       |-- guerreiro_espada.gd    (antigo, não rodar: sobrescreve a
+|       |                          arte da folha) montava o Guerreiro
+|       |                          de Espada Curta a partir do hoplita
+|       |-- guerreiro_rustico.gd   (antigo, idem) montava o Guerreiro
+|       |                          rústico a partir do Trabalhador
 |       |-- PROMPTS-CHATGPT.txt    Prompts para gerar os desenhos
 |       `-- chatgpt/               Referência, folha gerada, recortes
 |                                  grandes (grandes/) e os desenhos
 |                                  prontos com os nomes do jogo
-|                                  (prontos/); consolidado_unidades.png
-|                                  e referencia_unidades.png
+|                                  (prontos/); folha_unidades.png (a
+|                                  folha das 9 unidades), unidades/
+|                                  (os recortes grandes dela),
+|                                  consolidado_unidades.png e
+|                                  referencia_unidades.png
 `-- data/
     |-- maps/
     |   |-- mapa_teste.png         Mapa de teste 120x75 (era o
@@ -479,12 +487,9 @@ UNIDADES (scripts/units/)
   elas). A Cavalaria Leve usa o desenho do ChatGPT trazido pelo
   usuário (25/10/2026: cavaleiro de crista e capa na cor do time, com
   lança), importado por tools/art/import_unit.gd. Catapulta e Bigas
-  ainda são desenhos PROVISÓRIOS feitos por código ("tools/art/gen_art.gd
-  -- unidades", com a cor do time) e estão fora do padrão das outras
-  (traço chapado, sombra própria, vista de lado, largos demais). Os
-  prompts B1 e B2 da seção "UNIDADE NOVA" de
-  tools/art/PROMPTS-CHATGPT.txt pedem os definitivos, com a imagem
-  tools/art/chatgpt/referencia_unidades.png anexada.
+  eram desenhos provisórios feitos por código; desde 25/10/2026 todas
+  as 9 unidades vêm de uma folha só do ChatGPT (ver "ARTE DAS
+  UNIDADES" no histórico).
 - LANCEIRO (desde 25/10/2026, pedido do usuário; exige a
   tecnologia Trabalho em Bronze): +1 de ataque e +1 de defesa
   quando luta contra cavalaria (campo "Anti Cavalry Bonus" do
@@ -3525,6 +3530,23 @@ Screenshots também confirmaram o visual.
   enquadramento quase quadrado, azul #1E50FF, sem sombra) e os
   pedidos B1 (Bigas) e B2 (Catapulta), que substituem os prompts 17
   e 15. Validação: as duas imagens geradas e revisadas.
+- ARTE DAS UNIDADES NUMA FOLHA SÓ (o usuário gerou no ChatGPT as 9
+  unidades no mesmo padrão; o Guerreiro de Espada Curta veio com um
+  escudo solto na frente do corpo, que ele pediu para tirar). Novo
+  tools/art/import_folha_unidades.gd: remove o fundo verde e as
+  sombras do chão (pixel = k x cor do fundo), apaga o escudo pelo
+  contorno (menos a mão da espada) e pinta o antebraço que ele
+  escondia, separa as unidades da linha azul pelas colunas vazias,
+  tira a máscara do azul do time e reduz TODAS com a mesma escala
+  (0,289, limitada pela lança do Lanceiro), então a Biga e a
+  Catapulta ficam na proporção das pessoas e dos cavalos. Grava em
+  assets/sprites/units/, tools/art/chatgpt/unidades/ (grande) e
+  prontos/; a folha original fica em
+  tools/art/chatgpt/folha_unidades.png. O consolidado passou a ler
+  unidades/ (as 9). guerreiro_espada.gd e guerreiro_rustico.gd ficam
+  só como histórico (rodar de novo sobrescreveria a arte nova).
+  Validação: consolidado nas duas cores, o braço revisado ampliado e
+  screenshot no jogo das 9 unidades de dois jogadores.
 
 --------------------------------------------------------------
 7. BACKLOG (ideias para depois)
@@ -3606,8 +3628,8 @@ histórico):
     Arena)
 [ ] IA: fazer as unidades novas (Catapulta, Cavalaria Leve, Bigas) e
     estradas
-[ ] Arte definitiva das Bigas e da Catapulta (ChatGPT, prompts B1 e
-    B2 de tools/art/PROMPTS-CHATGPT.txt)
+[x] Arte definitiva das Bigas e da Catapulta (folha do ChatGPT com as
+    9 unidades, 25/10/2026)
 [ ] Ritmo da ciência: em 100 rodadas a máquina só pesquisa as
     tecnologias de 20 a 35 pontos (cada cidade gera 1-3 por turno)
 [x] Bem-estar social (23/10/2026). Ideias para depois:
