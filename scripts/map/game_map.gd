@@ -83,6 +83,8 @@ var road_progress := {}
 var _road_layer: Node2D
 
 var _terrain := PackedByteArray()
+## Casas de oceano (is_ocean): {casa: true}; vazio = calcular de novo.
+var _ocean := {}
 ## Rios: cada um é a lista dos cantos da grade por onde passa (ver Rivers).
 var rivers: Array = []
 ## Madeira que resta nas florestas já exploradas: {casa: quantidade}. Casa de
@@ -401,9 +403,48 @@ func get_terrain(cell: Vector2i) -> Terrain.Type:
 	return _terrain[cell.y * width + cell.x] as Terrain.Type
 
 
+## Se a casa é OCEANO: água ligada à borda do mapa (um lago no meio da terra
+## não conta). Calculado uma vez e refeito quando o terreno muda.
+func is_ocean(cell: Vector2i) -> bool:
+	if _ocean.is_empty():
+		_find_ocean()
+	return _ocean.has(cell)
+
+
+## Se a casa encosta no oceano (alguma das 8 vizinhas é oceano): onde a
+## cidade pode fazer a Galé (City.BUILDS "coastal").
+func is_coastal(cell: Vector2i) -> bool:
+	for direction in Movement.DIRECTIONS:
+		if is_in_bounds(cell + direction) and is_ocean(cell + direction):
+			return true
+	return false
+
+
+## Busca em largura pela água, a partir das casas de água da borda do mapa.
+func _find_ocean() -> void:
+	_ocean = {}
+	var queue: Array[Vector2i] = []
+	for y in height:
+		for x in width:
+			var cell := Vector2i(x, y)
+			if (x == 0 or y == 0 or x == width - 1 or y == height - 1) and get_terrain(cell) == Terrain.Type.WATER:
+				_ocean[cell] = true
+				queue.append(cell)
+	var head := 0
+	while head < queue.size():
+		var cell := queue[head]
+		head += 1
+		for direction in Movement.DIRECTIONS:
+			var next := cell + direction
+			if is_in_bounds(next) and not _ocean.has(next) and get_terrain(next) == Terrain.Type.WATER:
+				_ocean[next] = true
+				queue.append(next)
+
+
 ## Troca o terreno da casa (ex.: floresta esgotada vira cerrado) e redesenha.
 func set_terrain(cell: Vector2i, type: Terrain.Type) -> void:
 	_terrain[cell.y * width + cell.x] = type
+	_ocean = {} # refeito na próxima consulta (is_ocean)
 	_wood.erase(cell)
 	_terrain_image.set_pixelv(cell, Color8(type, 0, 0))
 	_terrain_map.update(_terrain_image)
@@ -427,6 +468,7 @@ func from_dict(data: Dictionary) -> void:
 		push_error("O save é de um mapa de outro tamanho (%dx%d)." % [int(data["width"]), int(data["height"])])
 		return
 	_terrain = terrain
+	_ocean = {}
 	for y in height:
 		for x in width:
 			_terrain_image.set_pixel(x, y, Color8(_terrain[y * width + x], 0, 0))

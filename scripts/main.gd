@@ -169,6 +169,8 @@ func _unhandled_input(event: InputEvent) -> void:
 				_rebuild_with_selected()
 			KEY_J:
 				_join_city_with_selected()
+			KEY_U:
+				_select_passenger()
 			KEY_ESCAPE:
 				_on_escape()
 
@@ -180,12 +182,12 @@ func get_unit_at(cell: Vector2i) -> Unit:
 
 
 ## {casa: Unit} de todas as unidades no mapa. Trabalhadores dentro de uma
-## madeireira remota não ocupam a casa.
+## madeireira remota e unidades embarcadas numa Galé não ocupam a casa.
 func occupants() -> Dictionary:
 	var result := {}
 	for player in players:
 		for unit in player.units:
-			if unit.working_mill == null:
+			if unit.working_mill == null and unit.transport == null:
 				result[unit.cell] = unit
 	return result
 
@@ -196,7 +198,7 @@ func can_move(unit: Unit) -> bool:
 		return false
 	var current := occupants()
 	var reachable := Movement.find_reachable(game_map, unit, current)
-	return (not Movement.destinations(reachable, current).is_empty()
+	return (not Movement.destinations(reachable, current, unit).is_empty()
 			or not Movement.attack_targets(game_map, unit, reachable, current).is_empty())
 
 
@@ -880,7 +882,7 @@ func select_unit(unit: Unit) -> void:
 		var current := occupants()
 		_reachable = Movement.find_reachable(game_map, unit, current)
 		_attack_targets = Movement.attack_targets(game_map, unit, _reachable, current)
-		move_overlay.show_moves(unit.cell, Movement.destinations(_reachable, current), _attack_targets.keys(),
+		move_overlay.show_moves(unit.cell, Movement.destinations(_reachable, current, unit), _attack_targets.keys(),
 				unit.is_ranged())
 		if unit.has_goto():
 			_show_goto_path(unit, unit.goto_target)
@@ -890,11 +892,19 @@ func select_unit(unit: Unit) -> void:
 	_update_info()
 
 
-## Move a unidade até [param target], que deve ser uma casa vazia ao alcance.
+## Move a unidade até [param target], que deve ser uma casa vazia ao alcance
+## (ou a casa de uma Galé dela com lugar: aí ela embarca).
 func move_unit(unit: Unit, target: Vector2i) -> void:
 	move_overlay.clear()
-	var reachable := Movement.find_reachable(game_map, unit, occupants())
+	var current := occupants()
+	var boat: Unit = current.get(target)
+	var reachable := Movement.find_reachable(game_map, unit, current)
 	await unit.move_along(Movement.build_path(reachable, target), game_map)
+	if boat and boat.can_carry(unit):
+		boat.board(unit)
+		hud.show_message("%s embarcou na Galé (%d/%d)." % [unit.type.display_name, boat.cargo.size(), boat.type.cargo_capacity],
+				Color(0.6, 0.85, 1))
+		return
 	await check_invasion(unit)
 
 
@@ -1006,15 +1016,17 @@ func release_mill_worker(mill: LumberMill) -> Unit:
 
 
 ## Casa de terra livre mais próxima de [param center] (a própria casa primeiro),
-## até [param radius] casas de distância, ou Unit.NO_TARGET se não houver.
-func free_cell_near(center: Vector2i, radius: int) -> Vector2i:
+## até [param radius] casas de distância, ou Unit.NO_TARGET se não houver. Com
+## [param ocean], uma casa de oceano livre (onde nasce a Galé).
+func free_cell_near(center: Vector2i, radius: int, ocean := false) -> Vector2i:
 	var current := occupants()
 	for distance in radius + 1:
 		for y in range(-distance, distance + 1):
 			for x in range(-distance, distance + 1):
 				var cell := center + Vector2i(x, y)
-				if (maxi(absi(x), absi(y)) == distance and game_map.is_in_bounds(cell)
-						and Terrain.is_walkable(game_map.get_terrain(cell)) and not current.has(cell)):
+				if maxi(absi(x), absi(y)) != distance or not game_map.is_in_bounds(cell) or current.has(cell):
+					continue
+				if game_map.is_ocean(cell) if ocean else Terrain.is_walkable(game_map.get_terrain(cell)):
 					return cell
 	return Unit.NO_TARGET
 
@@ -1032,6 +1044,9 @@ func _on_cell_clicked(cell: Vector2i) -> void:
 	if selected_unit and _attack_targets.has(cell):
 		selected_unit.goto_target = Unit.NO_TARGET # ordem manual cancela o "Mover"
 		_human_action(attack.bind(selected_unit, cell))
+	elif selected_unit and own_unit and own_unit.can_carry(selected_unit) and _reachable.has(cell):
+		selected_unit.goto_target = Unit.NO_TARGET
+		_human_action(move_unit.bind(selected_unit, cell)) # embarca na Galé
 	elif own_unit and own_unit != selected_unit:
 		select_unit(own_unit)
 	elif selected_unit and _reachable.has(cell) and unit == null:
@@ -1258,6 +1273,24 @@ func _on_unit_action(action_id: String) -> void:
 			_rebuild_with_selected()
 		"join_city":
 			_join_city_with_selected()
+		"unload":
+			_select_passenger()
+
+
+## Tecla U / botão "Desembarcar" na Galé: seleciona quem está a bordo (o
+## próximo, a cada vez). Ela desembarca andando para uma casa de terra vizinha.
+func _select_passenger() -> void:
+	var boat := selected_unit
+	if boat and boat.transport:
+		boat = boat.transport # já há um passageiro selecionado: vai para o próximo
+	if boat == null or boat.cargo.is_empty() or boat.owner_player != TurnManager.current_player():
+		return
+	var index := (boat.cargo.find(selected_unit) + 1) % boat.cargo.size()
+	select_unit(boat.cargo[index])
+	if selected_unit.moves_left <= 0:
+		hud.show_message("%s está sem movimentos: desembarca no próximo turno." % selected_unit.type.display_name, Color(1, 0.6, 0.4))
+	elif Movement.destinations(_reachable, occupants(), selected_unit).is_empty():
+		hud.show_message("Leve a Galé até a costa para desembarcar.", Color(1, 0.9, 0.3))
 
 
 ## Tecla B / botão "Construir nova cidade". Pergunta o nome da cidade, funda
@@ -1517,6 +1550,7 @@ func _on_turn_started(player: Player, turn_number: int) -> void:
 	_awaiting_end_turn = false
 	hud.set_turn(turn_number, player)
 	_heal_fortified_units(player)
+	_check_deep_water(player)
 	_process_cities(player)
 	_process_lumber_mills(player)
 	_process_rebuilds(player)
@@ -1579,6 +1613,25 @@ func _heal_fortified_units(player: Player) -> void:
 		if healed > 0:
 			var top := unit.position - Vector2(0, GameMap.TILE_SIZE / 2.0)
 			FloatingText.spawn(units_root, top, "+%d" % healed, Color(0.4, 1, 0.4))
+
+
+## Início da vez do jogador: a Galé que terminou o turno anterior em águas
+## profundas conta mais um; ao chegar a UnitType.deep_water_turn_limit, afunda
+## com quem estiver a bordo. Fora delas, a contagem zera. (As águas profundas
+## ainda não existem no mapa: ver Terrain.is_deep_water.)
+func _check_deep_water(player: Player) -> void:
+	for unit in player.units.duplicate():
+		if unit.type.deep_water_turn_limit <= 0:
+			continue
+		if not Terrain.is_deep_water(game_map.get_terrain(unit.cell)):
+			unit.deep_water_turns = 0
+			continue
+		unit.deep_water_turns += 1
+		if unit.deep_water_turns >= unit.type.deep_water_turn_limit:
+			if not player.is_ai:
+				hud.show_message("A %s afundou em águas profundas%s." % [unit.type.display_name,
+						" com %d unidade(s) a bordo" % unit.cargo.size() if not unit.cargo.is_empty() else ""], Color(1, 0.6, 0.4))
+			_destroy_unit(unit)
 
 
 ## Início da vez do jogador: as cidades dele produzem, comem e crescem.
@@ -1770,10 +1823,11 @@ func _remove_lumber_mill(mill: LumberMill) -> void:
 
 
 ## Unidade treinada por uma cidade: sai na própria cidade ou, se já houver uma
-## unidade lá, na primeira casa vizinha de terra livre. Retorna false se não
-## houver espaço (a cidade tenta de novo no próximo turno).
+## unidade lá, na primeira casa vizinha de terra livre (a Galé, numa casa
+## vizinha de oceano). Retorna false se não houver espaço (a cidade tenta de
+## novo no próximo turno).
 func _spawn_city_unit(type: UnitType, city: City) -> bool:
-	var cell := free_cell_near(city.cell, 1)
+	var cell := free_cell_near(city.cell, 1, type.is_naval)
 	if cell == Unit.NO_TARGET:
 		return false
 	_spawn_unit(type, city.owner_player, cell)
@@ -1784,6 +1838,15 @@ func _destroy_unit(unit: Unit) -> void:
 	print("%s (%s) foi destruído" % [unit.type.display_name, unit.owner_player.display_name])
 	if unit == selected_unit:
 		select_unit(null)
+	# Quem está a bordo afunda junto com a Galé
+	for passenger in unit.cargo.duplicate():
+		print("  %s afundou junto" % passenger.type.display_name)
+		if passenger == selected_unit:
+			select_unit(null)
+		passenger.owner_player.units.erase(passenger)
+		passenger.queue_free()
+	unit.cargo.clear()
+	unit.leave_transport()
 	unit.owner_player.units.erase(unit)
 	_check_victory()
 	await unit.play_death()
@@ -1901,6 +1964,13 @@ func restore_state(data: Dictionary) -> void:
 			units_root.add_child(unit)
 			player.units.append(unit)
 			unit.apply_dict(unit_data)
+		# Quem estava embarcado volta para a Galé da mesma casa
+		for i in player.units.size():
+			if player_data["units"][i].get("aboard", false):
+				for boat in player.units:
+					if boat.cell == player.units[i].cell and boat.can_carry(player.units[i]):
+						boat.board(player.units[i])
+						break
 		# Trabalhadores dentro das madeireiras (pela posição na lista de unidades)
 		for i in mills.size():
 			for index in player_data["lumber_mills"][i]["workers"]:
@@ -2041,6 +2111,10 @@ func _update_unit_actions() -> void:
 				"tooltip": error if not error.is_empty() else
 					"Destrói a melhoria inimiga (%d movimento). Fazenda: +%d de energia. Madeireira ou mina: +%d de ouro. Quem trabalhava nela é executado." % [
 						PILLAGE_COST, PILLAGE_FARM_ENERGY, PILLAGE_MILL_GOLD]})
+	if not unit.cargo.is_empty():
+		actions.append({"id": "unload", "label": "Desembarcar [U]",
+				"tooltip": "Seleciona quem está a bordo (%s): clique numa casa de terra vizinha para desembarcar." %
+					", ".join(unit.cargo.map(func(passenger: Unit) -> String: return passenger.type.display_name))})
 	actions.append({"id": "goto", "label": "Mover [G]",
 			"tooltip": "Escolha uma casa distante: a unidade anda até lá sozinha, turno após turno."})
 	if unit.has_goto():
@@ -2064,8 +2138,8 @@ func _update_mill_actions(mill: LumberMill) -> void:
 
 
 func _spawn_unit(type: UnitType, player: Player, cell: Vector2i) -> void:
-	if not game_map.is_in_bounds(cell) or not Terrain.is_walkable(game_map.get_terrain(cell)):
-		push_warning("Unidade %s não criada: casa %s não é terra." % [type.display_name, cell])
+	if not Movement.can_stand(game_map, type, cell):
+		push_warning("Unidade %s não criada: casa %s não é %s." % [type.display_name, cell, "água" if type.is_naval else "terra"])
 		return
 	var unit := Unit.new()
 	unit.setup(type, player, cell, game_map)
@@ -2132,6 +2206,12 @@ func _update_info() -> void:
 		])
 		if unit.has_goto():
 			lines[-1] += " | Indo para (%d, %d)" % [unit.goto_target.x, unit.goto_target.y]
+		if unit.type.cargo_capacity > 0:
+			lines[-1] += " | A bordo %d/%d%s" % [unit.cargo.size(), unit.type.cargo_capacity,
+					": " + ", ".join(unit.cargo.map(func(passenger: Unit) -> String: return passenger.type.display_name))
+					if not unit.cargo.is_empty() else ""]
+		if unit.transport:
+			lines[-1] += " | Embarcada na Galé"
 		if unit.rebuilding:
 			var building_city := claiming_city(unit.cell)
 			lines[-1] += " | Construindo estrada" if game_map.road_progress.has(unit.cell) else \

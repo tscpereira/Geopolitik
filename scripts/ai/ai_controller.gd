@@ -128,7 +128,7 @@ func _army_ready(player: Player) -> bool:
 
 
 func _is_field_soldier(unit: Unit) -> bool:
-	return unit.attack > 0 and not _economy.is_garrison(unit)
+	return unit.attack > 0 and not unit.is_naval() and unit.transport == null and not _economy.is_garrison(unit)
 
 
 func _attack_phase(game: Game, player: Player) -> void:
@@ -245,7 +245,7 @@ func _threatened_cells(game: Game, player: Player) -> Dictionary:
 		if other == player:
 			continue
 		for enemy in other.units:
-			if enemy.attack <= 0:
+			if enemy.attack <= 0 or enemy.is_naval() or enemy.transport:
 				continue # não ataca, não ameaça
 			var reachable := Movement.find_reachable(game.game_map, enemy, occupants, enemy.movement - 1)
 			for cell: Vector2i in reachable:

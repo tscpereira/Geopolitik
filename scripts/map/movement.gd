@@ -34,13 +34,23 @@ static func find_reachable(map: GameMap, unit: Unit, occupants: Dictionary, move
 	return _search(map, unit, occupants, unit.moves_left if moves < 0 else moves * POINTS)
 
 
-## Casas onde a unidade pode terminar o movimento: alcançáveis e vazias.
-static func destinations(reachable: Dictionary, occupants: Dictionary) -> Array[Vector2i]:
+## Casas onde a unidade pode terminar o movimento: alcançáveis e vazias. Com
+## [param unit], também a casa de uma Galé dela com lugar (embarcar).
+static func destinations(reachable: Dictionary, occupants: Dictionary, unit: Unit = null) -> Array[Vector2i]:
 	var result: Array[Vector2i] = []
 	for cell in reachable:
-		if not occupants.has(cell):
+		if not occupants.has(cell) or (unit and occupants[cell].can_carry(unit)):
 			result.append(cell)
 	return result
+
+
+## Se uma unidade do tipo [param type] pode ficar na casa: as navais na água, as
+## outras em terra andável.
+static func can_stand(map: GameMap, type: UnitType, cell: Vector2i) -> bool:
+	if not map.is_in_bounds(cell):
+		return false
+	var terrain := map.get_terrain(cell)
+	return Terrain.is_navigable(terrain) if type.is_naval else Terrain.is_walkable(terrain)
 
 
 ## Inimigos que a unidade pode atacar: {casa_do_inimigo: casa_de_onde_ataca}.
@@ -50,8 +60,8 @@ static func destinations(reachable: Dictionary, occupants: Dictionary) -> Array[
 ## Ataque à distância (Unit.is_ranged): o alvo pode estar a até attack_range
 ## casas da casa de onde ela dispara, com a linha de tiro livre (has_line_of_fire).
 static func attack_targets(map: GameMap, unit: Unit, reachable: Dictionary, occupants: Dictionary) -> Dictionary:
-	if unit.attack <= 0:
-		return {} # unidades sem ataque (ex.: Colono) não atacam
+	if unit.attack <= 0 or unit.transport:
+		return {} # sem ataque (ex.: Colono) ou embarcada: não ataca
 	var targets := {}
 	var best_distance := {}
 	for cell in reachable:
@@ -101,7 +111,9 @@ static func in_attack_range(map: GameMap, unit: Unit, from: Vector2i, target: Ve
 	if distance == 0:
 		return false
 	if not unit.is_ranged():
-		return distance == 1
+		# Corpo a corpo só contra quem está num terreno em que ela pode entrar:
+		# a Galé luta na água, as tropas de terra em terra
+		return distance == 1 and can_stand(map, unit.type, target)
 	return distance <= unit.type.attack_range and (unit.type.indirect_fire or has_line_of_fire(map, from, target))
 
 
@@ -169,7 +181,7 @@ static func step_cost(map: GameMap, unit: Unit, from: Vector2i, cell: Vector2i) 
 	if map.has_road(from) and map.has_road(cell):
 		return ROAD_STEP_POINTS
 	var cost := Terrain.move_cost(map.get_terrain(cell), unit.movement)
-	if unit.movement > 1 and map.crosses_river(from, cell):
+	if unit.movement > 1 and not unit.is_naval() and map.crosses_river(from, cell):
 		cost += Terrain.RIVER_MOVE_PENALTY
 	return mini(cost, unit.movement) * POINTS
 
@@ -188,9 +200,12 @@ static func path_cost(map: GameMap, unit: Unit, path: Array[Vector2i], from := U
 ## Cidades inimigas: só unidades militares de corpo a corpo entram (para
 ## invadir; ver Game.check_invasion), e a unidade para nelas (não atravessa).
 ## Arqueiro e Catapulta derrubam a guarnição de longe, mas não tomam a cidade.
+## A Galé só anda na água; a tropa de terra só entra na água para embarcar numa
+## Galé sua com lugar (e para ali).
 static func can_enter(map: GameMap, unit: Unit, cell: Vector2i, occupants: Dictionary) -> bool:
-	if not map.is_in_bounds(cell) or not Terrain.is_walkable(map.get_terrain(cell)):
-		return false
+	if not can_stand(map, unit.type, cell):
+		var boat: Unit = occupants.get(cell)
+		return boat != null and boat.can_carry(unit)
 	if is_enemy_city(map, unit, cell) and (unit.attack <= 0 or unit.is_ranged()):
 		return false
 	var occupant: Unit = occupants.get(cell)
@@ -219,6 +234,8 @@ static func _search(map: GameMap, unit: Unit, occupants: Dictionary, budget: int
 				return came_from
 			if cell != unit.cell and is_enemy_city(map, unit, cell):
 				continue # entrar numa cidade inimiga encerra o caminho (invasão)
+			if cell != unit.cell and not can_stand(map, unit.type, cell):
+				continue # embarcou numa Galé: o caminho acaba nela
 			for direction in DIRECTIONS:
 				var next := cell + direction
 				if not can_enter(map, unit, next, occupants):

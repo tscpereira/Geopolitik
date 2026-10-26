@@ -94,6 +94,18 @@ static func is_walkable(type: Type) -> bool:
 	return type != Type.WATER and type != Type.MOUNTAINS
 
 
+## Se unidades navais (Galé) andam neste terreno.
+static func is_navigable(type: Type) -> bool:
+	return type == Type.WATER
+
+
+## Águas profundas: a Galé afunda se terminar UnitType.deep_water_turn_limit
+## turnos seguidos nelas. O terreno ainda não existe (toda a água é rasa); quando
+## entrar no enum, basta responder true para ele aqui.
+static func is_deep_water(_type: Type) -> bool:
+	return false
+
+
 ## Se dá para construir uma fazenda neste terreno.
 static func can_farm(type: Type) -> bool:
 	return type == Type.GRASSLAND or type == Type.CERRADO

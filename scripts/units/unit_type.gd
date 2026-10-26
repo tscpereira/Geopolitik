@@ -31,6 +31,15 @@ extends Resource
 @export var indirect_fire := false
 ## Desenho do projétil no ataque à distância: 0 = flecha, 1 = pedra.
 @export_enum("Flecha", "Pedra") var projectile := 0
+## Unidade naval (Galé): só anda na água (Terrain.is_navigable) e só luta corpo
+## a corpo contra outras unidades na água.
+@export var is_naval := false
+## Quantas unidades de terra ela leva embarcadas (Galé: 2). Elas entram andando
+## para a casa dela e saem andando para uma casa de terra vizinha.
+@export_range(0, 9) var cargo_capacity := 0
+## Turnos seguidos terminados em águas profundas até afundar (com quem estiver
+## a bordo); 0 = não afunda. Galé: 2 (Terrain.is_deep_water).
+@export_range(0, 9) var deep_water_turn_limit := 0
 ## Pode construir uma nova cidade (tecla B), sendo consumida no processo.
 @export var can_found_city := false
 ## Pode construir madeireiras (tecla M): no território de uma cidade sua, a

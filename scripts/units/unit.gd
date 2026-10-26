@@ -60,6 +60,17 @@ var working_mill: LumberMill = null:
 	set(value):
 		working_mill = value
 		_update_visibility()
+## Galé em que a unidade está embarcada (null = em terra). A bordo, ela some do
+## mapa, não ocupa a casa (Game.occupants) e anda junto com a Galé; desembarca
+## andando para uma casa de terra vizinha.
+var transport: Unit = null:
+	set(value):
+		transport = value
+		_update_visibility()
+## Unidades a bordo (só para quem tem UnitType.cargo_capacity).
+var cargo: Array[Unit] = []
+## Turnos seguidos terminados em águas profundas (ver UnitType.deep_water_turn_limit).
+var deep_water_turns := 0
 ## Destino da ordem "Mover" (tecla G): a unidade anda até lá sozinha, turno
 ## após turno. NO_TARGET = sem ordem.
 var goto_target := NO_TARGET
@@ -108,6 +119,7 @@ func to_dict() -> Dictionary:
 		"type": type.resource_path, "cell": SaveGame.cell_to_json(cell), "move_points": moves_left,
 		"energy": energy, "fortified": fortified, "hidden_in_city": hidden_in_city,
 		"goto": SaveGame.cell_to_json(goto_target), "rebuilding": rebuilding,
+		"aboard": transport != null, "deep_water_turns": deep_water_turns,
 	}
 
 
@@ -120,12 +132,50 @@ func apply_dict(data: Dictionary) -> void:
 	hidden_in_city = data["hidden_in_city"]
 	goto_target = SaveGame.json_to_cell(data["goto"])
 	rebuilding = data.get("rebuilding", false)
+	deep_water_turns = int(data.get("deep_water_turns", 0))
 	_update_exhausted_look()
 
 
 ## Ataca à distância (UnitType.attack_range > 0: Arqueiro, Catapulta).
 func is_ranged() -> bool:
 	return type.attack_range > 0
+
+
+## Unidade naval (Galé): anda na água.
+func is_naval() -> bool:
+	return type.is_naval
+
+
+## Se [param unit] pode embarcar nesta unidade: é uma Galé do mesmo dono, com
+## lugar, e [param unit] é de terra.
+func can_carry(unit: Unit) -> bool:
+	return unit != self and unit.owner_player == owner_player and not unit.is_naval() \
+			and cargo.size() < type.cargo_capacity
+
+
+## Embarca [param unit] (que já está na casa desta Galé).
+func board(unit: Unit) -> void:
+	unit.fortified = false
+	unit.goto_target = NO_TARGET
+	unit.transport = self
+	unit.cell = cell
+	cargo.append(unit)
+	queue_redraw()
+
+
+## Sai da Galé (ao andar para a terra).
+func leave_transport() -> void:
+	if transport:
+		transport.cargo.erase(self)
+		transport.queue_redraw()
+		transport = null
+
+
+## Leva quem está a bordo para a casa e a posição atuais da Galé.
+func _carry_cargo() -> void:
+	for passenger in cargo:
+		passenger.cell = cell
+		passenger.position = position
 
 
 ## Defesa extra do terreno em que a unidade está (Terrain.DEFENSE_BONUS).
@@ -204,15 +254,19 @@ func heal_if_fortified() -> int:
 ## Anda casa a casa pelo caminho, gastando o custo de cada casa
 ## (Movement.step_cost, em pontos: 1 movimento, mais na floresta, nas colinas e
 ## ao atravessar um rio para quem tem mais de 1 de movimento, meio na estrada).
+## Quem está embarcado desembarca (aparece na Galé e anda para a terra); a Galé
+## leva quem está a bordo.
 func move_along(path: Array[Vector2i], map: GameMap) -> void:
 	fortified = false
 	rebuilding = false
+	moves_left -= Movement.path_cost(map, self, path)
+	leave_transport()
 	var tween := create_tween()
 	for step in path:
 		tween.tween_property(self, "position", map.cell_to_world(step), MOVE_STEP_TIME)
-	moves_left -= Movement.path_cost(map, self, path)
 	cell = path[-1]
 	await tween.finished
+	_carry_cargo()
 	_update_exhausted_look()
 
 
@@ -222,6 +276,7 @@ func advance_to(target: Vector2i, map: GameMap) -> void:
 	var tween := create_tween()
 	tween.tween_property(self, "position", map.cell_to_world(target), MOVE_STEP_TIME)
 	await tween.finished
+	_carry_cargo()
 
 
 ## Investida rápida em direção ao alvo e volta.
@@ -267,7 +322,7 @@ func set_selected(selected: bool) -> void:
 
 
 func _update_visibility() -> void:
-	visible = not hidden_in_city and working_mill == null
+	visible = not hidden_in_city and working_mill == null and transport == null
 
 
 func _update_exhausted_look() -> void:
@@ -306,6 +361,14 @@ func _draw() -> void:
 		var bar := Rect2(rect.position.x, rect.end.y - ENERGY_BAR_HEIGHT, rect.size.x, ENERGY_BAR_HEIGHT)
 		draw_rect(bar, Color.BLACK)
 		draw_rect(Rect2(bar.position, Vector2(bar.size.x * ratio, bar.size.y)), _energy_color(ratio))
+
+	# Galé: uma bolinha na cor do dono para cada unidade a bordo, no canto de cima
+	if type.cargo_capacity > 0:
+		var radius := GameMap.TILE_SIZE / 14.0
+		for i in type.cargo_capacity:
+			var center := Vector2(rect.end.x - radius - i * radius * 2.6, rect.position.y + radius)
+			draw_circle(center, radius + 1.5, Color.BLACK)
+			draw_circle(center, radius, owner_player.color if i < cargo.size() else Color(0.25, 0.25, 0.25))
 
 
 ## Base da unidade: sombra no chão e um anel na cor do jogador nos pés, para

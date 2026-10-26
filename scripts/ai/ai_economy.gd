@@ -721,9 +721,10 @@ func _is_free_worker(unit: Unit) -> bool:
 	return unit.type.can_rebuild and unit.working_mill == null
 
 
-## Unidade militar que não faz parte da guarnição de uma cidade.
+## Unidade militar de terra que não faz parte da guarnição de uma cidade (a
+## máquina ainda não usa Galés nem embarca tropas).
 func _is_field_soldier(unit: Unit) -> bool:
-	return unit.attack > 0 and not is_garrison(unit)
+	return unit.attack > 0 and not unit.is_naval() and unit.transport == null and not is_garrison(unit)
 
 
 ## Guarnição: unidade militar fortificada na cidade ou numa casa vizinha.

@@ -485,6 +485,8 @@ UNIDADES (scripts/units/)
     Cav. Leve   V        1       1       4          100  (Montaria; cavalaria)
     Bigas       B        2       1       3          100  (Guerra de movimento;
                                                          cavalaria)
+    Galé        N        1       1       3          100  (Navegação; naval,
+                                                         leva 2 unidades)
 - UNIDADES DA ERA ANTIGA (desde 25/10/2026, árvore do usuário; feitas
   no Quartel General): Arqueiro (12 de produção + 1 de população + 1
   Arco; exige Guerra a distância), Catapulta (10 de produção + 1 de
@@ -1221,7 +1223,7 @@ PRÉDIOS (City.buildings)
 
 ARSENAL (scripts/players/arsenal.gd, Player.arsenal)
 - O arsenal guarda as armas de todo o império (do jogador, não da
-  cidade). Armas: Lança, Espada Curta, Arco e Catapulta (a máquina).
+  cidade). Armas: Lança, Espada Curta, Arco, Catapulta (a máquina) e Galé (o casco; ver GALÉ E NAVEGAÇÃO).
 - Para formar um exército: primeiro a matéria-prima (madeira),
   depois as armas (Lança, na Marcenaria) e, por fim, a tropa
   (Lanceiro, no Quartel General, levando 1 Lança). O Guerreiro
@@ -1952,6 +1954,49 @@ energia dos dois lados.
 - As unidades atacam corpo a corpo, menos o Arqueiro e a Catapulta,
   que atacam à distância (ver ATAQUE À DISTÂNCIA, logo abaixo).
 
+GALÉ E NAVEGAÇÃO (desde 25/10/2026, pedido do usuário)
+- Tecnologia Navegação (60, exige Escrita; ilustração do mosaico de
+  Ulisses trazida pelo usuário, assets/tech/navegacao.png).
+- Como as outras armas: o CASCO é feito na Marcenaria (Galé (casco):
+  10 de produção + 8 de madeira) e vai para o arsenal ("Galés"); a
+  TRIPULAÇÃO é treinada no Quartel General (unidade Galé: 10 de
+  produção + 1 de população + 1 casco). As duas obras só existem em
+  CIDADE À BEIRA DO OCEANO (campo "coastal" de City.BUILDS; senão:
+  "Só em cidade à beira do oceano."). Oceano = água ligada à borda do
+  mapa (GameMap.is_ocean, busca em largura a partir da borda); lago no
+  meio da terra não conta, rio também não. Cidade costeira = alguma das
+  8 casas vizinhas é oceano (GameMap.is_coastal, City.is_coastal). A
+  Galé nasce numa casa de oceano vizinha à cidade.
+- Galé: Movimento 3, Ataque 1, Defesa 1, energia 100 (UnitType:
+  is_naval, cargo_capacity 2, deep_water_turn_limit 2). Só anda na
+  água (Terrain.is_navigable; Movement.can_stand), sem a penalidade
+  dos rios. Corpo a corpo só contra quem está na água (outra Galé); as
+  tropas de terra também não atacam a Galé corpo a corpo, mas Arqueiro
+  e Catapulta podem disparar nela.
+- EMBARCAR: com a tropa selecionada, clique na Galé (sua, com lugar)
+  numa casa vizinha (ou ao alcance): ela anda até lá e embarca. A
+  bordo, some do mapa, não ocupa a casa e anda junto com a Galé; a
+  Galé mostra uma bolinha na cor do dono por unidade a bordo (cinza =
+  lugar vazio) e o painel diz "A bordo 2/2: Guerreiro, Arqueiro".
+  Quem está a bordo não ataca.
+- DESEMBARCAR: com a Galé selecionada, tecla U (ou botão "Desembarcar
+  [U]") seleciona quem está a bordo (U de novo: o próximo); clique numa
+  casa de terra vizinha. Gasta o movimento normal da tropa (que guarda
+  os movimentos que tinha ao embarcar).
+- Galé destruída (ou afundada) leva quem estava a bordo.
+- ÁGUAS PROFUNDAS: a Galé afunda se terminar 2 turnos seguidos nelas
+  (Game._check_deep_water, no início da vez do dono; Unit.deep_water_turns
+  vai para o save). O terreno ainda não existe: Terrain.is_deep_water
+  responde false para tudo; quando ele entrar no enum, basta incluí-lo
+  ali.
+- Save: cada unidade guarda "aboard"; ao carregar, volta para a Galé
+  da mesma casa.
+- Desenho provisório feito por código (tools/art/gale.gd: casco com
+  proa curva, remos, vela listrada e escudos na cor do time pela
+  máscara gale_time.png), até chegar a arte do ChatGPT.
+- A máquina ainda não faz nem usa Galés (e ignora as do inimigo na
+  zona de ameaça).
+
 ATAQUE À DISTÂNCIA (desde 25/10/2026, pedido do usuário)
 - Campos do UnitType (.tres): "Attack Range" (alcance em casas; 0 =
   corpo a corpo), "Indirect Fire" (tiro por cima do terreno) e
@@ -2179,7 +2224,8 @@ CIÊNCIA E PESQUISA (scripts/science/technology.gd, Player.research)
       Escrita     40 pontos (era o Alfabeto; mesmo número no save)
       Trabalho em Bronze  35 pontos
       Montaria    35 pontos
-      Guerra a distância  35 pontos (desde 25/10/2026)
+  (Guerra a distância foi raiz por algumas horas em 25/10/2026; desde a
+  árvore com a Navegação, vem depois da Escrita.)
   ERA ANTIGA (árvore desenhada pelo usuário em 25/10/2026,
   OneDrive/Documents/techtree.drawio; custos sugeridos):
     Tecnologia (custo)        Exige                  Libera
@@ -2188,7 +2234,9 @@ CIÊNCIA E PESQUISA (scripts/science/technology.gd, Player.research)
     Misticismo (20)           -                      Templo
     Trabalho em Bronze (35)   -                      Lanceiro
     Montaria (35)             -                      Cavalaria Leve
-    Guerra a distância (35)   -                      Arqueiro
+    Guerra a distância (35)   Escrita                Arco, Arqueiro
+    Navegação (60)            Escrita                casco da Galé,
+                                                     Galé
     Literatura (70)           Escrita                Biblioteca
     Matemática (60)           Construção             Catapulta
     Trabalho em Ferro (70)    Bronze                 ferro no mapa,
@@ -2544,6 +2592,13 @@ Screenshots também confirmaram o visual.
     25/10/2026; hoje só o Lanceiro leva)
 [x] Arco e máquina da Catapulta feitos na Marcenaria, tropas treinadas
     no Quartel General (25/10/2026)
+[x] Navegação e Galé (casco na Marcenaria, tripulação no Quartel, só
+    em cidade à beira do oceano; leva 2 unidades) (25/10/2026)
+[ ] Águas profundas (terreno novo): a Galé afunda em 2 turnos nelas
+    (a regra já existe, falta o terreno)
+[ ] Estaleiro (para tecnologias navais mais avançadas)
+[ ] IA: fazer e usar Galés (transporte de tropas)
+[ ] Arte definitiva da Galé (ChatGPT)
 [x] Primeira fonte de ouro: impostos da Marcenaria parada
 [x] Lanceiro (1/2/1, +1 de ataque e defesa contra cavalaria) com a
     tecnologia Trabalho em Bronze; o Guerreiro ganhou um desenho
@@ -3719,6 +3774,21 @@ Screenshots também confirmaram o visual.
   arma), teste da IA (pede a máquina, não repete, depois treina a
   Catapulta), batalha entre máquinas, teste do Bronze e screenshot do
   painel Arsenal com os ícones novos.
+- NAVEGAÇÃO E GALÉ (pedido do usuário, com a árvore atualizada:
+  Guerra a distância passa a exigir Escrita; Navegação nova, também
+  depois da Escrita). Galé 3/1/1, leva 2 unidades, casco na Marcenaria
+  (8 de madeira, pedido do usuário; 10 de produção, sugestão) e
+  tripulação no Quartel (10, sugestão), só em cidade à beira do oceano
+  (pedido do usuário). Embarque e desembarque, a carga anda com a
+  Galé e afunda com ela, regra das águas profundas pronta para o
+  terreno novo, save com gente a bordo. O Estaleiro ficou para depois
+  (decisão do usuário). Validação: teste da Galé (árvore, oceano e
+  cidade costeira x interior, casco e tripulação, nascer no oceano,
+  andar só na água, embarcar 2, o terceiro não, carga navegando,
+  desembarcar com U, Galé x Galé, sem combate corpo a corpo entre terra
+  e água, afundar com a carga, salvar e carregar), testes do ataque à
+  distância e da IA, e screenshots da Galé carregada e das cores dos
+  dois jogadores.
 
 --------------------------------------------------------------
 7. BACKLOG (ideias para depois)

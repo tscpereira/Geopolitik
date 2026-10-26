@@ -16,8 +16,9 @@ extends RefCounted
 ##   Construção -> Matemática -> Engenharia Civil -> Pão e Circo
 ##   Trabalho em Bronze -> Trabalho em Ferro -> Pão e Circo
 ##   Montaria + Trabalho em Bronze -> Guerra de movimento
+##   Escrita -> Guerra a distância (25/10/2026; antes era raiz)
+##   Escrita -> Navegação (25/10/2026)
 ##   Misticismo (sem sucessora por enquanto)
-##   Guerra a distância (sem sucessora por enquanto; entrou em 25/10/2026)
 ## O que cada uma libera fica onde é usado: o campo "tech" de City.BUILDS
 ## (prédios, unidades), has_tech nas regras (Direito, Trabalho em Ferro,
 ## Engenharia Civil). Para uma tecnologia nova: entre no fim do enum e em DATA.
@@ -27,7 +28,7 @@ extends RefCounted
 enum Tech {
 	CONSTRUCTION, MYSTICISM, WRITING, BRONZE_WORKING, HORSEBACK_RIDING, LITERATURE, MATHEMATICS,
 	IRON_WORKING, CURRENCY, MOBILE_WARFARE, LAW, CIVIL_ENGINEERING, REPUBLIC, BREAD_AND_CIRCUSES,
-	RANGED_WARFARE,
+	RANGED_WARFARE, NAVIGATION,
 }
 
 ##   name      nome mostrado
@@ -63,9 +64,14 @@ const DATA := {
 		"image": "res://assets/tech/montaria.png",
 	},
 	Tech.RANGED_WARFARE: {
-		"name": "Guerra a distância", "cost": 35, "requires": [],
-		"description": "Arcos e flechas: atacar sem chegar perto. Libera o Arqueiro (ataque à distância 2, alcance 1).",
+		"name": "Guerra a distância", "cost": 35, "requires": [Tech.WRITING],
+		"description": "Arcos e flechas: atacar sem chegar perto. Libera o Arqueiro (ataque à distância 2, alcance 1; leva 1 Arco).",
 		"image": "res://assets/tech/guerra_a_distancia.png",
+	},
+	Tech.NAVIGATION: {
+		"name": "Navegação", "cost": 60, "requires": [Tech.WRITING],
+		"description": "Barcos a remo e a vela. Libera a Galé (Movimento 3, Ataque 1, Defesa 1; leva até 2 unidades), feita só em cidade à beira do oceano.",
+		"image": "res://assets/tech/navegacao.png",
 	},
 	Tech.LITERATURE: {
 		"name": "Literatura", "cost": 70, "requires": [Tech.WRITING],

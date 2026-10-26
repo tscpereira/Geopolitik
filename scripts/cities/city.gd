@@ -79,7 +79,7 @@ signal changed
 enum Build {
 	FARM, LUMBER_MILL, WARRIOR, WORKER, SETTLER, CITY_HALL, HEADQUARTERS, CARPENTRY, SPEAR, TEMPLE, WALLS, SPEARMAN, MINE,
 	SCHOOL, LIBRARY, MARKET, FORGE, ARENA, SHORT_SWORD, CATAPULT, LIGHT_CAVALRY, CHARIOT, SWORDSMAN,
-	ARCHER, BOW, CATAPULT_FRAME,
+	ARCHER, BOW, CATAPULT_FRAME, GALLEY_HULL, GALLEY,
 }
 
 ## Humor de um cidadão (bem-estar social).
@@ -145,6 +145,7 @@ const CATEGORY_NAMES := {
 ##               (Muralha; ver Unit.walls_defense_bonus)
 ##   tech        tecnologia (Technology.Tech) que o jogador precisa ter pesquisado
 ##   requires    prédio que produz a unidade ou a arma (a cidade precisa tê-lo)
+##   coastal     só em cidade à beira do oceano (Galé; ver is_coastal)
 ##   native      prédio que toda cidade já tem ao nascer (não aparece na lista)
 ##   description texto explicativo (tooltip da lista de construções)
 ## Em que terreno cada melhoria pode ser feita: ver allows_terrain.
@@ -297,6 +298,19 @@ const BUILDS := {
 		"cost": 10, "gold": 50, "wood": 4, "on_tile": false,
 		"weapon": Arsenal.Weapon.CATAPULT, "requires": Build.CARPENTRY, "tech": Technology.Tech.MATHEMATICS,
 		"description": "A máquina vai para o arsenal; a equipe é treinada no Quartel General (unidade Catapulta). Feita na Marcenaria; gasta 4 de madeira. Exige Matemática.",
+	},
+	Build.GALLEY_HULL: {
+		"name": "Galé (casco)", "article": "a", "category": Category.WEAPON,
+		"cost": 10, "gold": 50, "wood": 8, "on_tile": false, "coastal": true,
+		"weapon": Arsenal.Weapon.GALLEY, "requires": Build.CARPENTRY, "tech": Technology.Tech.NAVIGATION,
+		"description": "O barco vai para o arsenal; a tripulação é treinada no Quartel General (unidade Galé). Feita na Marcenaria, só em cidade à beira do oceano; gasta 8 de madeira. Exige Navegação.",
+	},
+	Build.GALLEY: {
+		"name": "Galé", "article": "a", "category": Category.UNIT,
+		"cost": 10, "gold": 50, "weapons": {Arsenal.Weapon.GALLEY: 1}, "on_tile": false, "coastal": true,
+		"unit": preload("res://data/units/gale.tres"), "population": 1,
+		"requires": Build.HEADQUARTERS, "tech": Technology.Tech.NAVIGATION,
+		"description": "Barco a remo (Movimento 3, Ataque 1, Defesa 1) que leva até 2 unidades: elas embarcam andando para a casa dele e desembarcam andando para a terra. Luta só contra barcos. Só em cidade à beira do oceano; leva 1 Galé do arsenal (o casco, feito na Marcenaria). Exige Navegação.",
 	},
 	Build.LIGHT_CAVALRY: {
 		"name": "Cavalaria Leve", "article": "a", "category": Category.UNIT,
@@ -671,12 +685,19 @@ func build_error(build: int) -> String:
 			return "Já está em obra."
 	if not has_tech_for(build):
 		return "Precisa da tecnologia %s." % Technology.tech_name(info["tech"])
+	if info.get("coastal", false) and not is_coastal():
+		return "Só em cidade à beira do oceano."
 	if info.has("requires") and not has_building(info["requires"]):
 		return "Precisa de %s." % BUILDS[info["requires"]]["name"]
 	for error: String in [wood_error(build), iron_error(build), weapons_error(build)]:
 		if not error.is_empty():
 			return error
 	return ""
+
+
+## Cidade à beira do oceano (GameMap.is_coastal): pode fazer a Galé.
+func is_coastal() -> bool:
+	return _map != null and _map.is_coastal(cell)
 
 
 ## Motivo pelo qual falta madeira para [param build] ("" = tem o suficiente).

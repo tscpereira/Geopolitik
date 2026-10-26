@@ -127,6 +127,31 @@ static func draw_weapon(canvas: CanvasItem, weapon: Arsenal.Weapon, rect: Rect2)
 			draw_bow(canvas, rect)
 		Arsenal.Weapon.CATAPULT:
 			draw_catapult(canvas, rect)
+		Arsenal.Weapon.GALLEY:
+			draw_galley(canvas, rect)
+
+
+## Galé de lado: casco de madeira com a proa curva, mastro e vela clara.
+static func draw_galley(canvas: CanvasItem, rect: Rect2) -> void:
+	var w := rect.size.x
+	var line := maxf(1.0, w / 24.0)
+	var o := rect.position
+	var p := func(x: float, y: float) -> Vector2: return o + Vector2(x, y) * w
+	# Mastro e vela
+	canvas.draw_line(p.call(0.5, 0.12), p.call(0.5, 0.62), Color.BLACK, w * 0.08)
+	canvas.draw_line(p.call(0.5, 0.12), p.call(0.5, 0.62), WOOD_SHAFT_COLOR, w * 0.04)
+	var sail := PackedVector2Array([p.call(0.3, 0.16), p.call(0.7, 0.16), p.call(0.73, 0.5), p.call(0.27, 0.5)])
+	canvas.draw_colored_polygon(sail, STONE_COLOR)
+	canvas.draw_polyline(sail + PackedVector2Array([sail[0]]), Color.BLACK, line)
+	# Casco
+	var hull := PackedVector2Array([p.call(0.06, 0.58), p.call(0.82, 0.58), p.call(0.92, 0.42), p.call(0.96, 0.46),
+			p.call(0.88, 0.62), p.call(0.8, 0.76), p.call(0.2, 0.76), p.call(0.1, 0.68)])
+	canvas.draw_colored_polygon(hull, LEATHER_COLOR)
+	canvas.draw_polyline(hull + PackedVector2Array([hull[0]]), Color.BLACK, line)
+	# Remos
+	for i in 4:
+		var x := 0.25 + i * 0.15
+		canvas.draw_line(p.call(x, 0.7), p.call(x - 0.08, 0.92), WOOD_SHAFT_COLOR, maxf(1.0, w * 0.04))
 
 
 ## Arco na diagonal: madeira curva, corda e uma flecha encaixada.
