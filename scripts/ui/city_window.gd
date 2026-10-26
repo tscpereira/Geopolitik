@@ -446,13 +446,17 @@ func _rebuild_mood() -> void:
 	status.fit_content = true
 	status.scroll_active = false
 	if _city.is_in_disorder():
-		status.text = "[color=#%s]DESORDEM CIVIL: mais infelizes que felizes. A cidade não avança obras nem rende ouro ou ciência. Ponha cidadãos nas festividades, fortifique soldados na cidade ou construa um Templo.[/color]" % NEGATIVE_COLOR.to_html(false)
+		status.text = "[color=#%s]DESORDEM CIVIL: a maioria da cidade está infeliz. A cidade não avança obras nem rende ouro ou ciência. Ponha cidadãos nas festividades, fortifique soldados na cidade ou construa um Templo.[/color]" % NEGATIVE_COLOR.to_html(false)
 	elif _city.is_celebrating():
 		status.text = "[color=#%s]CELEBRAÇÃO: nenhum infeliz e pelo menos metade feliz. +%d de alimento por turno (+%d por feliz).[/color]" % [
 			City.HAPPY_COLOR.to_html(false), _city.celebration_food(), City.CELEBRATION_FOOD_PER_HAPPY]
 	else:
-		status.text = "[color=#%s]Em ordem.[/color] Desordem: infelizes > felizes. Celebração: nenhum infeliz e metade feliz (%d+ de população)." % [
-			POSITIVE_COLOR.to_html(false), City.CELEBRATION_MIN_POPULATION]
+		var margin := _city.unrest_margin()
+		status.text = "[color=#%s]Em ordem.[/color] %s Desordem: mais da metade infeliz (cada feliz compensa um infeliz). Celebração: nenhum infeliz e metade feliz (%d+ de população)." % [
+			POSITIVE_COLOR.to_html(false),
+			"[color=#%s]No limite: mais um infeliz e a cidade entra em desordem.[/color]" % NEGATIVE_COLOR.to_html(false) if margin == 0
+				else "Aguenta mais %d infeliz%s." % [margin, "es" if margin > 1 else ""],
+			City.CELEBRATION_MIN_POPULATION]
 	_mood_box.add_child(status)
 	var details := _make_muted("    " + "\n    ".join(_city.mood_details()))
 	details.add_theme_font_size_override("font_size", 13)

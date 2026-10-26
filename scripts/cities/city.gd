@@ -1313,11 +1313,20 @@ func mood() -> Dictionary:
 	return result
 
 
-## Desordem civil: mais infelizes que felizes. A cidade não avança obras nem
-## rende ouro ou ciência (o alimento e a madeira continuam).
+## Desordem civil: a MAIORIA da cidade está infeliz, descontados os felizes
+## ((infelizes − felizes) × 2 > população; até 26/10/2026 bastava ter mais
+## infelizes que felizes, e uma cidade de 5 sem Templo já se revoltava). A
+## cidade não avança obras nem rende ouro ou ciência (o alimento e a madeira
+## continuam).
 func is_in_disorder() -> bool:
+	return unrest_margin() < 0
+
+
+## Quantos infelizes a mais a cidade aguenta antes da desordem (negativo = já
+## está em desordem): população ÷ 2 − (infelizes − felizes), arredondado para baixo.
+func unrest_margin() -> int:
 	var current := mood()
-	return current["unhappy"] > current["happy"]
+	return floori((population - 2 * (current["unhappy"] - current["happy"])) / 2.0)
 
 
 ## Celebração: nenhum infeliz, pelo menos metade feliz e população mínima.

@@ -1422,7 +1422,16 @@ BEM-ESTAR SOCIAL (felicidade; City.mood, constantes no topo de city.gd)
                        (Marcenaria parada, campo "idle_goods")
 - Ordem do cálculo: base -> agitação -> Templo e guarnição ->
   alegria.
-- DESORDEM CIVIL: mais infelizes que felizes. Enquanto durar, a
+- DESORDEM CIVIL (desde 26/10/2026): a MAIORIA da cidade está infeliz,
+  descontados os felizes: (infelizes − felizes) × 2 > população
+  (City.is_in_disorder). Antes bastava ter mais infelizes que felizes,
+  e como ninguém nasce feliz, uma cidade de 5 sem Templo já se
+  revoltava. Hoje, até 4 cidades e sem fome: sem nada, a desordem vem
+  na população 9 (antes 5); com Templo, 13 (antes 7). A fome soma 1
+  infeliz (sem nada: 7). City.unrest_margin = quantos infelizes a mais
+  a cidade aguenta; a janela da cidade mostra "Aguenta mais N
+  infelizes" ou, em vermelho, "No limite: mais um infeliz e a cidade
+  entra em desordem". Enquanto durar, a
   cidade NÃO avança obras (nem unidades e armas), NÃO rende ouro
   (impostos) e NÃO gera ciência. O alimento, o crescimento e a
   madeira continuam. É conferida no início da vez do dono, com
@@ -3842,6 +3851,21 @@ Screenshots também confirmaram o visual.
   Validação: teste (profundidades, "libera", T abre e fecha, Esc,
   botão, estados, nenhum cartão sobreposto, clique escolhe a pesquisa)
   e screenshots do topo e do fim da árvore.
+
+
+26/10/2026
+- DESORDEM CIVIL MAIS BRANDA (pedido do usuário: as regras
+  de felicidade estavam exigentes demais). A desordem só vem quando a
+  maioria da cidade está infeliz, descontados os felizes ((infelizes −
+  felizes) × 2 > população), em vez de "mais infelizes que felizes".
+  Sem nada, a cidade aguenta até a população 8 (antes 4); com Templo,
+  até 12 (antes 6). Base, tamanho do império, Templo, lei marcial e
+  festividades continuam iguais. A janela da cidade mostra a margem.
+  Validação: teste (a fórmula em populações 1 a 20, limites com e sem
+  Templo, com fome, margem, festividades tirando a cidade grande da
+  desordem) e screenshot da janela. Testes antigos que esperam
+  desordem na população 5 (test_workforce, test_arsenal) falham por
+  mudança de regra.
 
 --------------------------------------------------------------
 7. BACKLOG (ideias para depois)
