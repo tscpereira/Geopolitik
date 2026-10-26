@@ -1,10 +1,13 @@
 extends SceneTree
 
-## Desenho provisório da Galé (até chegar a arte do ChatGPT): barco a remo
-## visto de lado, casco de madeira com proa curva, remos, mastro e vela
-## quadrada listrada. As listras da vela e os escudos ficam na cor do jogador:
-## pretos na imagem e brancos na máscara gale_time.png (Unit.team_texture soma
-## a cor do jogador na proporção da máscara, sem franja nas bordas).
+## Desenho da Galé, feito por código a partir do modelo trazido pelo usuário
+## (25/10/2026: barco longo de casco escuro de tábuas, cabeça de animal
+## entalhada na popa, proa alta e curva com aríete de bronze, vela quadrada
+## com listras verticais presa numa verga com cordas, escudos redondos na
+## amurada e remos saindo por furos, inclinados para trás). Simplificado para
+## 80x80. As listras da vela e os escudos ficam na cor do jogador: pretos na
+## imagem e brancos na máscara gale_time.png (Unit.team_texture soma a cor do
+## jogador na proporção da máscara, sem franja nas bordas).
 ## Uso: godot --headless --path . --script tools/art/gale.gd
 ## Grava assets/sprites/units/gale.png e gale_time.png (80x80).
 
@@ -14,16 +17,19 @@ const SCALE := 4
 const OUT := "res://assets/sprites/units/gale.png"
 const OUT_MASK := "res://assets/sprites/units/gale_time.png"
 
-const OUTLINE := Color8(30, 20, 12)
-const HULL := Color8(122, 74, 38)
-const HULL_DARK := Color8(84, 50, 26)
-const HULL_LIGHT := Color8(160, 104, 56)
-const OAR := Color8(190, 150, 100)
-const MAST := Color8(96, 62, 32)
-const SAIL := Color8(236, 226, 200)
+const OUTLINE := Color8(28, 22, 16)
+const HULL := Color8(104, 80, 56)
+const HULL_DARK := Color8(72, 55, 38)
+const HULL_LIGHT := Color8(138, 108, 76)
+const PLANK := Color8(58, 44, 30)
+const OAR := Color8(150, 118, 78)
+const MAST := Color8(110, 82, 52)
+const ROPE := Color8(70, 56, 40)
+const SAIL := Color8(238, 234, 222)
+const SAIL_SHADE := Color8(208, 204, 192)
+const BRONZE := Color8(214, 168, 60)
 ## Marca das áreas na cor do jogador (vira preto na imagem e branco na máscara).
 const TEAM := Color(1, 0, 1)
-const WATER := Color8(220, 235, 245)
 
 
 var _mask: Image
@@ -34,39 +40,59 @@ func _initialize() -> void:
 	big.fill(Color(0, 0, 0, 0))
 	_mask = Image.create(SIZE * SCALE, SIZE * SCALE, false, Image.FORMAT_RGBA8)
 	_mask.fill(Color.BLACK)
-	# Coordenadas em pixels da imagem final (0..80); _poly escala.
-	# Remos (atrás do casco), inclinados para trás
+	# Coordenadas em pixels da imagem final (0..80).
+	# Remos de trás (mais escuros, por baixo do casco)
 	for i in 5:
-		var x := 24.0 + i * 8.0
-		_line(big, Vector2(x, 54), Vector2(x - 7, 70), 3.2, OUTLINE)
-		_line(big, Vector2(x, 54), Vector2(x - 7, 70), 1.6, OAR)
-	# Espuma onde os remos tocam a água
-	for i in 5:
-		_circle(big, Vector2(17.0 + i * 8.0, 70.5), 2.2, WATER)
+		var x := 25.0 + i * 9.0
+		_line(big, Vector2(x + 2, 55), Vector2(x - 6, 69), 2.6, OUTLINE)
+		_line(big, Vector2(x + 2, 55), Vector2(x - 6, 69), 1.2, HULL_DARK)
+	# Cordas do mastro até as pontas da verga e até a proa e a popa
+	for target in [Vector2(20, 14), Vector2(60, 14), Vector2(10, 40), Vector2(72, 40)]:
+		_line(big, Vector2(40, 7), target, 0.9, ROPE)
 	# Mastro
-	_poly(big, [Vector2(38.5, 10), Vector2(41.5, 10), Vector2(41.5, 52), Vector2(38.5, 52)], OUTLINE, MAST)
-	# Vela quadrada com listras na cor do time
-	var sail := [Vector2(24, 14), Vector2(56, 14), Vector2(58, 40), Vector2(22, 40)]
+	_poly(big, [Vector2(38.8, 6), Vector2(41.2, 6), Vector2(41.2, 50), Vector2(38.8, 50)], OUTLINE, MAST)
+	# Vela: quadrada, um pouco estufada, com 3 listras na cor do time
+	var sail := [Vector2(22, 15), Vector2(58, 15), Vector2(60, 28), Vector2(58, 41), Vector2(24, 40), Vector2(22, 28)]
 	_poly(big, sail, OUTLINE, SAIL)
-	for stripe in [[26.5, 33.5], [46.5, 53.5]]:
+	_poly(big, [Vector2(24, 34), Vector2(58, 34), Vector2(58, 40), Vector2(24, 39)], SAIL_SHADE, SAIL_SHADE, false)
+	for stripe in [[28.0, 34.0], [40.0, 46.0], [52.0, 57.5]]:
 		var a: float = stripe[0]
 		var b: float = stripe[1]
-		_poly(big, [Vector2(a, 15.5), Vector2(b, 15.5), Vector2(b + 1.2, 38.5), Vector2(a - 1.2, 38.5)], TEAM, TEAM, false)
-	# Verga (a vara que segura a vela)
-	_poly(big, [Vector2(21, 12), Vector2(59, 12), Vector2(59, 15), Vector2(21, 15)], OUTLINE, MAST)
-	# Casco: proa alta e curva à direita, popa à esquerda
-	var hull := [Vector2(8, 46), Vector2(66, 46), Vector2(72, 40), Vector2(75, 33), Vector2(77, 36),
-			Vector2(74, 46), Vector2(66, 57), Vector2(18, 57), Vector2(10, 52)]
+		_poly(big, [Vector2(a, 16), Vector2(b, 16), Vector2(b + 0.4, 39.5), Vector2(a + 0.4, 39.5)], TEAM, TEAM, false)
+	# Verga, com as amarrações
+	_poly(big, [Vector2(19, 13), Vector2(61, 13), Vector2(61, 15.6), Vector2(19, 15.6)], OUTLINE, MAST)
+	# Casco: comprido e curvo; popa à esquerda (sobe até a cabeça de animal) e
+	# proa à direita (poste alto e curvo)
+	var hull := [Vector2(6, 38), Vector2(10, 37), Vector2(13, 44), Vector2(68, 44), Vector2(72, 37),
+			Vector2(74, 30), Vector2(77, 31), Vector2(76, 42), Vector2(70, 54), Vector2(62, 59),
+			Vector2(22, 59), Vector2(12, 54), Vector2(7, 46)]
 	_poly(big, hull, OUTLINE, HULL)
-	# Faixa escura na linha d'água e faixa clara na borda
-	_poly(big, [Vector2(14, 53), Vector2(68, 53), Vector2(66, 56), Vector2(18, 56)], HULL_DARK, HULL_DARK, false)
-	_poly(big, [Vector2(10, 47), Vector2(66, 47), Vector2(65, 49), Vector2(11, 49)], HULL_LIGHT, HULL_LIGHT, false)
-	# Escudos na amurada (cor do time)
+	# Tábuas (linhas escuras ao longo do casco) e a faixa clara da amurada
+	_poly(big, [Vector2(12, 44.5), Vector2(69, 44.5), Vector2(68.5, 46.5), Vector2(12.5, 46.5)], HULL_LIGHT, HULL_LIGHT, false)
+	for y in [50.0, 54.0]:
+		_line(big, Vector2(12 + (y - 50) * 0.8, y), Vector2(70 - (y - 50) * 1.6, y), 0.8, PLANK)
+	_poly(big, [Vector2(16, 56.5), Vector2(66, 56.5), Vector2(62, 58.5), Vector2(22, 58.5)], HULL_DARK, HULL_DARK, false)
+	# Cabeça de animal entalhada na popa
+	_poly(big, [Vector2(4, 37), Vector2(6, 32), Vector2(10, 31), Vector2(13, 33), Vector2(12, 36),
+			Vector2(9, 36), Vector2(8, 39)], OUTLINE, HULL_LIGHT)
+	_circle(big, Vector2(9.5, 33.2), 0.8, OUTLINE)
+	# Aríete de bronze na proa, na linha d'água
+	_poly(big, [Vector2(68, 54), Vector2(79, 56.5), Vector2(67, 58.5)], OUTLINE, BRONZE)
+	# Escudos redondos na amurada (cor do time, com o centro de bronze)
+	for i in 4:
+		var center := Vector2(30.0 + i * 8.5, 42.5)
+		_circle(big, center, 3.6, OUTLINE)
+		_circle(big, center, 2.8, TEAM)
+		_circle(big, center, 0.9, BRONZE)
+	# Furos dos remos e os remos da frente (claros), inclinados para trás
 	for i in 5:
-		_circle(big, Vector2(22.0 + i * 9.0, 49.5), 3.4, OUTLINE)
-		_circle(big, Vector2(22.0 + i * 9.0, 49.5), 2.5, TEAM)
-	# Olho na proa
-	_circle(big, Vector2(68, 47), 1.6, OUTLINE)
+		var hole := Vector2(26.0 + i * 9.0, 50)
+		_circle(big, hole, 1.7, OUTLINE)
+		var blade := hole + Vector2(-9, 17)
+		_line(big, hole, blade, 2.8, OUTLINE)
+		_line(big, hole, blade, 1.3, OAR)
+		_poly(big, [blade + Vector2(-1.2, -2.5), blade + Vector2(1.8, -1.5), blade + Vector2(0.4, 3), blade + Vector2(-2.2, 2)],
+				OUTLINE, OAR)
 
 	# Reduz pela metade duas vezes (média de 4x4 pixels: bordas suaves)
 	for half in [SIZE * 2, SIZE]:

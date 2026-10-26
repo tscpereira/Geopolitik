@@ -96,6 +96,8 @@ func _ready() -> void:
 
 	hud.action_pressed.connect(_on_unit_action)
 	hud.research_pressed.connect(_on_research_pressed)
+	hud.tech_tree_pressed.connect(_open_tech_tree)
+	hud.tech_tree_dialog.research_chosen.connect(_on_tree_research_chosen)
 	hud.city_window.closed.connect(_on_city_window_closed)
 	TurnManager.turn_started.connect(_on_turn_started)
 	TurnManager.start_game(players)
@@ -117,7 +119,7 @@ func _unhandled_input(event: InputEvent) -> void:
 	var key: int = event.keycode if event is InputEventKey and event.pressed and not event.echo else KEY_NONE
 	if (hud.city_window.visible or hud.city_name_dialog.visible or hud.notice_dialog.visible
 			or hud.save_dialog.visible or hud.invasion_dialog.visible or hud.research_dialog.visible
-			or hud.tech_dialog.visible):
+			or hud.tech_dialog.visible or hud.tech_tree_dialog.visible):
 		return # as janelas cuidam dos próprios cliques e teclas
 	# Carregar: L (no editor do Godot o F9 pausa o jogo embutido) ou F9
 	if (key == KEY_L or key == KEY_F9) and not _is_busy:
@@ -131,6 +133,9 @@ func _unhandled_input(event: InputEvent) -> void:
 		return
 	if key == KEY_F5:
 		_open_save_dialog(true)
+		return
+	if key == KEY_T:
+		_open_tech_tree()
 		return
 
 	if is_enter:
@@ -1806,6 +1811,29 @@ func _on_research_pressed() -> void:
 	await _choose_research(player)
 	if _awaiting_end_turn:
 		hud.show_end_turn_prompt(true)
+
+
+## Tecla T / botão "Árvore [T]": a árvore de tecnologias do jogador humano. Na
+## vez dele, sem nada acontecendo, dá para escolher a pesquisa clicando.
+func _open_tech_tree() -> void:
+	var player := TurnManager.current_player()
+	if player.is_ai:
+		for other in players:
+			if not other.is_ai:
+				player = other
+	if player.is_ai or hud.city_window.visible or hud.research_dialog.visible:
+		return
+	hud.tech_tree_dialog.open(player, not _is_busy and not game_over and player == TurnManager.current_player())
+
+
+## Clique numa tecnologia disponível na árvore: vira a pesquisa.
+func _on_tree_research_chosen(tech: int) -> void:
+	var player := TurnManager.current_player()
+	if _is_busy or player.is_ai:
+		return
+	player.research = tech
+	_update_resources()
+	hud.show_message("Pesquisando %s (%d pontos de ciência)." % [Technology.tech_name(tech), Technology.cost(tech)], Icons.SCIENCE_COLOR)
 
 
 ## Tira a madeireira do mapa; os trabalhadores voltam ao mapa ao redor dela.

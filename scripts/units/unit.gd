@@ -363,10 +363,11 @@ func _draw() -> void:
 		draw_rect(Rect2(bar.position, Vector2(bar.size.x * ratio, bar.size.y)), _energy_color(ratio))
 
 	# Galé: uma bolinha na cor do dono para cada unidade a bordo, no canto de cima
+	# à esquerda (fora da vela)
 	if type.cargo_capacity > 0:
-		var radius := GameMap.TILE_SIZE / 14.0
+		var radius := GameMap.TILE_SIZE / 16.0
 		for i in type.cargo_capacity:
-			var center := Vector2(rect.end.x - radius - i * radius * 2.6, rect.position.y + radius)
+			var center := Vector2(rect.position.x + radius + 1.5 + i * radius * 2.6, rect.position.y + radius + 1.5)
 			draw_circle(center, radius + 1.5, Color.BLACK)
 			draw_circle(center, radius, owner_player.color if i < cargo.size() else Color(0.25, 0.25, 0.25))
 

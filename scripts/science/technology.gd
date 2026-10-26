@@ -37,6 +37,8 @@ enum Tech {
 ##   description  texto do tooltip e da janela de tecnologia descoberta
 ##   image     ilustração da janela de tecnologia descoberta (TechDialog);
 ##             qualquer tamanho, ela é recortada para caber
+##   unlocks   o que ela libera fora de City.BUILDS (regras, Estrada...), para a
+##             árvore (TechTreeDialog); os prédios e unidades vêm do campo "tech"
 const DATA := {
 	Tech.CONSTRUCTION: {
 		"name": "Construção", "cost": 30, "requires": [],
@@ -85,6 +87,7 @@ const DATA := {
 	},
 	Tech.IRON_WORKING: {
 		"name": "Trabalho em Ferro", "cost": 70, "requires": [Tech.BRONZE_WORKING],
+		"unlocks": ["ferro no mapa", "Mina"],
 		"description": "Fundir e forjar o ferro. Mostra o ferro no mapa, libera a Mina (+1 de ferro por cidadão), a Forja (Espadas Curtas; parada, impostos e bem-estar) e o Guerreiro de Espada Curta (Ataque 2, Defesa 2).",
 		"image": "res://assets/tech/trabalho_em_ferro.png",
 	},
@@ -100,16 +103,19 @@ const DATA := {
 	},
 	Tech.LAW: {
 		"name": "Direito", "cost": 100, "requires": [Tech.LITERATURE],
+		"unlocks": ["+1 contente em todas as cidades"],
 		"description": "Leis escritas e iguais para todos. Todas as cidades ganham +1 cidadão contente de base.",
 		"image": "res://assets/tech/direito.png",
 	},
 	Tech.CIVIL_ENGINEERING: {
 		"name": "Engenharia Civil", "cost": 100, "requires": [Tech.MATHEMATICS],
+		"unlocks": ["Estrada"],
 		"description": "Pontes, aquedutos e vias pavimentadas. Os Trabalhadores passam a construir Estradas (andar de estrada para estrada custa meio movimento).",
 		"image": "res://assets/tech/engenharia_civil.png",
 	},
 	Tech.REPUBLIC: {
 		"name": "República", "cost": 150, "requires": [Tech.LAW],
+		"unlocks": ["governo representativo (ainda sem efeito)"],
 		"description": "O povo escolhe os seus representantes. Vai habilitar o governo representativo (os governos ainda não existem no jogo).",
 		"image": "res://assets/tech/republica.png",
 	},

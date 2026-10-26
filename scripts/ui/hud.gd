@@ -12,6 +12,8 @@ extends CanvasLayer
 signal action_pressed(action_id: String)
 ## Clique no painel de Ciência: abrir a escolha da pesquisa.
 signal research_pressed
+## Botão "Árvore [T]" do painel de Ciência: abrir a árvore de tecnologias.
+signal tech_tree_pressed
 
 ## Tempo que uma mensagem fica na tela antes de sumir.
 const MESSAGE_TIME := 3.0
@@ -40,6 +42,8 @@ const MESSAGE_TIME := 3.0
 @onready var invasion_dialog: InvasionDialog = $InvasionDialog
 @onready var research_dialog: ResearchDialog = $ResearchDialog
 @onready var tech_dialog: TechDialog = $TechDialog
+## Árvore de tecnologias (criada pelo código, por cima das outras janelas).
+var tech_tree_dialog: TechTreeDialog
 
 var _prompt_tween: Tween
 var _message_tween: Tween
@@ -63,6 +67,9 @@ var _shown_science := []
 
 
 func _ready() -> void:
+	tech_tree_dialog = TechTreeDialog.new()
+	tech_tree_dialog.name = "TechTreeDialog"
+	add_child(tech_tree_dialog)
 	_gold_icon.texture = Icons.gold_coin(22)
 	_gold_icon.tooltip_text = "Ouro do tesouro: compra unidades e prédios na hora. Vem dos impostos das Marcenarias sem armas na fila."
 	_wood_icon.draw.connect(func() -> void:
@@ -122,11 +129,23 @@ func _build_science_panel() -> void:
 	box.add_theme_constant_override("separation", 2)
 	box.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	panel.add_child(box)
+	var title_row := HBoxContainer.new()
+	title_row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	box.add_child(title_row)
 	var title := Label.new()
 	title.text = "Ciência"
 	title.add_theme_color_override("font_color", Color(0.75, 0.75, 0.75))
 	title.add_theme_font_size_override("font_size", 13)
-	box.add_child(title)
+	title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	title_row.add_child(title)
+	# Botão da árvore de tecnologias (o resto do painel abre a escolha da pesquisa)
+	var tree_button := Button.new()
+	tree_button.text = "Árvore [T]"
+	tree_button.focus_mode = Control.FOCUS_NONE
+	tree_button.add_theme_font_size_override("font_size", 12)
+	tree_button.tooltip_text = "Árvore de tecnologias: o que já foi pesquisado e o que ainda falta."
+	tree_button.pressed.connect(func() -> void: tech_tree_pressed.emit())
+	title_row.add_child(tree_button)
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override("separation", 8)
 	row.mouse_filter = Control.MOUSE_FILTER_IGNORE

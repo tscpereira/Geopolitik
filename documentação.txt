@@ -138,6 +138,7 @@ C:\ProjetoGame
 |       |-- invasion_dialog.gd     Ocupar / Saquear e destruir
 |       |-- research_dialog.gd     Escolha da pesquisa
 |       |-- tech_dialog.gd         Tecnologia descoberta (ilustração)
+|       |-- tech_tree_dialog.gd    Árvore de tecnologias (tecla T)
 |       |-- icons.gd               Ícones desenhados (moeda de ouro,
 |       |                          construções e unidades)
 |       `-- floating_text.gd       Números de dano flutuantes
@@ -1991,9 +1992,13 @@ GALÉ E NAVEGAÇÃO (desde 25/10/2026, pedido do usuário)
   ali.
 - Save: cada unidade guarda "aboard"; ao carregar, volta para a Galé
   da mesma casa.
-- Desenho provisório feito por código (tools/art/gale.gd: casco com
-  proa curva, remos, vela listrada e escudos na cor do time pela
-  máscara gale_time.png), até chegar a arte do ChatGPT.
+- Desenho feito por código (tools/art/gale.gd) a partir do modelo que o
+  usuário trouxe (barco longo de casco escuro de tábuas, cabeça de
+  animal na popa, proa alta e curva com aríete de bronze, vela quadrada
+  com listras verticais, escudos redondos e remos inclinados),
+  simplificado para 80x80. As listras da vela e os escudos ficam na cor
+  do time pela máscara gale_time.png. As bolinhas da carga ficam no
+  canto de cima à esquerda, fora da vela.
 - A máquina ainda não faz nem usa Galés (e ignora as do inimigo na
   zona de ameaça).
 
@@ -2262,6 +2267,29 @@ CIÊNCIA E PESQUISA (scripts/science/technology.gd, Player.research)
   (City.has_tech_for); antes aparecia desabilitado com "Precisa da
   tecnologia Misticismo.", motivo que City.build_error ainda
   devolve (proteção para a máquina e para compras).
+- ÁRVORE DE TECNOLOGIAS (scripts/ui/tech_tree_dialog.gd, desde
+  25/10/2026, pedido do usuário): a techtree.drawio dentro do jogo.
+  Abre pelo botão "Árvore [T]" no canto do painel de Ciência do HUD
+  (o resto do painel continua abrindo a escolha da pesquisa) ou pela
+  tecla T; fecha com Esc, T ou "Fechar". Título "Árvore de
+  tecnologias - N de 16 pesquisadas" e legenda das cores.
+    * Colunas pela profundidade (TechTreeDialog.depth): as raízes à
+      esquerda; cada tecnologia fica uma coluna depois da exigência
+      mais funda (Escrita 0, Navegação 1, Direito 2, República 3). Na
+      primeira coluna, a ordem do enum; nas outras, cada cartão tenta
+      ficar na altura média das exigidas (menos cruzamento de setas).
+    * Setas curvas das exigidas para as que dependem delas: verdes
+      quando a exigida já foi pesquisada, cinza senão.
+    * Cartão: nome, estado e "Libera: ..." (as construções e unidades
+      de City.BUILDS com aquele "tech" e o campo "unlocks" de
+      Technology.DATA, para as regras: ferro no mapa, Mina, +1
+      contente, Estrada, governo). Tooltip: a descrição.
+        verde     pesquisada (custo);
+        azul      pesquisando N/custo, barra e turnos que faltam;
+        dourado   disponível: clicar escolhe a pesquisa (só na vez do
+                  jogador, sem nada acontecendo);
+        cinza     bloqueada: "falta X, Y".
+    * Rola na vertical (a coluna 1 tem 7 tecnologias).
 - JANELA DE PESQUISA (scripts/ui/research_dialog.gd): as
   tecnologias disponíveis, cada uma com o custo, os pontos já
   feitos, a estimativa de turnos e o botão "Pesquisar"; embaixo, a
@@ -2598,7 +2626,7 @@ Screenshots também confirmaram o visual.
     (a regra já existe, falta o terreno)
 [ ] Estaleiro (para tecnologias navais mais avançadas)
 [ ] IA: fazer e usar Galés (transporte de tropas)
-[ ] Arte definitiva da Galé (ChatGPT)
+[x] Desenho da Galé a partir do modelo do usuário (25/10/2026)
 [x] Primeira fonte de ouro: impostos da Marcenaria parada
 [x] Lanceiro (1/2/1, +1 de ataque e defesa contra cavalaria) com a
     tecnologia Trabalho em Bronze; o Guerreiro ganhou um desenho
@@ -3789,6 +3817,18 @@ Screenshots também confirmaram o visual.
   e água, afundar com a carga, salvar e carregar), testes do ataque à
   distância e da IA, e screenshots da Galé carregada e das cores dos
   dois jogadores.
+- DESENHO DA GALÉ PELO MODELO DO USUÁRIO: tools/art/gale.gd refeito a
+  partir da imagem trazida (cabeça de animal na popa, aríete de bronze,
+  vela de listras verticais na cor do time, escudos e remos); as
+  bolinhas da carga foram para o canto de cima à esquerda. A imagem do
+  modelo não ficou salva no disco (veio colada na conversa): o desenho
+  é uma releitura por código, não um recorte dela.
+- ÁRVORE DE TECNOLOGIAS NO JOGO (pedido do usuário): botão "Árvore [T]"
+  no painel de Ciência e tecla T; colunas por profundidade, setas,
+  cores por estado, o que cada uma libera e clique para pesquisar.
+  Validação: teste (profundidades, "libera", T abre e fecha, Esc,
+  botão, estados, nenhum cartão sobreposto, clique escolhe a pesquisa)
+  e screenshots do topo e do fim da árvore.
 
 --------------------------------------------------------------
 7. BACKLOG (ideias para depois)
@@ -3883,8 +3923,9 @@ histórico):
       "Bem-estar" (os livres vão para as festividades);
     - guerra longa deixando o povo infeliz (cansaço da guerra);
     - prédios de lazer e maravilhas que alegram todo o império.
-[ ] Ciência: tela da árvore inteira (com as tecnologias futuras e
-    as ligações entre elas)
+[x] Ciência: tela da árvore inteira, com as ligações e o que falta
+    (25/10/2026)
+[ ] Árvore: mostrar as eras futuras quando existirem
 [ ] IA: pôr cidadãos pesquisando na Prefeitura; escolher pesquisas
     pela personalidade
 [ ] Cultura
