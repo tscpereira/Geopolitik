@@ -486,9 +486,10 @@ UNIDADES (scripts/units/)
     Bigas       B        2       1       3          100  (Guerra de movimento;
                                                          cavalaria)
 - UNIDADES DA ERA ANTIGA (desde 25/10/2026, árvore do usuário; feitas
-  no Quartel General): Arqueiro (12 de produção + 1 de população + 5
-  de madeira; exige Guerra a distância), Catapulta (20 de produção + 1
-  de população + 10 de madeira), Cavalaria Leve (15 + 1 de população + 1 Lança) e
+  no Quartel General): Arqueiro (12 de produção + 1 de população + 1
+  Arco; exige Guerra a distância), Catapulta (10 de produção + 1 de
+  população + 1 Catapulta do arsenal, a máquina feita na Marcenaria;
+  exige Matemática), Cavalaria Leve (15 + 1 de população + 1 Lança) e
   Bigas (20 + 1 de população + 5 de madeira + 1 Espada Curta). A
   Cavalaria Leve e as Bigas são cavalaria (o Lanceiro tem +1 contra
   elas). A Cavalaria Leve usa o desenho do ChatGPT trazido pelo
@@ -1220,7 +1221,7 @@ PRÉDIOS (City.buildings)
 
 ARSENAL (scripts/players/arsenal.gd, Player.arsenal)
 - O arsenal guarda as armas de todo o império (do jogador, não da
-  cidade). Por enquanto existe só a Lança.
+  cidade). Armas: Lança, Espada Curta, Arco e Catapulta (a máquina).
 - Para formar um exército: primeiro a matéria-prima (madeira),
   depois as armas (Lança, na Marcenaria) e, por fim, a tropa
   (Lanceiro, no Quartel General, levando 1 Lança). O Guerreiro
@@ -1229,6 +1230,20 @@ ARSENAL (scripts/players/arsenal.gd, Player.arsenal)
   de FERRO (pago ao pedir, devolvido se cancelar, como a madeira;
   City.iron_error). As Bigas levam 1. Exige Trabalho em Ferro: antes
   dela, não aparece na lista "Construir" (pedido do usuário).
+- ARCO E CATAPULTA (desde 25/10/2026, pedido do usuário): feitos na
+  Marcenaria e depois usados para treinar a tropa no Quartel General.
+    Arco                  5 de produção + 2 de madeira (o mesmo da
+                          Lança); exige Guerra a distância. O
+                          Arqueiro leva 1.
+    Catapulta (máquina)   10 de produção + 4 de madeira (o dobro da
+                          madeira da Lança); exige Matemática. No
+                          arsenal aparece como "Catapultas"; a unidade
+                          Catapulta (a equipe, treinada no Quartel)
+                          leva 1.
+  O Arqueiro e a Catapulta não gastam mais madeira no Quartel (antes:
+  5 e 10); a Catapulta passou de 20 para 10 de produção no Quartel,
+  porque a máquina já custa 10 na Marcenaria. Ícones: arco com flecha
+  e catapulta de rodas (Icons.draw_bow, draw_catapult).
 - Lança: classe "Armas" da lista Construir. 5 de produção + 2 de
   madeira (ou 50 de ouro + 2 de madeira). Entra na fila da
   Marcenaria; pronta, vai direto para o arsenal (mensagem "Lança
@@ -1987,7 +2002,12 @@ ATAQUE À DISTÂNCIA (desde 25/10/2026, pedido do usuário)
       3 na Equilibrada: 1 de 3, 1 de 5 na Expansionista) ataca à
       distância: Catapulta se tem Matemática e a madeira não faz falta
       aos prédios, senão Arqueiro com Guerra a distância
-      (AIEconomy._army_unit). Sem as tecnologias, corpo a corpo;
+      (AIEconomy._army_unit). Sem as tecnologias, corpo a corpo.
+      A máquina pede primeiro a arma na Marcenaria (o Arco ou a
+      máquina da Catapulta; uma de cada vez) e treina a unidade no
+      Quartel quando a arma está no arsenal; sem Marcenaria e sem a
+      arma, faz corpo a corpo (AIEconomy._can_equip,
+      _missing_weapon_build);
     * guarnição: prefere corpo a corpo (Arqueiro e Catapulta têm
       Defesa 1); só vão para a cidade se não houver outro soldado
       (AIEconomy._nearest_soldier);
@@ -2522,6 +2542,8 @@ Screenshots também confirmaram o visual.
 [x] Roda do mouse não dá zoom no mapa com a janela da cidade aberta
 [x] Arsenal (Lança) e Marcenaria; Guerreiro leva 1 Lança (até
     25/10/2026; hoje só o Lanceiro leva)
+[x] Arco e máquina da Catapulta feitos na Marcenaria, tropas treinadas
+    no Quartel General (25/10/2026)
 [x] Primeira fonte de ouro: impostos da Marcenaria parada
 [x] Lanceiro (1/2/1, +1 de ataque e defesa contra cavalaria) com a
     tecnologia Trabalho em Bronze; o Guerreiro ganhou um desenho
@@ -3684,6 +3706,19 @@ Screenshots também confirmaram o visual.
   máquina contra máquina sem erros (nesse ritmo nenhuma monta
   exército, ver "Balancear o ritmo do jogo"); screenshot da janela da
   tecnologia com a ilustração.
+- ARCO E MÁQUINA DA CATAPULTA (pedido do usuário): o Arqueiro leva 1
+  Arco e a Catapulta leva 1 máquina, as duas armas feitas na
+  Marcenaria (Arco: 5 + 2 de madeira, como a Lança; máquina: 10 + 4
+  de madeira, o dobro da madeira da Lança) e as tropas treinadas no
+  Quartel General (Arqueiro 12, Catapulta 10 de produção, sem
+  madeira). Os custos de produção da máquina e do treino da Catapulta
+  são sugestões. Novos itens no fim dos enums (Arsenal.Weapon.BOW,
+  CATAPULT; City.Build.BOW, CATAPULT_FRAME), saves antigos valem. A
+  máquina faz a arma antes da tropa. Validação: teste do jogador
+  (erros "Faltam armas", madeira gasta, arsenal, treino gastando a
+  arma), teste da IA (pede a máquina, não repete, depois treina a
+  Catapulta), batalha entre máquinas, teste do Bronze e screenshot do
+  painel Arsenal com os ícones novos.
 
 --------------------------------------------------------------
 7. BACKLOG (ideias para depois)

@@ -79,7 +79,7 @@ signal changed
 enum Build {
 	FARM, LUMBER_MILL, WARRIOR, WORKER, SETTLER, CITY_HALL, HEADQUARTERS, CARPENTRY, SPEAR, TEMPLE, WALLS, SPEARMAN, MINE,
 	SCHOOL, LIBRARY, MARKET, FORGE, ARENA, SHORT_SWORD, CATAPULT, LIGHT_CAVALRY, CHARIOT, SWORDSMAN,
-	ARCHER,
+	ARCHER, BOW, CATAPULT_FRAME,
 }
 
 ## Humor de um cidadão (bem-estar social).
@@ -208,7 +208,7 @@ const BUILDS := {
 		"name": "Marcenaria", "article": "a", "category": Category.BUILDING,
 		"cost": 10, "gold": 50, "wood": 10, "on_tile": false, "idle_gold": 1, "idle_goods": 2,
 		"idle_label": "Impostos e bens (sem armas na fila)",
-		"description": "Produz armas (Lanças). Parada, cada trabalhador rende +1 de ouro e cada 2 dão +1 de alegria. Gasta 10 de madeira.",
+		"description": "Produz armas (Lanças, Arcos e a máquina da Catapulta). Parada, cada trabalhador rende +1 de ouro e cada 2 dão +1 de alegria. Gasta 10 de madeira.",
 	},
 	Build.TEMPLE: {
 		"name": "Templo", "article": "o", "category": Category.BUILDING,
@@ -274,17 +274,29 @@ const BUILDS := {
 	},
 	Build.CATAPULT: {
 		"name": "Catapulta", "article": "a", "category": Category.UNIT,
-		"cost": 20, "gold": 50, "wood": 10, "on_tile": false,
+		"cost": 10, "gold": 50, "weapons": {Arsenal.Weapon.CATAPULT: 1}, "on_tile": false,
 		"unit": preload("res://data/units/catapulta.tres"), "population": 1,
 		"requires": Build.HEADQUARTERS, "tech": Technology.Tech.MATHEMATICS,
-		"description": "Máquina de cerco: ataque à distância 4, alcance 2 (floresta e colinas no meio bloqueiam o tiro); Defesa 1, Movimento 1. Exige Matemática; gasta 10 de madeira.",
+		"description": "Máquina de cerco com a sua equipe: ataque à distância 4, alcance 2 (floresta e colinas no meio bloqueiam o tiro); Defesa 1, Movimento 1. Exige Matemática; leva 1 Catapulta do arsenal (a máquina, feita na Marcenaria).",
 	},
 	Build.ARCHER: {
 		"name": "Arqueiro", "article": "o", "category": Category.UNIT,
-		"cost": 12, "gold": 50, "wood": 5, "on_tile": false,
+		"cost": 12, "gold": 50, "weapons": {Arsenal.Weapon.BOW: 1}, "on_tile": false,
 		"unit": preload("res://data/units/arqueiro.tres"), "population": 1,
 		"requires": Build.HEADQUARTERS, "tech": Technology.Tech.RANGED_WARFARE,
-		"description": "Atira flechas na casa vizinha: ataque à distância 2, alcance 1, sem levar dano; Defesa 1, Movimento 1. Exige Guerra a distância; gasta 5 de madeira (arco e flechas).",
+		"description": "Atira flechas na casa vizinha: ataque à distância 2, alcance 1, sem levar dano; Defesa 1, Movimento 1. Exige Guerra a distância; leva 1 Arco.",
+	},
+	Build.BOW: {
+		"name": "Arco", "article": "o", "category": Category.WEAPON,
+		"cost": 5, "gold": 50, "wood": 2, "on_tile": false,
+		"weapon": Arsenal.Weapon.BOW, "requires": Build.CARPENTRY, "tech": Technology.Tech.RANGED_WARFARE,
+		"description": "Arma do arsenal: o Arqueiro leva 1. Feito na Marcenaria; gasta 2 de madeira. Exige Guerra a distância.",
+	},
+	Build.CATAPULT_FRAME: {
+		"name": "Catapulta (máquina)", "article": "a", "category": Category.WEAPON,
+		"cost": 10, "gold": 50, "wood": 4, "on_tile": false,
+		"weapon": Arsenal.Weapon.CATAPULT, "requires": Build.CARPENTRY, "tech": Technology.Tech.MATHEMATICS,
+		"description": "A máquina vai para o arsenal; a equipe é treinada no Quartel General (unidade Catapulta). Feita na Marcenaria; gasta 4 de madeira. Exige Matemática.",
 	},
 	Build.LIGHT_CAVALRY: {
 		"name": "Cavalaria Leve", "article": "a", "category": Category.UNIT,

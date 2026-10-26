@@ -27,7 +27,8 @@ extends RefCounted
 ##                 tecnologias), um de cada vez, na capital e em cidades de 4+;
 ##        armas    Lanças até spears_per_city por cidade (só com o Lanceiro);
 ##        exército soldados até army_to_attack fora das cidades, 1 em cada
-##                 ranged_share de ataque à distância (Catapulta ou Arqueiro);
+##                 ranged_share de ataque à distância (Catapulta ou Arqueiro,
+##                 com a máquina ou o Arco feitos antes na Marcenaria);
 ##   3. cidadãos, do zero (_distribute_workers): fazendas e casas sem
 ##      melhoria até a cidade não passar fome, festividades até sair da
 ##      desordem civil, 1 em cada madeireira (se falta madeira), a RESERVA das
@@ -143,26 +144,58 @@ func _plan(city: City) -> void:
 		queued_army += _count_queued(build)
 	if _p.army_to_attack > 0 and city.population >= 3 \
 			and _count_units(_is_field_soldier) + queued_army < _p.army_to_attack:
-		_try_order(city, _army_unit(reserve))
+		var unit := _army_unit(city, reserve)
+		var weapon_build := _missing_weapon_build(unit)
+		if weapon_build < 0:
+			_try_order(city, unit)
+		elif _player.weapons_in_production(City.BUILDS[weapon_build]["weapon"]) == 0:
+			# A arma primeiro (Arco, máquina da Catapulta); a unidade vem quando
+			# ela estiver no arsenal
+			_try_order(city, weapon_build)
 
 
 ## Unidade do exército que falta: uma de ataque à distância enquanto houver
-## menos que army_to_attack / ranged_share (Catapulta, se der para pagar a
-## madeira sem mexer na [param reserve] dos prédios; senão Arqueiro), ou o
-## soldado de corpo a corpo (_soldier).
-func _army_unit(reserve: int) -> int:
+## menos que army_to_attack / ranged_share (Catapulta, se der para fazer a
+## máquina sem mexer na [param reserve] de madeira dos prédios; senão
+## Arqueiro), ou o soldado de corpo a corpo (_soldier). Só escolhe a unidade à
+## distância se a arma dela já existe (no arsenal ou em produção) ou se a
+## [param city] tem a Marcenaria para fazê-la.
+func _army_unit(city: City, reserve: int) -> int:
 	if _p.ranged_share <= 0:
 		return _soldier()
 	var ranged := _count_units(func(unit: Unit) -> bool: return _is_field_soldier(unit) and unit.is_ranged()) \
 			+ _count_queued(City.Build.ARCHER) + _count_queued(City.Build.CATAPULT)
 	if ranged >= _p.army_to_attack / _p.ranged_share:
 		return _soldier()
-	if _player.researched.has(Technology.Tech.MATHEMATICS) \
-			and _player.wood - City.BUILDS[City.Build.CATAPULT]["wood"] >= reserve:
+	if _player.researched.has(Technology.Tech.MATHEMATICS) and _can_equip(city, City.Build.CATAPULT, reserve):
 		return City.Build.CATAPULT
-	if _player.researched.has(Technology.Tech.RANGED_WARFARE):
+	if _player.researched.has(Technology.Tech.RANGED_WARFARE) and _can_equip(city, City.Build.ARCHER, reserve):
 		return City.Build.ARCHER
 	return _soldier()
+
+
+## Se a arma de [param build] já está no arsenal ou em produção, ou se a
+## [param city] pode fazê-la agora (tem o prédio e a madeira sem mexer na
+## [param reserve]).
+func _can_equip(city: City, build: int, reserve: int) -> bool:
+	var weapon_build := _missing_weapon_build(build)
+	if weapon_build < 0:
+		return true
+	var info: Dictionary = City.BUILDS[weapon_build]
+	return _player.weapons_in_production(info["weapon"]) > 0 \
+			or (city.has_building(info["requires"]) and _player.wood - info.get("wood", 0) >= reserve)
+
+
+## Obra que faz a primeira arma que falta no arsenal para [param build] (ex.:
+## Arco para o Arqueiro), ou -1 se não falta nenhuma.
+func _missing_weapon_build(build: int) -> int:
+	var weapons: Dictionary = City.BUILDS[build].get("weapons", {})
+	for weapon: Arsenal.Weapon in weapons:
+		if _player.arsenal[weapon] < weapons[weapon]:
+			for maker: int in City.BUILDS:
+				if City.BUILDS[maker].get("weapon", -1) == weapon:
+					return maker
+	return -1
 
 
 ## Pede a obra se as regras deixarem e se ainda não houver uma igual na fila.
@@ -291,7 +324,7 @@ func _job_priority(city: City, job: City.Construction) -> int:
 			return 0 if city.food_per_turn() < _p.food_surplus else 5
 		City.Build.SPEAR, City.Build.WARRIOR, City.Build.SPEARMAN:
 			return 1 if defense_short else 6
-		City.Build.ARCHER, City.Build.CATAPULT:
+		City.Build.ARCHER, City.Build.CATAPULT, City.Build.BOW, City.Build.CATAPULT_FRAME:
 			return 6
 		City.Build.WORKER:
 			return 0 if _farm_jobs() > 0 else 1 if _rebuild_jobs() > 0 else 2 if wood_short else 7

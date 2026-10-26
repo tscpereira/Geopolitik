@@ -58,7 +58,7 @@ static func build_icon(build: int, player_color: Color, size := ICON_SIZE) -> Co
 ##   Mercado         barraca com toldo listrado e frutas no balcão;
 ##   Forja           bigorna (o ferro) com um martelo;
 ##   Arena           anfiteatro de pedra com dois andares de arcos;
-##   armas           o desenho da arma (Lança: lança).
+##   armas           o desenho da arma (Lança, Espada Curta, Arco, Catapulta).
 static func draw_build(canvas: CanvasItem, build: int, rect: Rect2, player_color: Color) -> void:
 	var info: Dictionary = City.BUILDS[build]
 	if info.has("unit"):
@@ -123,6 +123,58 @@ static func draw_weapon(canvas: CanvasItem, weapon: Arsenal.Weapon, rect: Rect2)
 			draw_spear(canvas, rect)
 		Arsenal.Weapon.SHORT_SWORD:
 			draw_sword(canvas, rect.grow(-rect.size.x * 0.14)) # espada curta: a espada menor
+		Arsenal.Weapon.BOW:
+			draw_bow(canvas, rect)
+		Arsenal.Weapon.CATAPULT:
+			draw_catapult(canvas, rect)
+
+
+## Arco na diagonal: madeira curva, corda e uma flecha encaixada.
+static func draw_bow(canvas: CanvasItem, rect: Rect2) -> void:
+	var w := rect.size.x
+	var line := maxf(1.0, w / 24.0)
+	var radius := w * 0.5
+	canvas.draw_set_transform(rect.get_center() + Vector2(-w, w) * 0.14, -PI / 4.0, Vector2.ONE)
+	# Corda (reta entre as pontas) e flecha atravessando
+	var top := Vector2(0, -radius * 0.92)
+	var bottom := Vector2(0, radius * 0.92)
+	canvas.draw_line(top, bottom, Color(0.93, 0.9, 0.82), line)
+	canvas.draw_line(Vector2(-w * 0.08, 0), Vector2(w * 0.5, 0), Color.BLACK, line * 3.0)
+	canvas.draw_line(Vector2(-w * 0.08, 0), Vector2(w * 0.5, 0), WOOD_SHAFT_COLOR, line * 1.6)
+	canvas.draw_colored_polygon(PackedVector2Array([Vector2(w * 0.6, 0), Vector2(w * 0.48, -w * 0.07),
+			Vector2(w * 0.48, w * 0.07)]), STEEL_COLOR)
+	# Madeira do arco: arco de círculo para fora
+	var center := Vector2(-radius * 0.35, 0)
+	var span := asin(0.92 / 1.06)
+	canvas.draw_arc(center, radius * 1.06, -span, span, 16, Color.BLACK, maxf(2.5, w * 0.13))
+	canvas.draw_arc(center, radius * 1.06, -span, span, 16, LEATHER_COLOR, maxf(1.5, w * 0.08))
+	canvas.draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+
+
+## Catapulta vista de lado: base de madeira com rodas e o braço com a concha
+## erguido.
+static func draw_catapult(canvas: CanvasItem, rect: Rect2) -> void:
+	var w := rect.size.x
+	var line := maxf(1.0, w / 24.0)
+	var o := rect.position
+	# Braço inclinado com a concha na ponta
+	var pivot := o + Vector2(w * 0.55, w * 0.62)
+	var tip := o + Vector2(w * 0.2, w * 0.15)
+	canvas.draw_line(pivot, tip, Color.BLACK, w * 0.12)
+	canvas.draw_line(pivot, tip, WOOD_SHAFT_COLOR, w * 0.07)
+	canvas.draw_circle(tip, w * 0.11, Color.BLACK)
+	canvas.draw_circle(tip, w * 0.08, LEATHER_COLOR)
+	canvas.draw_circle(tip + Vector2(0, -w * 0.02), w * 0.05, STONE_SHADE)
+	# Montante (triângulo) e base
+	canvas.draw_line(o + Vector2(w * 0.45, w * 0.78), o + Vector2(w * 0.62, w * 0.45), Color.BLACK, w * 0.1)
+	canvas.draw_line(o + Vector2(w * 0.45, w * 0.78), o + Vector2(w * 0.62, w * 0.45), WOOD_SHAFT_COLOR, w * 0.05)
+	_draw_block(canvas, Rect2(o + Vector2(w * 0.1, w * 0.7), Vector2(w * 0.82, w * 0.11)), WOOD_SHAFT_COLOR, line)
+	# Rodas
+	for x in [0.25, 0.77]:
+		var hub := o + Vector2(w * x, w * 0.84)
+		canvas.draw_circle(hub, w * 0.12, Color.BLACK)
+		canvas.draw_circle(hub, w * 0.09, LEATHER_COLOR)
+		canvas.draw_circle(hub, w * 0.03, Color.BLACK)
 
 
 ## Lança na diagonal: cabo de madeira comprido e ponta de aço em folha.
