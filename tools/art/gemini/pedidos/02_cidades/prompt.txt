@@ -1,0 +1,46 @@
+I am remaking the art of a 2D turn-based strategy game set in ancient Greece. The attached image has two parts:
+- LEFT, "ESTILO": a galley. It is the STYLE REFERENCE: paint everything in exactly this style.
+- RIGHT, "ATUAL": the current, low-quality versions of the items I need, numbered, in the same grid I want back. Use them only to know WHAT to draw (content and composition), not how they look.
+
+Create ONE image: a sprite sheet with 14 Greek town map icons: 4 town sizes (rows) x 4 versions (columns).
+
+STYLE (copy it from the galley):
+- Detailed painted digital illustration with realistic proportions: soft painted shading, visible wood grain and texture, warm earthy palette (warm brown wood, off-white linen and plaster, terracotta roof tiles, bronze, olive greens). Not cartoon, not chibi, not pixel art, no thick black outlines, no flat colors, not a photo.
+- Strong, clean silhouettes that stay readable when shrunk to small game sprites: few big shapes, no thin clutter.
+- Soft daylight from the TOP-LEFT. All items in the sheet share the same light, scale and camera.
+
+CAMERA AND LOOK:
+- Every town in three-quarter view from above (about 40 degrees), like a small diorama: the whole town sits on a small round island of dusty ground with a few olive trees and cypresses around its edge. Whitewashed houses with terracotta tile roofs.
+- The 4 versions in a row are the SAME town (same houses, same island): column 1 plain; column 2 plus the ruler's palace temple on the highest point; column 3 plus a stone city wall with towers and a gate; column 4 with both the temple and the wall.
+- The rows grow: hamlet (4-5 houses, the hamlet has no palace version), village (about 10 houses), town (about 20 houses on two levels), city (houses filling the island, a stoa and a small theatre; its palace is an ACROPOLIS: a big columned temple on a high rocky terrace). Houses have the same size in every row; only their number grows.
+
+SHEET LAYOUT:
+- A grid of 4 columns x 4 rows, evenly spaced, each item centered in its own cell, never touching or overlapping its neighbours, never cropped.
+- Order, left to right, top to bottom (the numbers match the right side of the attached image):
+  Row 1 (hamlet):
+    1. Hamlet, plain: a few houses, a market awning, a well, olive trees, a low dry-stone garden wall.
+    - (empty cell: leave it plain green)
+    2. Hamlet with a short stone wall, a gate and two small towers with banners.
+    - (empty cell: leave it plain green)
+  Row 2 (village):
+    3. Village, plain: houses around a square with a well, a fountain and a market.
+    4. Village + a small temple with white columns on the highest point.
+    5. Village + a stone wall with square towers and a gate.
+    6. Village + temple + wall.
+  Row 3 (town):
+    7. Town, plain: about 20 houses on two levels, a market square.
+    8. Town + a bigger temple on a raised stone terrace.
+    9. Town + a wall with several towers and a big gate.
+    10. Town + temple + wall.
+  Row 4 (city):
+    11. City, plain: many houses filling the island, a stoa, a small theatre.
+    12. City + an acropolis: a large columned temple on a high rocky terrace.
+    13. City + a tall wall with four big towers and a monumental gate.
+    14. City + acropolis + wall.
+- No numbers, labels or text in the image.
+
+TEAM COLOR:
+- The player's color is ONE vivid royal blue (#1E50FF), used ONLY on: banners on the towers, market awnings and the temple roof trim. Use lighter and darker shades of that blue there, nowhere else. No other blue, cyan, teal or purple anywhere: no blue sky, no water, no blue shadows.
+
+BACKGROUND:
+- One flat, solid chroma-key green (#00B140) filling the whole background and the space between the cells: no gradient, no texture, no vignette, no cast shadow on the background, no ground, no frame, no text, no signature.

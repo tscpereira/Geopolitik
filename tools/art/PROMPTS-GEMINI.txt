@@ -2,29 +2,31 @@ PROMPTS PARA REFAZER OS DESENHOS NO GEMINI (padrão da Galé)
 ===========================================================
 
 A Galé feita no Gemini (26/10/2026) virou o padrão de acabamento do jogo.
-Pedir tudo de uma vez não funcionou: o Gemini se perdeu. Por isso cada
-desenho tem o SEU pedido, numa pasta própria:
+Tudo de uma vez o Gemini não entendeu; um pedido por desenho ficou
+granular demais. Por isso há UM PEDIDO POR TEMA:
 
-  tools/art/gemini/pedidos/<NN>_<nome>/
-    referencia.png   à esquerda a Galé (o ESTILO), à direita o desenho
-                     atual (só o CONTEÚDO; o terreno aparece repetido 3x3)
+  tools/art/gemini/pedidos/<NN>_<tema>/
+    referencia.png   à esquerda a Galé (o ESTILO); à direita os desenhos
+                     atuais do tema (o CONTEÚDO), numerados, na mesma
+                     grade e ordem que o prompt pede
     prompt.txt       o prompt inteiro, com o estilo embutido
 
-  Como usar (detalhes em tools/art/gemini/pedidos/LEIA-ME.txt):
-    1. conversa NOVA no Gemini para cada pedido;
-    2. anexe referencia.png e cole prompt.txt;
-    3. salve a imagem na pasta como resultado.png.
-  Cidades com _capital, _muralha e _ruinas são EDIÇÕES: anexe também o
-  resultado.png da versão anterior (o prompt diz qual), na ordem das pastas.
+    01_unidades      9 unidades (3x3)
+    02_cidades       14 cidades (4x4; o povoado sem as versões de capital)
+    03_ruinas        8 ruínas (4x2)
+    04_terrenos      6 texturas (3x2)
+    05_melhorias     7 melhorias + o ícone do ferro (4x2)
+    06_tecnologias   16 ilustrações (4x4, opcional)
 
-  61 pedidos: 01-09 unidades, 10-31 cidades (14) e ruínas (8), 32-37
-  terrenos, 38-44 melhorias, 45 ferro, 46-61 tecnologias (opcional).
+  Como usar (detalhes em tools/art/gemini/pedidos/LEIA-ME.txt): conversa
+  NOVA no Gemini para cada tema; anexe referencia.png, cole prompt.txt e
+  salve a folha na pasta como resultado.png.
 
   Para regerar (depois de trocar desenhos ou mudar os textos):
     godot_console.cmd --path . --script tools/art/pedidos_gemini.gd   (COM janela)
   Os textos dos prompts ficam no próprio pedidos_gemini.gd.
 
-  Folhas com tudo junto (só para consulta, não para o Gemini):
+  Folhas com tudo junto (só para consulta):
     godot_console.cmd --path . --script tools/art/folha_assets.gd
     -> tools/art/gemini/assets_*.png
 
@@ -43,7 +45,6 @@ LÓGICA DOS DESENHOS DAS CIDADES
   templo e sem cor do time.
 
 DEPOIS (importar)
-  Unidades: import_folha_unidades.gd -- <resultado.png> <nome> (o nome em
-  AVULSAS, com a altura no jogo). Cidades, ruínas, terrenos e melhorias:
-  os importadores serão adaptados ao fundo verde quando as imagens
-  chegarem.
+  As folhas voltam em grade, com fundo verde: os importadores serão
+  adaptados para recortar cada célula na ordem do prompt quando os
+  resultados chegarem.

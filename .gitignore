@@ -12,5 +12,3 @@ build/
 Thumbs.db
 .vscode/
 
-# Referências dos pedidos ao Gemini: regeradas por tools/art/pedidos_gemini.gd
-tools/art/gemini/pedidos/*/referencia.png

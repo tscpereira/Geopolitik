@@ -1,263 +1,344 @@
 extends SceneTree
 
-## Um PEDIDO por desenho para o Gemini (ele se perdia com tudo de uma vez).
-## Rode COM janela (os títulos são desenhados pelo Godot):
+## Um PEDIDO por TEMA para o Gemini (tudo de uma vez ele não entendeu; um por
+## desenho ficou granular demais). Rode COM janela (os títulos são desenhados
+## pelo Godot):
 ##   godot_console.cmd --path . --script tools/art/pedidos_gemini.gd
-## Grava tools/art/gemini/pedidos/<NN>_<nome>/ com:
-##   referencia.png  a Galé (o ESTILO) à esquerda e o desenho atual (o
-##                   CONTEÚDO) à direita; o terreno aparece repetido 3x3;
-##   prompt.txt      o prompt inteiro, com o estilo embutido: anexe a
-##                   referência e cole o texto, numa conversa nova.
-## E tools/art/gemini/pedidos/LEIA-ME.txt com a ordem e as dicas.
+## Grava tools/art/gemini/pedidos/<NN>_<tema>/ com:
+##   referencia.png  à esquerda a Galé (o ESTILO); à direita os desenhos atuais
+##                   do tema (o CONTEÚDO), na MESMA grade e ordem que o
+##                   prompt pede, numerados;
+##   prompt.txt      o prompt inteiro, com o estilo embutido.
+## E tools/art/gemini/pedidos/LEIA-ME.txt com o passo a passo.
 
 const OUT := "res://tools/art/gemini/pedidos/"
 const STYLE_IMAGE := "res://tools/art/chatgpt/gale_avulsa.png"
 const TEAM_BLUE := Color8(30, 80, 255)
-const PANEL := 460
+const BACK := Color8(46, 50, 56)
+const CARD := Color8(70, 76, 84)
 
-const STYLE := """STYLE (copy it from the LEFT image, the galley):
+const INTRO := """I am remaking the art of a 2D turn-based strategy game set in ancient Greece. The attached image has two parts:
+- LEFT, "ESTILO": a galley. It is the STYLE REFERENCE: paint everything in exactly this style.
+- RIGHT, "ATUAL": the current, low-quality versions of the items I need, numbered, in the same grid I want back. Use them only to know WHAT to draw (content and composition), not how they look.
+
+Create ONE image: a sprite sheet with %s."""
+
+const STYLE := """STYLE (copy it from the galley):
 - Detailed painted digital illustration with realistic proportions: soft painted shading, visible wood grain and texture, warm earthy palette (warm brown wood, off-white linen and plaster, terracotta roof tiles, bronze, olive greens). Not cartoon, not chibi, not pixel art, no thick black outlines, no flat colors, not a photo.
-- Strong, clean silhouette that stays readable when shrunk to a small game sprite: few big shapes, no thin clutter.
-- Soft daylight from the TOP-LEFT."""
+- Strong, clean silhouettes that stay readable when shrunk to small game sprites: few big shapes, no thin clutter.
+- Soft daylight from the TOP-LEFT. All items in the sheet share the same light, scale and camera."""
+
+const GRID := """SHEET LAYOUT:
+- A grid of %d columns x %d rows, evenly spaced, each item centered in its own cell, never touching or overlapping its neighbours, never cropped.
+- Order, left to right, top to bottom (the numbers match the right side of the attached image):
+%s
+- No numbers, labels or text in the image."""
 
 const TEAM := """TEAM COLOR:
 - The player's color is ONE vivid royal blue (#1E50FF), used ONLY on: %s. Use lighter and darker shades of that blue there, nowhere else. No other blue, cyan, teal or purple anywhere: no blue sky, no water, no blue shadows."""
 
+const NO_TEAM := "TEAM COLOR: none in this sheet (no blue at all)."
+
 const GREEN := """BACKGROUND:
-- One flat, solid chroma-key green (#00B140) filling the whole background: no gradient, no texture, no vignette, no cast shadow on the background, no ground, no frame, no text, no signature.
-- One subject only, whole, never cropped, centered, with a small empty margin. Square image (1:1)."""
-
-const INTRO := """I am remaking the art of a 2D turn-based strategy game set in ancient Greece. The attached image has two parts:
-- LEFT, "ESTILO": a galley that is the STYLE REFERENCE. Paint in exactly this style.
-- RIGHT, "ATUAL": the current, low-quality version of the item I need. Use it only to know WHAT to draw (content and composition), not how it looks.
-Create ONE image: %s."""
-
-const UNIT_CAMERA := """CAMERA:
-- Three-quarter view facing RIGHT, seen from slightly above (about 20-30 degrees), like the galley.
-- Feet, hooves and wheels on one common ground line at the bottom. People at natural human proportions; horses, chariots and machines at the same scale as the people."""
-
-const CITY_CAMERA := """CAMERA AND LOOK:
-- Three-quarter view from above (about 40 degrees), like a small diorama: the whole town sits on a small round island of dusty ground with a few olive trees and cypresses around its edge.
-- Greek town: whitewashed houses with terracotta tile roofs. It must read well when shrunk to 128x128 pixels."""
-
-const TILE_RULES := """THIS IS A TERRAIN TEXTURE, not an object:
-- Seen straight from above (top-down), filling the whole square edge to edge.
-- SEAMLESS: it must tile perfectly when repeated side by side and top to bottom (the right image shows the current one repeated 3x3).
-- No object in the middle, no horizon, no border, no frame, no text. Square image (1:1)."""
-
-const IMPROVEMENT_CAMERA := """CAMERA:
-- Seen from above (about 60-70 degrees, almost top-down), because it sits on top of the terrain of a square map tile. Fill most of the square."""
+- One flat, solid chroma-key green (#00B140) filling the whole background and the space between the cells: no gradient, no texture, no vignette, no cast shadow on the background, no ground, no frame, no text, no signature."""
 
 var _style: Image
 
 
 func _initialize() -> void:
-	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(OUT))
 	_style = _load(STYLE_IMAGE)
 	_run()
 
 
 func _run() -> void:
+	# Apaga os pedidos antigos (um por desenho)
+	var dir := DirAccess.open(ProjectSettings.globalize_path("res://tools/art/gemini/"))
+	if dir and dir.dir_exists("pedidos"):
+		_remove_tree(ProjectSettings.globalize_path(OUT))
+	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(OUT))
 	var n := 0
-	for item: Dictionary in _items():
+	for theme: Dictionary in _themes():
 		n += 1
-		var folder := "%s%02d_%s/" % [OUT, n, item["name"]]
+		var folder := "%s%02d_%s/" % [OUT, n, theme["name"]]
 		DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(folder))
 		var file := FileAccess.open(ProjectSettings.globalize_path(folder + "prompt.txt"), FileAccess.WRITE)
-		file.store_string(item["prompt"] + "\n")
+		file.store_string(_prompt(theme) + "\n")
 		file.close()
-		await _reference(item, folder + "referencia.png")
-	_readme(n)
-	print("ok: %d pedidos" % n)
+		await _reference(theme, folder + "referencia.png")
+	_readme()
+	print("ok: %d temas" % n)
 	quit()
 
 
-# --- Os pedidos ------------------------------------------------------------------
-
-func _items() -> Array:
-	var items := []
-	var units := [
-		["trabalhador", "a Greek laborer: bare arms, short off-white tunic, leather sandals, carrying a heavy axe on his right shoulder", "his belt and tunic trim"],
-		["colono", "a Greek settler walking: wide straw hat, off-white tunic, a big bundle on his back, a shovel in his hand", "his tunic trim and belt"],
-		["guerreiro", "a rustic ancient warrior: bare chest, short off-white kilt, a heavy club over the shoulder and a small round shield", "his sash, headband and the shield face"],
-		["lanceiro", "a Greek hoplite standing guard: bronze Corinthian helmet with a horsehair crest, bronze muscle cuirass, off-white chiton, a tall spear held upright and a large round aspis shield with a bronze rim and a white lambda", "the helmet crest, tunic trim and the shield face"],
-		["guerreiro_espada", "a legionary-style swordsman in an attack pose: bronze helmet with a crest, segmented armor, a short gladius raised, a curved rectangular scutum shield with a gold eagle", "the helmet crest and the shield face"],
-		["arqueiro", "a Greek archer drawing a long wooden bow: off-white tunic, a quiver of arrows on the back", "his headband and tunic trim"],
-		["cavalaria_leve", "light cavalry: a brown horse in mid trot, the rider with a bronze crested helmet and a cloak, holding a spear; horse and rider no wider than about 1.2 times their height", "the helmet crest and the cloak"],
-		["bigas", "a two-horse war chariot: two brown horses side by side in mid trot, a light wooden chariot with two spoked wheels and one charioteer in a crested bronze helmet holding the reins; compact, no wider than 1.3 times its height", "the front panel of the chariot and the charioteer's crest"],
-		["catapulta", "a wooden torsion catapult (onager) on four solid wooden wheels with bronze hubs, thick twisted rope at the base of the arm, a leather sling cup holding a round stone; no crew", "a small pennant on a pole at the back and a painted band on the frame"],
-	]
-	for unit: Array in units:
-		items.append({"name": unit[0], "images": ["res://assets/sprites/units/" + unit[0]], "team": true,
-			"prompt": "\n\n".join([INTRO % ("a game unit: " + unit[1]), STYLE, UNIT_CAMERA, TEAM % unit[2], GREEN])})
-	# Cidades: a versão normal de cada classe primeiro; as outras EDITAM a anterior
-	var towns := {
-		"povoado": "a small hamlet: 4 or 5 whitewashed houses, one market awning, a well, olive trees and a low dry-stone wall around the gardens (fewer houses than a village, but each house the same size as in a bigger town)",
-		"vila": "a village: about 10 houses around a small square with a well, a fountain and a market with awnings; cypresses between the houses",
-		"cidade": "a town: about 20 houses on two levels, a larger market square with awnings, a fountain",
-		"metropole": "a large city: many houses filling the whole island, a stoa and a small theatre",
-	}
-	var temples := {
-		"vila": "a small Greek temple with white columns on the highest point (the ruler's palace temple)",
-		"cidade": "a bigger Greek temple on a raised stone terrace (the ruler's palace temple)",
-		"metropole": "an ACROPOLIS: a large columned temple on a high rocky terrace (the ruler's palace)",
-	}
-	var walls := {
-		"povoado": "a short stone wall with a gate and two small towers",
-		"vila": "a stone wall with square towers and a gate",
-		"cidade": "a stone wall with several towers and a big gate",
-		"metropole": "a tall stone wall with four big towers and a monumental gate",
-	}
-	var city_team := "banners, market awnings and the temple roof trim"
-	for rank: String in ["povoado", "vila", "cidade", "metropole"]:
-		var base := "res://assets/sprites/cities/" + rank
-		items.append({"name": rank, "images": [base], "team": true,
-			"prompt": "\n\n".join([INTRO % ("a Greek town seen as a map icon: " + towns[rank]), STYLE, CITY_CAMERA, TEAM % city_team, GREEN])})
-		var variants := []
-		if temples.has(rank):
-			variants.append([rank + "_capital", rank, "add %s. Keep everything else identical." % temples[rank]])
-		variants.append([rank + "_muralha", rank, "surround the same town with %s, with banners on the towers. Keep the houses identical." % walls[rank]])
-		if temples.has(rank):
-			variants.append([rank + "_capital_muralha", rank + "_capital", "surround the same town with %s, with banners on the towers. Keep the houses and the temple identical." % walls[rank]])
-		variants.append([rank + "_ruinas", rank, "the same town after being sacked and burned: roofs collapsed, blackened walls, rubble and a little smoke; no people, no banners and NO blue at all. Keep the same island, size and camera."])
-		variants.append([rank + "_muralha_ruinas", rank + "_muralha", "the same walled town after being sacked and burned: broken walls and towers, collapsed roofs, rubble and a little smoke; no people, no banners and NO blue at all. Keep the same island, size and camera."])
-		for v: Array in variants:
-			var edit := """EDIT, do not redraw: I am ALSO attaching the image you generated before for "%s". Edit THAT image: %s
-Keep exactly the same painted style, camera, island, size and the green background (#00B140).""" % [v[1], v[2]]
-			items.append({"name": v[0], "images": ["res://assets/sprites/cities/" + v[0]], "team": not v[0].ends_with("ruinas"),
-				"prompt": "\n\n".join([INTRO % "an edited version of a town map icon (details below)", edit,
-					TEAM % city_team if not v[0].ends_with("ruinas") else "TEAM COLOR: none in this image (ruins have no banners).", GREEN])})
-	var tiles := [
-		["pradaria", "grassland: short green grass with small tufts and a few tiny flowers, olive-green palette"],
-		["cerrado", "dry savanna: yellow-tan dry grass and dusty soil, a few small low bushes"],
-		["floresta", "a forest seen from above: a dense canopy of round deciduous tree crowns in deep greens, with soft shadows between them"],
-		["colinas", "green rolling hills seen from above: soft grassy mounds with gentle painted light and shade"],
-		["montanhas", "rocky grey mountains seen from above: sharp rock ridges and scree in light grey and warm grey, no snow"],
-		["agua", "the sea seen from above: deep dark teal water with small painted wave crests (this dark teal is fine; it must be clearly different from royal blue)"],
-	]
-	for tile: Array in tiles:
-		items.append({"name": "terreno_" + tile[0], "images": ["res://assets/tiles/" + tile[0]], "tile": true,
-			"prompt": "\n\n".join([INTRO % ("a terrain texture: " + tile[1]), STYLE, TILE_RULES])})
-	var improvements := [
-		["fazenda", "a farm plot: a patchwork of four small fields (golden wheat, green rows of vegetables, brown ploughed soil) with low wooden fences between them", ""],
-		["fazenda_obra", "a farm plot just being prepared: bare ploughed brown furrows, a few stakes and a wooden fence, nothing grown yet", ""],
-		["fazenda_destruida", "a farm plot burned and trampled: scorched black patches over the fields, broken fences, a little smoke", "fazenda"],
-		["madeireira", "a lumber camp in a small clearing: a stack of cut logs, a sawhorse with a log, an axe in a stump, a few trees around", ""],
-		["madeireira_destruida", "a lumber camp burned: charred logs, a collapsed sawhorse, smoke", "madeireira"],
-		["mina", "a mine entrance cut into a grey rocky mound: a dark tunnel mouth framed by wooden beams, a small ore cart", ""],
-		["mina_destruida", "a collapsed mine: fallen beams and rubble blocking the tunnel, a little smoke", "mina"],
-	]
-	for imp: Array in improvements:
-		var subject: String = imp[1]
-		if imp[2] != "":
-			subject += """. If you made the "%s" image before, attach it too and edit it, keeping the same layout""" % imp[2]
-		items.append({"name": imp[0], "images": ["res://assets/sprites/improvements/" + imp[0]],
-			"prompt": "\n\n".join([INTRO % ("a terrain improvement for a map tile: " + subject), STYLE, IMPROVEMENT_CAMERA,
-				"TEAM COLOR: none (no blue at all).", GREEN])})
-	items.append({"name": "ferro", "images": ["res://assets/sprites/resources/ferro"],
-		"prompt": "\n\n".join([INTRO % "a small resource icon: an iron anvil, dark grey metal with a soft highlight, three-quarter view",
-			STYLE, "TEAM COLOR: none (no blue at all).", GREEN])})
-	var techs := [
-		["alfabeto", "Escrita", "a scribe writing Greek letters on a wax tablet"],
-		["construcao", "Construção", "masons building a stone wall with ropes and a wooden crane"],
-		["misticismo", "Misticismo", "priests burning incense at an altar before a temple"],
-		["bronze", "Trabalho em Bronze", "a smith pouring molten bronze into a mold"],
-		["montaria", "Montaria", "young riders taming wild horses"],
-		["guerra_a_distancia", "Guerra a distância", "archers training at targets"],
-		["navegacao", "Navegação", "a galley with a striped sail at sea"],
-		["literatura", "Literatura", "a poet reading from a scroll to listeners under a portico"],
-		["matematica", "Matemática", "geometers drawing circles and triangles on sand with compasses"],
-		["trabalho_em_ferro", "Trabalho em Ferro", "a blacksmith hammering red-hot iron on an anvil"],
-		["moeda", "Moeda", "minting silver drachmas with a hammer and die"],
-		["guerra_de_movimento", "Guerra de movimento", "war chariots charging across a plain"],
-		["direito", "Direito", "citizens voting with pebbles before a magistrate"],
-		["engenharia_civil", "Engenharia Civil", "workers paving a road with an aqueduct behind"],
-		["republica", "República", "a citizens' assembly on a hill, a speaker on a stone platform"],
-		["pao_e_circo", "Pão e Circo", "games in an arena with a cheering crowd and bread being handed out"],
-	]
-	for tech: Array in techs:
-		items.append({"name": "tecnologia_" + tech[0], "images": ["res://assets/tech/" + tech[0]], "wide": true,
-			"prompt": "\n\n".join([INTRO % ("an illustration for the technology \"%s\": %s in ancient Greece" % [tech[1], tech[2]]), STYLE,
-				"FORMAT: landscape 16:10, a complete painted scene that fills the frame (no green background here), warm palette, soft light, no text, no frame. TEAM COLOR: does not apply."])})
-	return items
+func _prompt(theme: Dictionary) -> String:
+	var lines: Array[String] = []
+	var number := 0
+	var row := 0
+	var items: Array = theme["items"]
+	for i in items.size():
+		if i % theme["columns"] == 0:
+			row += 1
+			lines.append("  Row %d%s:" % [row, " (" + theme["rows"][row - 1] + ")" if theme.has("rows") else ""])
+		var item: Array = items[i]
+		if item[0] == "":
+			lines.append("    - (empty cell: leave it plain green)")
+		else:
+			number += 1
+			lines.append("    %d. %s" % [number, item[2]])
+	var parts: Array[String] = [INTRO % theme["what"], STYLE, theme["camera"],
+			GRID % [theme["columns"], ceili(items.size() / float(theme["columns"])), "\n".join(lines)]]
+	if theme.has("extra"):
+		parts.append(theme["extra"])
+	parts.append(TEAM % theme["team"] if theme.has("team") else NO_TEAM)
+	if not theme.get("no_green", false):
+		parts.append(GREEN)
+	return "\n\n".join(parts)
 
 
-# --- Imagem de referência ---------------------------------------------------------
+# --- Os temas ------------------------------------------------------------------
 
-func _reference(item: Dictionary, path: String) -> void:
-	var current: Image = _load(item["images"][0] + ".png")
-	if item.get("team", false):
-		current = _tinted(item["images"][0])
-	if item.get("tile", false):
-		var tiled := Image.create(current.get_width() * 3, current.get_height() * 3, false, Image.FORMAT_RGBA8)
-		for y in 3:
-			for x in 3:
-				tiled.blit_rect(current, Rect2i(Vector2i.ZERO, current.get_size()), Vector2i(x, y) * current.get_size())
-		current = tiled
+func _themes() -> Array:
+	var u := "res://assets/sprites/units/"
+	var c := "res://assets/sprites/cities/"
+	var t := "res://assets/tiles/"
+	var m := "res://assets/sprites/improvements/"
+	return [
+		{"name": "unidades", "what": "9 game units", "columns": 3, "cell": 150, "team_tint": true,
+		"camera": """CAMERA:
+- Every unit in three-quarter view facing RIGHT, seen from slightly above (about 20-30 degrees), like the galley.
+- All units at the SAME scale: people at natural human size; horses, chariot and catapult at the same scale as the people. Feet, hooves and wheels on the bottom line of each cell.""",
+		"team": "crests, tunic trims, belts, sashes, headbands, cloaks, shield faces, the chariot's front panel and the catapult's pennant",
+		"items": [
+			["trabalhador", u + "trabalhador", "Laborer: bare arms, short off-white tunic, sandals, a heavy axe on his right shoulder."],
+			["colono", u + "colono", "Settler walking: wide straw hat, off-white tunic, a big bundle on his back, a shovel in his hand."],
+			["guerreiro", u + "guerreiro", "Rustic warrior: bare chest, short kilt with a sash, headband, a heavy club over the shoulder, a small round shield."],
+			["lanceiro", u + "lanceiro", "Hoplite: bronze Corinthian helmet with a horsehair crest, bronze cuirass, a tall spear upright, a big round aspis shield with a white lambda."],
+			["guerreiro_espada", u + "guerreiro_espada", "Swordsman in an attack pose: crested bronze helmet, segmented armor, short gladius raised, curved rectangular scutum with a gold eagle."],
+			["arqueiro", u + "arqueiro", "Archer drawing a long wooden bow, off-white tunic, headband, a quiver on the back."],
+			["cavalaria_leve", u + "cavalaria_leve", "Light cavalry: a brown horse in mid trot, the rider with a crested bronze helmet and a cloak, holding a spear."],
+			["bigas", u + "bigas", "Two-horse war chariot: two brown horses side by side, a light wooden chariot with two spoked wheels and its painted front panel, one charioteer in a crested helmet holding the reins."],
+			["catapulta", u + "catapulta", "Wooden torsion catapult (onager) on four solid wheels with bronze hubs, twisted rope at the base of the arm, a sling cup with a round stone, a small pennant at the back; no crew."],
+		]},
+		{"name": "cidades", "what": "14 Greek town map icons: 4 town sizes (rows) x 4 versions (columns)", "columns": 4, "cell": 150, "team_tint": true,
+		"rows": ["hamlet", "village", "town", "city"],
+		"camera": """CAMERA AND LOOK:
+- Every town in three-quarter view from above (about 40 degrees), like a small diorama: the whole town sits on a small round island of dusty ground with a few olive trees and cypresses around its edge. Whitewashed houses with terracotta tile roofs.
+- The 4 versions in a row are the SAME town (same houses, same island): column 1 plain; column 2 plus the ruler's palace temple on the highest point; column 3 plus a stone city wall with towers and a gate; column 4 with both the temple and the wall.
+- The rows grow: hamlet (4-5 houses, the hamlet has no palace version), village (about 10 houses), town (about 20 houses on two levels), city (houses filling the island, a stoa and a small theatre; its palace is an ACROPOLIS: a big columned temple on a high rocky terrace). Houses have the same size in every row; only their number grows.""",
+		"team": "banners on the towers, market awnings and the temple roof trim",
+		"items": [
+			["povoado", c + "povoado", "Hamlet, plain: a few houses, a market awning, a well, olive trees, a low dry-stone garden wall."],
+			["", "", ""],
+			["povoado_muralha", c + "povoado_muralha", "Hamlet with a short stone wall, a gate and two small towers with banners."],
+			["", "", ""],
+			["vila", c + "vila", "Village, plain: houses around a square with a well, a fountain and a market."],
+			["vila_capital", c + "vila_capital", "Village + a small temple with white columns on the highest point."],
+			["vila_muralha", c + "vila_muralha", "Village + a stone wall with square towers and a gate."],
+			["vila_capital_muralha", c + "vila_capital_muralha", "Village + temple + wall."],
+			["cidade", c + "cidade", "Town, plain: about 20 houses on two levels, a market square."],
+			["cidade_capital", c + "cidade_capital", "Town + a bigger temple on a raised stone terrace."],
+			["cidade_muralha", c + "cidade_muralha", "Town + a wall with several towers and a big gate."],
+			["cidade_capital_muralha", c + "cidade_capital_muralha", "Town + temple + wall."],
+			["metropole", c + "metropole", "City, plain: many houses filling the island, a stoa, a small theatre."],
+			["metropole_capital", c + "metropole_capital", "City + an acropolis: a large columned temple on a high rocky terrace."],
+			["metropole_muralha", c + "metropole_muralha", "City + a tall wall with four big towers and a monumental gate."],
+			["metropole_capital_muralha", c + "metropole_capital_muralha", "City + acropolis + wall."],
+		]},
+		{"name": "ruinas", "what": "8 map icons of Greek towns after being sacked and burned", "columns": 4, "cell": 150,
+		"rows": ["without a wall", "with a wall"],
+		"camera": """CAMERA AND LOOK:
+- Same camera and island as a Greek town map icon: three-quarter view from above (about 40 degrees), the town on a small round island of dusty ground with a few trees around its edge.
+- Ruins: collapsed terracotta roofs, blackened whitewashed walls, broken columns, rubble and a little grey smoke. No people, no banners, no temple standing.
+- Columns grow in size: hamlet (a few houses), village, town, city (many houses). Row 2 is the same as row 1 plus a broken stone city wall with fallen towers.""",
+		"items": [
+			["povoado_ruinas", c + "povoado_ruinas", "Hamlet in ruins."],
+			["vila_ruinas", c + "vila_ruinas", "Village in ruins."],
+			["cidade_ruinas", c + "cidade_ruinas", "Town in ruins."],
+			["metropole_ruinas", c + "metropole_ruinas", "City in ruins."],
+			["povoado_muralha_ruinas", c + "povoado_muralha_ruinas", "Walled hamlet in ruins."],
+			["vila_muralha_ruinas", c + "vila_muralha_ruinas", "Walled village in ruins."],
+			["cidade_muralha_ruinas", c + "cidade_muralha_ruinas", "Walled town in ruins."],
+			["metropole_muralha_ruinas", c + "metropole_muralha_ruinas", "Walled city in ruins."],
+		]},
+		{"name": "terrenos", "what": "6 square terrain textures", "columns": 3, "cell": 150, "tile": true,
+		"camera": """THESE ARE TERRAIN TEXTURES, not objects:
+- Each one seen straight from above (top-down) and filling its whole square cell edge to edge.
+- Each one SEAMLESS: it must tile perfectly when repeated side by side and top to bottom.
+- No object in the middle, no horizon, no border inside the squares.""",
+		"extra": "The squares are separated by thin flat green (#00B140) gutters.",
+		"items": [
+			["pradaria", t + "pradaria", "Grassland: short green grass with small tufts and a few tiny flowers."],
+			["cerrado", t + "cerrado", "Dry savanna: yellow-tan dry grass and dusty soil, a few small low bushes."],
+			["floresta", t + "floresta", "Forest canopy from above: dense round tree crowns in deep greens, soft shadows between them."],
+			["colinas", t + "colinas", "Green rolling hills from above: soft grassy mounds with gentle light and shade."],
+			["montanhas", t + "montanhas", "Rocky grey mountains from above: sharp rock ridges and scree, no snow."],
+			["agua", t + "agua", "Sea from above: deep dark teal water with small painted wave crests (dark teal is fine here, clearly different from royal blue)."],
+		]},
+		{"name": "melhorias", "what": "7 terrain improvements for map tiles and 1 resource icon", "columns": 4, "cell": 150,
+		"camera": """CAMERA:
+- Improvements seen from above (about 60-70 degrees, almost top-down), because each one sits on top of the terrain of a square map tile; each fills most of its cell.
+- The destroyed versions show the same place as the intact one, burned or collapsed, with a little smoke.""",
+		"items": [
+			["fazenda", m + "fazenda", "Farm: a patchwork of four small fields (golden wheat, green vegetable rows, brown ploughed soil) with low wooden fences."],
+			["fazenda_obra", m + "fazenda_obra", "Farm being prepared: bare ploughed brown furrows, a few stakes and a fence, nothing grown."],
+			["fazenda_destruida", m + "fazenda_destruida", "The same farm burned and trampled: scorched black patches, broken fences."],
+			["madeireira", m + "madeireira", "Lumber camp in a clearing: a stack of cut logs, a sawhorse with a log, an axe in a stump, a few trees."],
+			["madeireira_destruida", m + "madeireira_destruida", "The same lumber camp burned: charred logs, a collapsed sawhorse."],
+			["mina", m + "mina", "Mine: a dark tunnel mouth framed by wooden beams, cut into a grey rocky mound, a small ore cart."],
+			["mina_destruida", m + "mina_destruida", "The same mine collapsed: fallen beams and rubble blocking the tunnel."],
+			["ferro", "res://assets/sprites/resources/ferro", "Resource icon: an iron anvil, dark grey metal with a soft highlight, three-quarter view."],
+		]},
+		{"name": "tecnologias", "what": "16 small illustrations, one per technology, in ancient Greece", "columns": 4, "cell": 170, "wide": true,
+		"no_green": true,
+		"camera": """FORMAT:
+- Each illustration is a complete painted scene in a landscape rectangle (about 16:10), filling its cell.
+- Separate the 16 scenes with thin dark gutters. No text, no titles.""",
+		"items": [
+			["alfabeto", "res://assets/tech/alfabeto", "Writing: a scribe writing Greek letters on a wax tablet."],
+			["construcao", "res://assets/tech/construcao", "Construction: masons building a stone wall with a wooden crane."],
+			["misticismo", "res://assets/tech/misticismo", "Mysticism: priests burning incense at an altar before a temple."],
+			["bronze", "res://assets/tech/bronze", "Bronze working: a smith pouring molten bronze into a mold."],
+			["montaria", "res://assets/tech/montaria", "Horseback riding: young riders taming wild horses."],
+			["guerra_a_distancia", "res://assets/tech/guerra_a_distancia", "Ranged warfare: archers training at targets."],
+			["navegacao", "res://assets/tech/navegacao", "Navigation: a galley with a striped sail at sea."],
+			["literatura", "res://assets/tech/literatura", "Literature: a poet reading a scroll to listeners under a portico."],
+			["matematica", "res://assets/tech/matematica", "Mathematics: geometers drawing circles and triangles on sand."],
+			["trabalho_em_ferro", "res://assets/tech/trabalho_em_ferro", "Iron working: a blacksmith hammering red-hot iron on an anvil."],
+			["moeda", "res://assets/tech/moeda", "Currency: minting silver drachmas with a hammer and die."],
+			["guerra_de_movimento", "res://assets/tech/guerra_de_movimento", "Mobile warfare: war chariots charging across a plain."],
+			["direito", "res://assets/tech/direito", "Law: citizens voting with pebbles before a magistrate."],
+			["engenharia_civil", "res://assets/tech/engenharia_civil", "Civil engineering: workers paving a road, an aqueduct behind."],
+			["republica", "res://assets/tech/republica", "Republic: a citizens' assembly on a hill, a speaker on a stone platform."],
+			["pao_e_circo", "res://assets/tech/pao_e_circo", "Bread and circuses: games in an arena, a cheering crowd, bread handed out."],
+		]},
+	]
+
+
+# --- Imagem de referência -----------------------------------------------------------
+
+func _reference(theme: Dictionary, path: String) -> void:
 	var viewport := SubViewport.new()
 	viewport.transparent_bg = false
-	viewport.size = Vector2i(PANEL * 2 + 60, PANEL + 70)
 	viewport.render_target_update_mode = SubViewport.UPDATE_ALWAYS
 	root.add_child(viewport)
-	var back := ColorRect.new()
-	back.color = Color8(46, 50, 56)
-	back.size = viewport.size
-	viewport.add_child(back)
-	for side in 2:
-		var x := 20 + side * (PANEL + 20)
-		var title := Label.new()
-		title.text = "ESTILO (referência)" if side == 0 else "ATUAL: " + item["name"] + " (só o conteúdo)"
-		title.position = Vector2(x, 12)
-		title.add_theme_font_size_override("font_size", 22)
-		title.add_theme_color_override("font_color", Color8(235, 235, 235))
-		viewport.add_child(title)
-		var frame := ColorRect.new()
-		frame.color = Color8(70, 76, 84)
-		frame.position = Vector2(x, 50)
-		frame.size = Vector2(PANEL, PANEL)
-		viewport.add_child(frame)
-		var picture := TextureRect.new()
-		picture.texture = ImageTexture.create_from_image(_style if side == 0 else current)
-		picture.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-		picture.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-		picture.position = Vector2(x + 10, 60)
-		picture.size = Vector2(PANEL - 20, PANEL - 20)
-		viewport.add_child(picture)
+	var background := ColorRect.new()
+	background.color = BACK
+	viewport.add_child(background)
+	var margin := MarginContainer.new()
+	for side in ["left", "top", "right", "bottom"]:
+		margin.add_theme_constant_override("margin_" + side, 20)
+	viewport.add_child(margin)
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 30)
+	margin.add_child(row)
+	# Esquerda: o estilo
+	var left := VBoxContainer.new()
+	left.add_child(_label("ESTILO (referência)", 22))
+	left.add_child(_picture(_style, Vector2(420, 420)))
+	row.add_child(left)
+	# Direita: os desenhos atuais na grade pedida
+	var right := VBoxContainer.new()
+	right.add_child(_label("ATUAL: %s (só o conteúdo; mesma grade e ordem)" % theme["name"], 22))
+	var grid := GridContainer.new()
+	grid.columns = theme["columns"]
+	grid.add_theme_constant_override("h_separation", 8)
+	grid.add_theme_constant_override("v_separation", 8)
+	right.add_child(grid)
+	var cell: int = theme["cell"]
+	var size := Vector2(cell, cell * 0.62) if theme.get("wide", false) else Vector2(cell, cell)
+	var number := 0
+	for item: Array in theme["items"]:
+		var card := PanelContainer.new()
+		var style := StyleBoxFlat.new()
+		style.bg_color = CARD if item[0] != "" else Color(CARD, 0.35)
+		style.set_corner_radius_all(6)
+		style.set_content_margin_all(5)
+		card.add_theme_stylebox_override("panel", style)
+		var inner := VBoxContainer.new()
+		card.add_child(inner)
+		if item[0] == "":
+			var empty := Control.new()
+			empty.custom_minimum_size = size
+			inner.add_child(empty)
+			inner.add_child(_label("(vazio)", 13))
+		else:
+			number += 1
+			var image := _tinted(item[1]) if theme.get("team_tint", false) else _load(item[1] + ".png")
+			if theme.get("tile", false):
+				image = _tiled(image, 2)
+			inner.add_child(_picture(image, size))
+			var name_label := _label("%d. %s" % [number, item[0]], 13)
+			name_label.custom_minimum_size.x = size.x
+			name_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+			name_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+			inner.add_child(name_label)
+		grid.add_child(card)
+	row.add_child(right)
 	for i in 3:
+		await process_frame
+	var total := margin.get_combined_minimum_size()
+	viewport.size = Vector2i(ceili(total.x), ceili(total.y))
+	background.size = total
+	margin.size = total
+	for i in 4:
 		await process_frame
 	await RenderingServer.frame_post_draw
 	viewport.get_texture().get_image().save_png(ProjectSettings.globalize_path(path))
+	print("  %s (%dx%d)" % [path.get_file(), viewport.size.x, viewport.size.y])
 	viewport.queue_free()
 
 
-func _readme(count: int) -> void:
-	var text := """PEDIDOS PARA O GEMINI: UM DESENHO POR VEZ (%d pedidos)
-==============================================================
-Cada pasta é um pedido. Para cada uma:
-  1. Abra uma CONVERSA NOVA no Gemini (assim ele não mistura os pedidos).
-  2. Anexe referencia.png (à esquerda o ESTILO, a Galé; à direita o
-     desenho ATUAL, que mostra só o que desenhar).
-  3. Cole o texto de prompt.txt inteiro.
-  4. Baixe a imagem e salve na própria pasta como resultado.png.
+func _picture(image: Image, size: Vector2) -> TextureRect:
+	var picture := TextureRect.new()
+	picture.texture = ImageTexture.create_from_image(image)
+	picture.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	picture.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	picture.custom_minimum_size = size
+	return picture
 
-Cidades e ruínas (pastas com _capital, _muralha, _ruinas): são EDIÇÕES.
-Anexe também o resultado.png da pasta indicada no prompt (ex.: para
-vila_muralha, o resultado de "vila"). Por isso faça na ordem das pastas.
+
+func _label(text: String, font_size: int) -> Label:
+	var label := Label.new()
+	label.text = text
+	label.add_theme_font_size_override("font_size", font_size)
+	label.add_theme_color_override("font_color", Color8(235, 235, 235))
+	return label
+
+
+func _readme() -> void:
+	var text := """PEDIDOS PARA O GEMINI: UM POR TEMA
+==================================
+Cada pasta é um pedido, com uma folha do tema inteiro:
+  01_unidades     9 unidades (3x3; a Galé já está pronta)
+  02_cidades      14 cidades (4x4: linhas = povoado, vila, cidade,
+                  metrópole; colunas = normal, capital com palácio,
+                  com muralha, capital com muralha; o povoado não tem
+                  as versões de capital: células vazias)
+  03_ruinas       8 ruínas (4x2: sem muralha / com muralha)
+  04_terrenos     6 texturas (3x2)
+  05_melhorias    7 melhorias + o ícone do ferro (4x2)
+  06_tecnologias  16 ilustrações (4x4, opcional)
+
+Para cada pasta:
+  1. Abra uma CONVERSA NOVA no Gemini.
+  2. Anexe referencia.png (à esquerda o ESTILO, a Galé; à direita os
+     desenhos ATUAIS do tema, numerados, na mesma grade que o prompt
+     pede).
+  3. Cole o texto de prompt.txt inteiro.
+  4. Salve a imagem na pasta como resultado.png.
+
+Se a folha sair errada, peça para refazer na mesma conversa, citando o
+problema, ex.: "Redo it: keep the same 4x4 grid and order", "Redo it:
+the background must be one flat green #00B140", "Redo it: the 4 versions
+in a row must be the same town", "Redo it: same painted style as the
+galley".
 
 Lógica das cidades: classe pela população (povoado 1-5, vila 6-15,
-cidade 16-30, metrópole 31+); "_capital" = só a capital, com o templo
-no alto (o Palácio; o povoado não tem); "_muralha" = só com o prédio
-Muralha, em qualquer classe; "_ruinas" = cidade destruída.
+cidade 16-30, metrópole 31+); capital = templo no alto (o Palácio; o
+povoado não tem); muralha = só com o prédio Muralha, em qualquer classe.
 
-Se sair fora do padrão, peça para refazer na mesma conversa, citando o
-problema: "Redo it: the background must be one flat green #00B140",
-"Redo it: no water and no blue except the listed parts", "Redo it: same
-painted style as the galley, not cartoon".
-
-Ordem sugerida: unidades (01-09), cidades e ruínas, terrenos,
-melhorias, ferro e, por último (opcional), as tecnologias.
-Gerado por tools/art/pedidos_gemini.gd.
-""" % count
+Gerado por tools/art/pedidos_gemini.gd (os textos dos prompts ficam lá).
+"""
 	var file := FileAccess.open(ProjectSettings.globalize_path(OUT + "LEIA-ME.txt"), FileAccess.WRITE)
 	file.store_string(text)
 	file.close()
@@ -287,3 +368,23 @@ func _tinted(path: String) -> Image:
 				image.set_pixel(x, y, Color(minf(p.r + TEAM_BLUE.r * m, 1.0), minf(p.g + TEAM_BLUE.g * m, 1.0),
 						minf(p.b + TEAM_BLUE.b * m, 1.0), p.a))
 	return image
+
+
+## O terreno repetido [param times] x [param times] (para mostrar a emenda).
+func _tiled(image: Image, times: int) -> Image:
+	var tiled := Image.create(image.get_width() * times, image.get_height() * times, false, Image.FORMAT_RGBA8)
+	for y in times:
+		for x in times:
+			tiled.blit_rect(image, Rect2i(Vector2i.ZERO, image.get_size()), Vector2i(x, y) * image.get_size())
+	return tiled
+
+
+func _remove_tree(path: String) -> void:
+	var dir := DirAccess.open(path)
+	if dir == null:
+		return
+	for sub in dir.get_directories():
+		_remove_tree(path.path_join(sub))
+	for file in dir.get_files():
+		dir.remove(file)
+	DirAccess.remove_absolute(path)

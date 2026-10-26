@@ -1,0 +1,41 @@
+I am remaking the art of a 2D turn-based strategy game set in ancient Greece. The attached image has two parts:
+- LEFT, "ESTILO": a galley. It is the STYLE REFERENCE: paint everything in exactly this style.
+- RIGHT, "ATUAL": the current, low-quality versions of the items I need, numbered, in the same grid I want back. Use them only to know WHAT to draw (content and composition), not how they look.
+
+Create ONE image: a sprite sheet with 16 small illustrations, one per technology, in ancient Greece.
+
+STYLE (copy it from the galley):
+- Detailed painted digital illustration with realistic proportions: soft painted shading, visible wood grain and texture, warm earthy palette (warm brown wood, off-white linen and plaster, terracotta roof tiles, bronze, olive greens). Not cartoon, not chibi, not pixel art, no thick black outlines, no flat colors, not a photo.
+- Strong, clean silhouettes that stay readable when shrunk to small game sprites: few big shapes, no thin clutter.
+- Soft daylight from the TOP-LEFT. All items in the sheet share the same light, scale and camera.
+
+FORMAT:
+- Each illustration is a complete painted scene in a landscape rectangle (about 16:10), filling its cell.
+- Separate the 16 scenes with thin dark gutters. No text, no titles.
+
+SHEET LAYOUT:
+- A grid of 4 columns x 4 rows, evenly spaced, each item centered in its own cell, never touching or overlapping its neighbours, never cropped.
+- Order, left to right, top to bottom (the numbers match the right side of the attached image):
+  Row 1:
+    1. Writing: a scribe writing Greek letters on a wax tablet.
+    2. Construction: masons building a stone wall with a wooden crane.
+    3. Mysticism: priests burning incense at an altar before a temple.
+    4. Bronze working: a smith pouring molten bronze into a mold.
+  Row 2:
+    5. Horseback riding: young riders taming wild horses.
+    6. Ranged warfare: archers training at targets.
+    7. Navigation: a galley with a striped sail at sea.
+    8. Literature: a poet reading a scroll to listeners under a portico.
+  Row 3:
+    9. Mathematics: geometers drawing circles and triangles on sand.
+    10. Iron working: a blacksmith hammering red-hot iron on an anvil.
+    11. Currency: minting silver drachmas with a hammer and die.
+    12. Mobile warfare: war chariots charging across a plain.
+  Row 4:
+    13. Law: citizens voting with pebbles before a magistrate.
+    14. Civil engineering: workers paving a road, an aqueduct behind.
+    15. Republic: a citizens' assembly on a hill, a speaker on a stone platform.
+    16. Bread and circuses: games in an arena, a cheering crowd, bread handed out.
+- No numbers, labels or text in the image.
+
+TEAM COLOR: none in this sheet (no blue at all).

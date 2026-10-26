@@ -183,7 +183,7 @@ C:\ProjetoGame
 |       |-- folha_assets.gd        Folha com todos os desenhos e os
 |       |                          nomes (tools/art/gemini/), para
 |       |                          pedir a refação no Gemini
-|       |-- pedidos_gemini.gd      Um pedido por desenho para o Gemini
+|       |-- pedidos_gemini.gd      Um pedido por tema para o Gemini
 |       |                          (gemini/pedidos/: referência + prompt)
 |       |-- PROMPTS-GEMINI.txt     Índice dos pedidos ao Gemini e a
 |       |                          lógica dos desenhos das cidades
@@ -340,20 +340,19 @@ MAPA (scripts/map/)
   assets_tecnologias), geradas COM janela por
     godot_console.cmd --path . --script tools/art/folha_assets.gd
   (a cor do time aparece no azul padrão #1E50FF), só para consulta.
-  PEDIDOS: o Gemini se perdeu com tudo de uma vez, então cada desenho
-  tem o seu pedido em tools/art/gemini/pedidos/<NN>_<nome>/ (61:
-  9 unidades, 14 cidades, 8 ruínas, 6 terrenos, 7 melhorias, o ferro
-  e 16 tecnologias), gerados COM janela por
+  PEDIDOS POR TEMA (tudo de uma vez o Gemini se perdeu; um por desenho
+  ficou granular demais): tools/art/gemini/pedidos/<NN>_<tema>/, 6
+  temas (unidades 3x3, cidades 4x4, ruínas 4x2, terrenos 3x2,
+  melhorias e ferro 4x2, tecnologias 4x4), gerados COM janela por
     godot_console.cmd --path . --script tools/art/pedidos_gemini.gd
-  Cada pasta tem referencia.png (a Galé, o ESTILO, à esquerda; o
-  desenho atual, o CONTEÚDO, à direita; terreno repetido 3x3) e
-  prompt.txt (o prompt inteiro, com o estilo, o fundo verde #00B140 e
-  onde vai o azul do time). Uma conversa nova por pedido; as variantes
-  de cidade e as ruínas EDITAM o resultado da versão anterior (anexar
-  o resultado.png dela). Os textos ficam em pedidos_gemini.gd; as
-  referencia.png não vão para o Git (.gitignore: são regeradas).
-  Índice e lógica das cidades: tools/art/PROMPTS-GEMINI.txt; passo a
-  passo: tools/art/gemini/pedidos/LEIA-ME.txt. Os importadores de cidade, terreno e melhoria ainda
+  Cada pasta tem referencia.png (a Galé, o ESTILO, à esquerda; os
+  desenhos atuais do tema, numerados, na grade pedida, à direita) e
+  prompt.txt (o prompt inteiro: estilo, câmera, grade e ordem, onde vai
+  o azul do time, fundo verde #00B140). Uma conversa nova por tema;
+  salvar a folha como resultado.png na pasta. Os textos ficam em
+  pedidos_gemini.gd. Índice e lógica das cidades:
+  tools/art/PROMPTS-GEMINI.txt; passo a passo:
+  tools/art/gemini/pedidos/LEIA-ME.txt. Os importadores de cidade, terreno e melhoria ainda
   esperam o fundo do ChatGPT: serão adaptados ao fundo verde quando as
   imagens chegarem.
 - ESTILO PINTADO (desde 23/10/2026, a partir de uma referência
@@ -3914,6 +3913,13 @@ Screenshots também confirmaram o visual.
   referência (estilo da Galé + desenho atual) e o prompt completo;
   LEIA-ME.txt com a ordem. PROMPTS-GEMINI.txt virou o índice. Correção:
   as cidades são 14 (não 15).
+
+- PEDIDOS AO GEMINI POR TEMA (o pedido por desenho ficou granular
+  demais, avaliação do usuário): pedidos_gemini.gd agora gera 6 pastas,
+  uma por tema, cada uma com a folha de referência do tema (desenhos
+  atuais numerados na grade pedida, ao lado da Galé) e o prompt da
+  folha inteira. As 61 pastas antigas foram apagadas; as referências
+  (poucas agora) voltaram para o Git.
 
 --------------------------------------------------------------
 7. BACKLOG (ideias para depois)

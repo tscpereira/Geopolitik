@@ -1,0 +1,35 @@
+I am remaking the art of a 2D turn-based strategy game set in ancient Greece. The attached image has two parts:
+- LEFT, "ESTILO": a galley. It is the STYLE REFERENCE: paint everything in exactly this style.
+- RIGHT, "ATUAL": the current, low-quality versions of the items I need, numbered, in the same grid I want back. Use them only to know WHAT to draw (content and composition), not how they look.
+
+Create ONE image: a sprite sheet with 8 map icons of Greek towns after being sacked and burned.
+
+STYLE (copy it from the galley):
+- Detailed painted digital illustration with realistic proportions: soft painted shading, visible wood grain and texture, warm earthy palette (warm brown wood, off-white linen and plaster, terracotta roof tiles, bronze, olive greens). Not cartoon, not chibi, not pixel art, no thick black outlines, no flat colors, not a photo.
+- Strong, clean silhouettes that stay readable when shrunk to small game sprites: few big shapes, no thin clutter.
+- Soft daylight from the TOP-LEFT. All items in the sheet share the same light, scale and camera.
+
+CAMERA AND LOOK:
+- Same camera and island as a Greek town map icon: three-quarter view from above (about 40 degrees), the town on a small round island of dusty ground with a few trees around its edge.
+- Ruins: collapsed terracotta roofs, blackened whitewashed walls, broken columns, rubble and a little grey smoke. No people, no banners, no temple standing.
+- Columns grow in size: hamlet (a few houses), village, town, city (many houses). Row 2 is the same as row 1 plus a broken stone city wall with fallen towers.
+
+SHEET LAYOUT:
+- A grid of 4 columns x 2 rows, evenly spaced, each item centered in its own cell, never touching or overlapping its neighbours, never cropped.
+- Order, left to right, top to bottom (the numbers match the right side of the attached image):
+  Row 1 (without a wall):
+    1. Hamlet in ruins.
+    2. Village in ruins.
+    3. Town in ruins.
+    4. City in ruins.
+  Row 2 (with a wall):
+    5. Walled hamlet in ruins.
+    6. Walled village in ruins.
+    7. Walled town in ruins.
+    8. Walled city in ruins.
+- No numbers, labels or text in the image.
+
+TEAM COLOR: none in this sheet (no blue at all).
+
+BACKGROUND:
+- One flat, solid chroma-key green (#00B140) filling the whole background and the space between the cells: no gradient, no texture, no vignette, no cast shadow on the background, no ground, no frame, no text, no signature.
