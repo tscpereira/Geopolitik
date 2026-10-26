@@ -1992,16 +1992,13 @@ GALÉ E NAVEGAÇÃO (desde 25/10/2026, pedido do usuário)
   ali.
 - Save: cada unidade guarda "aboard"; ao carregar, volta para a Galé
   da mesma casa.
-- Desenho: a imagem trazida pelo usuário (barco longo de casco marrom,
-  vela branca com listras escuras, escudos e remos; guardada em
-  tools/art/chatgpt/gale_original.png), importada por
-  tools/art/import_gale.gd: tira o fundo cinza-claro liso (inundação a
-  partir das bordas, com o halo claro em volta, e os bolsões fechados
-  entre as cordas e os remos), transforma as LISTRAS DA VELA (cinza
-  escuro neutro dentro da área da vela) na cor do time pela máscara
-  gale_time.png e reduz para 76x70 com o casco em y = 73. Prévia nas
-  duas cores: tools/art/chatgpt/prontos/gale_previa.png. As bolinhas da
-  carga ficam no canto de cima à esquerda.
+- Desenho: pedido ao Gemini com o prompt B3 de tools/art/PROMPTS-CHATGPT.txt
+  (mesmo estilo pintado das outras unidades, fundo verde liso, listras da
+  vela, escudos e cristas dos elmos em azul do time) e importado como
+  desenho avulso: import_folha_unidades.gd -- <imagem> gale (AVULSAS:
+  altura 66, sem passar de 76 de largura; fica 71x66). A imagem fica em
+  tools/art/chatgpt/gale_avulsa.png e entra no consolidado.gd. As bolinhas da
+carga ficam no canto de cima à esquerda.
 - A máquina ainda não faz nem usa Galés (e ignora as do inimigo na
   zona de ameaça).
 
@@ -3831,6 +3828,14 @@ Screenshots também confirmaram o visual.
   importada por tools/art/import_gale.gd (fundo tirado, listras da vela
   na cor do time). tools/art/gale.gd foi apagado. Validação: prévia em
   vermelho e amarelo e screenshot no jogo, teste da Galé.
+- GALÉ PELO GEMINI: a imagem pequena também ficou fora do padrão
+  (pixelada, avaliação do usuário). Prompt B3 para o Gemini em
+  PROMPTS-CHATGPT.txt; o resultado (pintado, fundo verde, azul só na vela,
+  nos escudos e nas cristas) foi importado como desenho avulso por
+  import_folha_unidades.gd ("gale" em AVULSAS; a largura agora também
+  limita a escala dos avulsos). Saíram import_gale.gd e a imagem antiga.
+  Validação: screenshot no jogo nas duas cores, consolidado das 10
+  unidades e teste da Galé.
 - ÁRVORE DE TECNOLOGIAS NO JOGO (pedido do usuário): botão "Árvore [T]"
   no painel de Ciência e tecla T; colunas por profundidade, setas,
   cores por estado, o que cada uma libera e clique para pesquisar.

@@ -1,25 +1,25 @@
-extends SceneTree
+﻿extends SceneTree
 
 ## Consolidado da arte das unidades. Rode na pasta do projeto:
 ##   godot_console.cmd --headless --path . --script tools/art/consolidado.gd
 ## Grava em tools/art/chatgpt/:
-##   consolidado_unidades.png: todas as unidades como estão no jogo (sprite
+##   consolidado_unidades.png: todas as unidades como estÃ£o no jogo (sprite
 ##     80x80 ampliado 3x), em azul e em vermelho, sobre a pradaria;
 ##   referencia_unidades.png: os desenhos grandes do ChatGPT (unidades/, da
 ##     folha importada por import_folha_unidades.gd), em azul do time
-##     (#1E50FF), na mesma escala relativa do jogo. É a imagem para anexar
+##     (#1E50FF), na mesma escala relativa do jogo. Ã‰ a imagem para anexar
 ##     ao pedir uma unidade nova (PROMPTS-CHATGPT.txt, "UNIDADE NOVA").
 
 const UNITS_DIR := "res://assets/sprites/units/"
 const GRANDES := "res://tools/art/chatgpt/unidades/"
 const OUT := "res://tools/art/chatgpt/"
 ## Ordem do consolidado (a mesma da lista de unidades do jogo).
-const UNITS := ["trabalhador", "colono", "guerreiro", "lanceiro", "guerreiro_espada", "arqueiro", "cavalaria_leve", "bigas", "catapulta"]
+const UNITS := ["trabalhador", "colono", "guerreiro", "lanceiro", "guerreiro_espada", "arqueiro", "cavalaria_leve", "bigas", "catapulta", "gale"]
 const TEAM_BLUE := Color8(30, 80, 255)
 const TEAM_RED := Color8(220, 40, 40)
 const CELL := 240
-## Referência: os desenhos no tamanho da folha (a escala já é a mesma para
-## todos), cada um numa caixa BOX, pés na mesma linha.
+## ReferÃªncia: os desenhos no tamanho da folha (a escala jÃ¡ Ã© a mesma para
+## todos), cada um numa caixa BOX, pÃ©s na mesma linha.
 const BOX := Vector2(250, 245)
 const MARGIN := 24
 

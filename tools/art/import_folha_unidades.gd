@@ -30,7 +30,7 @@ const ORIGINAL := "res://tools/art/chatgpt/folha_unidades.png"
 const AVULSA := "res://tools/art/chatgpt/%s_avulsa.png"
 ## Unidade avulsa -> altura do desenho no jogo, em pixels (a da folha, na
 ## mesma pose: o guerreiro em investida tinha 55).
-const AVULSAS := {"guerreiro_espada": 55}
+const AVULSAS := {"guerreiro_espada": 55, "gale": 66}
 const SIZE := 80
 const MAX_SIZE := Vector2(76, 70)
 const FEET := 73
@@ -104,7 +104,8 @@ func _avulsa(unit_name: String) -> void:
 			if (p.h < 0.03 or p.h > 0.95) and p.s > 0.55 and p.v > 0.15:
 				image.set_pixel(x, y, Color.from_hsv(0.64, p.s, p.v, p.a))
 	box.size += Vector2i.ONE
-	_install(image.get_region(box), unit_name, float(AVULSAS[unit_name]) / box.size.y)
+	# Altura de AVULSAS, sem passar da largura máxima (a Galé é quase tão larga quanto alta)
+	_install(image.get_region(box), unit_name, minf(float(AVULSAS[unit_name]) / box.size.y, MAX_SIZE.x / box.size.x))
 
 
 func _remove_backdrop(img: Image) -> void:
