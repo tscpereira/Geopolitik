@@ -170,19 +170,24 @@ func _themes() -> Array:
 			["colinas", t + "colinas", "Hill grass: short green-olive grass with small tufts, a few small grey stones and patches of bare earth; slightly drier and stonier than a meadow."],
 			["montanhas", t + "montanhas", "Mountain rock: grey and warm-grey stone surface with cracks, small loose pebbles and a few patches of lichen; even, no peaks."],
 		]},
-		{"name": "melhorias", "what": "7 terrain improvements for map tiles and 1 resource icon", "columns": 4, "cell": 150,
-		"camera": """CAMERA:
-- Improvements seen from above (about 60-70 degrees, almost top-down), because each one sits on top of the terrain of a square map tile; each fills most of its cell.
-- The destroyed versions show the same place as the intact one, burned or collapsed, with a little smoke.""",
+		# Melhorias: madeireira, mina e o ferro já vieram bons na folha de 26/10/2026
+		# (tools/art/gemini/melhorias_folha.png). As fazendas vieram com uma casa e
+		# ocupando a casa inteira: o usuário quer só os canteiros, com a "cruz" entre
+		# eles e a margem transparentes (o terreno do mapa aparece por baixo).
+		{"name": "fazendas", "what": "3 versions of the same small farm, seen straight from above", "columns": 3, "cell": 170,
+		"camera": """CAMERA AND SHAPE (read carefully, this is the most important part):
+- Seen STRAIGHT from above (top-down, 90 degrees), like a drone photo: no perspective, no side walls visible.
+- Each farm is ONLY FOUR small separate field plots, arranged 2 x 2 like the four panes of a window.
+- Between the four plots there is a CROSS-shaped gap (a straight vertical gap and a straight horizontal gap, each about 1/8 of the cell wide), and around the four plots there is an empty margin (about 1/8 of the cell on each side). The four plots together cover only about 70% of the cell.
+- The cross-shaped gap and the margin contain NOTHING: they are the flat chroma-key green background (#00B140). The game makes that green transparent, so the map's own grass shows through between and around the plots. Do NOT paint grass, soil, paths, roads or shadows there.
+- NO farmhouse, NO barn, NO hut, NO building of any kind, NO trees, NO people, NO animals, NO tools lying around.
+- NO big fence around the whole farm. Each plot may have a thin low wooden fence or a neat dark edge of its own.
+- The 3 versions are the SAME four plots in the same places; only the crops change.""",
+		"extra": "NOTE: here the right side of the attached image is not old art but a LAYOUT SKETCH: it shows where the four plots go and that the cross-shaped gap and the margin stay plain green. Paint the plots in the painted style; keep that layout.",
 		"items": [
-			["fazenda", m + "fazenda", "Farm: a patchwork of four small fields (golden wheat, green vegetable rows, brown ploughed soil) with low wooden fences."],
-			["fazenda_obra", m + "fazenda_obra", "Farm being prepared: bare ploughed brown furrows, a few stakes and a fence, nothing grown."],
-			["fazenda_destruida", m + "fazenda_destruida", "The same farm burned and trampled: scorched black patches, broken fences."],
-			["madeireira", m + "madeireira", "Lumber camp in a clearing: a stack of cut logs, a sawhorse with a log, an axe in a stump, a few trees."],
-			["madeireira_destruida", m + "madeireira_destruida", "The same lumber camp burned: charred logs, a collapsed sawhorse."],
-			["mina", m + "mina", "Mine: a dark tunnel mouth framed by wooden beams, cut into a grey rocky mound, a small ore cart."],
-			["mina_destruida", m + "mina_destruida", "The same mine collapsed: fallen beams and rubble blocking the tunnel."],
-			["ferro", "res://assets/sprites/resources/ferro", "Resource icon: an iron anvil, dark grey metal with a soft highlight, three-quarter view."],
+			["fazenda", "esquema:producao", "Farm in production: plot 1 golden ripe wheat, plot 2 neat green vegetable rows, plot 3 young green sprouts in brown soil, plot 4 a second field of wheat or vegetables."],
+			["fazenda_obra", "esquema:obra", "Farm just being prepared: the same four plots, all freshly ploughed brown furrows, nothing grown yet, a few wooden stakes at the corners."],
+			["fazenda_destruida", "esquema:queimada", "The same farm burned and trampled: the four plots with scorched black patches, burned crops and broken plot fences, a thin wisp of smoke."],
 		]},
 		{"name": "tecnologias", "what": "16 small illustrations, one per technology, in ancient Greece", "columns": 4, "cell": 170, "wide": true,
 		"no_green": true,
@@ -299,7 +304,11 @@ func _reference(theme: Dictionary, path: String) -> void:
 			inner.add_child(_label("(vazio)", 13))
 		else:
 			number += 1
-			var image := _tinted(item[1]) if theme.get("team_tint", false) else _load(item[1] + ".png")
+			var image: Image
+			if item[1].begins_with("esquema:"):
+				image = _farm_layout(item[1].trim_prefix("esquema:"))
+			else:
+				image = _tinted(item[1]) if theme.get("team_tint", false) else _load(item[1] + ".png")
 			if theme.get("tile", false):
 				image = _tiled(image, 2)
 			inner.add_child(_picture(image, size))
@@ -358,7 +367,10 @@ Cada pasta é um pedido, com uma folha do tema:
                         relevo pintado e não serviram)
   08_terrenos_relevo    colinas e montanhas: só a superfície, SEM relevo
                         (o mapa já desenha morros e picos)
-  09_melhorias          7 melhorias + o ícone do ferro (4x2)
+  09_fazendas           as 3 fazendas, só os 4 canteiros (a "cruz" entre
+                        eles e a margem ficam no verde: transparentes).
+                        Madeireira, mina e ferro já vieram bons (folha em
+                        tools/art/gemini/melhorias_folha.png)
   10_tecnologias        16 ilustrações (4x4, opcional)
   (As 14 cidades numa folha só o Gemini não conseguiu: copiou a
   referência. Por isso uma classe por pedido.)
@@ -421,6 +433,31 @@ func _tiled(image: Image, times: int) -> Image:
 		for x in times:
 			tiled.blit_rect(image, Rect2i(Vector2i.ZERO, image.get_size()), Vector2i(x, y) * image.get_size())
 	return tiled
+
+
+## Esquema do formato da fazenda (no lugar do desenho antigo, que ocupava a
+## casa inteira): fundo verde, 4 canteiros 2x2 com a "cruz" e a margem vazias.
+## [param kind]: "producao", "obra" ou "queimada" (cores dos canteiros).
+func _farm_layout(kind: String) -> Image:
+	var size := 160
+	var image := Image.create(size, size, false, Image.FORMAT_RGBA8)
+	image.fill(Color8(0, 177, 64))
+	var colors: Array = {
+		"producao": [Color8(214, 178, 72), Color8(88, 140, 60), Color8(128, 96, 60), Color8(200, 168, 70)],
+		"obra": [Color8(120, 84, 52), Color8(112, 78, 48), Color8(120, 84, 52), Color8(112, 78, 48)],
+		"queimada": [Color8(70, 56, 40), Color8(48, 44, 38), Color8(90, 70, 46), Color8(40, 36, 32)],
+	}[kind]
+	var margin := size / 8
+	var gap := size / 8
+	var plot := (size - margin * 2 - gap) / 2
+	for i in 4:
+		var origin := Vector2i(margin + (i % 2) * (plot + gap), margin + (i / 2) * (plot + gap))
+		image.fill_rect(Rect2i(origin, Vector2i(plot, plot)), Color8(60, 40, 24))
+		image.fill_rect(Rect2i(origin + Vector2i(2, 2), Vector2i(plot - 4, plot - 4)), colors[i])
+		# Sulcos (linhas um pouco mais escuras)
+		for y in range(origin.y + 6, origin.y + plot - 4, 6):
+			image.fill_rect(Rect2i(origin.x + 3, y, plot - 6, 1), colors[i].darkened(0.25))
+	return image
 
 
 ## Arquivos das pastas de pedido que não são gerados aqui (o resultado.png que

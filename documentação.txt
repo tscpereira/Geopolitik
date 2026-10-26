@@ -3998,6 +3998,18 @@ Screenshots também confirmaram o visual.
   do tema. Validação: prévia 3x3 de cada textura e screenshots do mapa
   (costa, de longe e de perto).
 
+- MELHORIAS DO GEMINI (folha guardada em tools/art/gemini/
+  melhorias_folha.png): madeireira, madeireira destruída, mina, mina
+  destruída e a bigorna do ferro ficaram boas (falta o importador). As
+  fazendas não: vieram com uma casa e ocupando a casa inteira. O
+  usuário quer só os 4 canteiros, com a "cruz" entre eles e a margem
+  TRANSPARENTES, para o terreno do mapa aparecer. O pedido das
+  melhorias virou 09_fazendas: só as 3 fazendas, vistas de cima, sem
+  construção nem cerca em volta, e a referência mostra um ESQUEMA do
+  formato (canteiros 2x2 sobre o verde) em vez dos desenhos antigos.
+  Ao importar, conferir que o shader do mapa (farm_tex) respeita a
+  transparência.
+
 --------------------------------------------------------------
 7. BACKLOG (ideias para depois)
 --------------------------------------------------------------

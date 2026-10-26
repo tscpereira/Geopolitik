@@ -14,7 +14,10 @@ Cada pasta é um pedido, com uma folha do tema:
                         relevo pintado e não serviram)
   08_terrenos_relevo    colinas e montanhas: só a superfície, SEM relevo
                         (o mapa já desenha morros e picos)
-  09_melhorias          7 melhorias + o ícone do ferro (4x2)
+  09_fazendas           as 3 fazendas, só os 4 canteiros (a "cruz" entre
+                        eles e a margem ficam no verde: transparentes).
+                        Madeireira, mina e ferro já vieram bons (folha em
+                        tools/art/gemini/melhorias_folha.png)
   10_tecnologias        16 ilustrações (4x4, opcional)
   (As 14 cidades numa folha só o Gemini não conseguiu: copiou a
   referência. Por isso uma classe por pedido.)

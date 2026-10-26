@@ -20,7 +20,9 @@ granular demais. Por isso há UM PEDIDO POR TEMA:
     07_terrenos           6 texturas (3x2)        FEITO 26/10/2026 (menos
                                                   colinas e montanhas)
     08_terrenos_relevo    colinas e montanhas, só a superfície, sem relevo
-    09_melhorias          7 melhorias + o ícone do ferro (4x2)
+    09_fazendas           as 3 fazendas: só os 4 canteiros, a "cruz" e a
+                          margem transparentes, sem casa (madeireira, mina
+                          e ferro já vieram: gemini/melhorias_folha.png)
     10_tecnologias        16 ilustrações (4x4, opcional)
   As 14 cidades numa folha só o Gemini não conseguiu (copiou a
   referência): por isso uma classe de cidade por pedido.
