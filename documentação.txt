@@ -1992,13 +1992,16 @@ GALÉ E NAVEGAÇÃO (desde 25/10/2026, pedido do usuário)
   ali.
 - Save: cada unidade guarda "aboard"; ao carregar, volta para a Galé
   da mesma casa.
-- Desenho feito por código (tools/art/gale.gd) a partir do modelo que o
-  usuário trouxe (barco longo de casco escuro de tábuas, cabeça de
-  animal na popa, proa alta e curva com aríete de bronze, vela quadrada
-  com listras verticais, escudos redondos e remos inclinados),
-  simplificado para 80x80. As listras da vela e os escudos ficam na cor
-  do time pela máscara gale_time.png. As bolinhas da carga ficam no
-  canto de cima à esquerda, fora da vela.
+- Desenho: a imagem trazida pelo usuário (barco longo de casco marrom,
+  vela branca com listras escuras, escudos e remos; guardada em
+  tools/art/chatgpt/gale_original.png), importada por
+  tools/art/import_gale.gd: tira o fundo cinza-claro liso (inundação a
+  partir das bordas, com o halo claro em volta, e os bolsões fechados
+  entre as cordas e os remos), transforma as LISTRAS DA VELA (cinza
+  escuro neutro dentro da área da vela) na cor do time pela máscara
+  gale_time.png e reduz para 76x70 com o casco em y = 73. Prévia nas
+  duas cores: tools/art/chatgpt/prontos/gale_previa.png. As bolinhas da
+  carga ficam no canto de cima à esquerda.
 - A máquina ainda não faz nem usa Galés (e ignora as do inimigo na
   zona de ameaça).
 
@@ -3823,6 +3826,11 @@ Screenshots também confirmaram o visual.
   bolinhas da carga foram para o canto de cima à esquerda. A imagem do
   modelo não ficou salva no disco (veio colada na conversa): o desenho
   é uma releitura por código, não um recorte dela.
+- GALÉ COM O DESENHO DO USUÁRIO: o desenho por código não ficou bom
+  (avaliação do usuário); a Galé passou a usar a imagem que ele trouxe,
+  importada por tools/art/import_gale.gd (fundo tirado, listras da vela
+  na cor do time). tools/art/gale.gd foi apagado. Validação: prévia em
+  vermelho e amarelo e screenshot no jogo, teste da Galé.
 - ÁRVORE DE TECNOLOGIAS NO JOGO (pedido do usuário): botão "Árvore [T]"
   no painel de Ciência e tecla T; colunas por profundidade, setas,
   cores por estado, o que cada uma libera e clique para pesquisar.
