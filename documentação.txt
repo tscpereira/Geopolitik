@@ -2555,7 +2555,12 @@ SITUAÇÃO DE CADA TEMA
   08_terrenos_relevo    FALTA (colinas e montanhas só a superfície, sem
                         relevo: o shader já desenha os morros e picos)
   09_fazendas           FEITO (montadas a partir dos canteiros soltos;
-                        ver FAZENDAS DO GEMINI no histórico)
+                        ver FAZENDAS DO GEMINI no histórico). NOVO pedido
+                        no estilo do Civilization VI (o usuário gosta
+                        daquele visual): mosaico de campos listrados com
+                        vinhedo e oliveiras, cercas baixas, sem casa, verde
+                        entre os campos transparente. Anexar também o print
+                        do Civ VI do usuário ajuda.
   (melhorias)           madeireira, madeireira destruída, mina, mina
                         destruída e a bigorna do ferro vieram BONS em
                         tools/art/gemini/melhorias_folha.png: FALTA o

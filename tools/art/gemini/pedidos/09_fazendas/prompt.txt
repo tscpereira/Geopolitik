@@ -3,32 +3,33 @@ I am remaking the art of a 2D turn-based strategy game set in ancient Greece. Th
 - RIGHT, "ATUAL": the current, low-quality versions of the items I need, numbered, in the same grid I want back. Use them only to know WHAT to draw (content and composition), not how they look.
 - Paint everything NEW. Do not copy or paste any part of the attached image into the result: no galley, no old drawings, no labels, no numbers.
 
-Create ONE image: a sprite sheet with 3 versions of the same small farm, seen straight from above.
+Create ONE image: a sprite sheet with 3 versions of the same small patch of Greek farmland, seen from high above.
 
 STYLE (copy it from the galley):
 - Detailed painted digital illustration with realistic proportions: soft painted shading, visible wood grain and texture, warm earthy palette (warm brown wood, off-white linen and plaster, terracotta roof tiles, bronze, olive greens). Not cartoon, not chibi, not pixel art, no thick black outlines, no flat colors, not a photo.
 - Strong, clean silhouettes that stay readable when shrunk to small game sprites: few big shapes, no thin clutter.
 - Soft daylight from the TOP-LEFT. All items in the sheet share the same light, scale and camera.
 
-CAMERA AND SHAPE (read carefully, this is the most important part):
-- Seen STRAIGHT from above (top-down, 90 degrees), like a drone photo: no perspective, no side walls visible.
-- Each farm is ONLY FOUR small separate field plots, arranged 2 x 2 like the four panes of a window.
-- Between the four plots there is a CROSS-shaped gap (a straight vertical gap and a straight horizontal gap, each about 1/8 of the cell wide), and around the four plots there is an empty margin (about 1/8 of the cell on each side). The four plots together cover only about 70% of the cell.
-- The cross-shaped gap and the margin contain NOTHING: they are the flat chroma-key green background (#00B140). The game makes that green transparent, so the map's own grass shows through between and around the plots. Do NOT paint grass, soil, paths, roads or shadows there.
-- NO farmhouse, NO barn, NO hut, NO building of any kind, NO trees, NO people, NO animals, NO tools lying around.
-- NO big fence around the whole farm. Each plot may have a thin low wooden fence or a neat dark edge of its own.
-- The 3 versions are the SAME four plots in the same places; only the crops change.
+LOOK (read carefully, this is the most important part):
+- Like the farms of the strategy game Civilization VI, painted in the galley's style: a cosy PATCHWORK of 5 or 6 small fields of different sizes and colours, each field covered with neat parallel PLANTING STRIPES (crop rows), the stripe direction changing from one field to the next so the patchwork reads clearly from far away.
+- Greek countryside crops: golden wheat, pale green barley, dark green vegetable rows, a VINEYARD (rows of low grapevines) and a few rows of small round OLIVE TREES. Warm, sunny, saturated but natural colours.
+- The fields are slightly irregular rectangles (not a perfect grid), separated by thin LOW WOODEN FENCES or low dry-stone walls along some of their edges, with a few small round bushes or trees at some corners.
+- High bird's-eye view, almost top-down (about 70-80 degrees): the fields are seen from above, and the fences and trees show just a little of their sides.
+- The whole patch covers about 75-80% of its cell; its outline is organic and slightly irregular, not a square.
+- Between the fields there are narrow gaps, and around the patch there is an empty margin: those gaps and the margin contain NOTHING, only the flat chroma-key green background (#00B140). The game makes that green transparent, so the map's own grass shows through. Do NOT paint grass, paths, roads or shadows in them.
+- NO farmhouse, NO barn, NO building of any kind, NO people, NO animals, NO carts or machines.
+- The 3 versions are the SAME patch with the same fields in the same places; only the crops change.
 
 SHEET LAYOUT:
 - A grid of 3 columns x 1 rows, evenly spaced, each item centered in its own cell, never touching or overlapping its neighbours, never cropped.
 - Order, left to right, top to bottom (the numbers match the right side of the attached image):
   Row 1:
-    1. Farm in production: plot 1 golden ripe wheat, plot 2 neat green vegetable rows, plot 3 young green sprouts in brown soil, plot 4 a second field of wheat or vegetables.
-    2. Farm just being prepared: the same four plots, all freshly ploughed brown furrows, nothing grown yet, a few wooden stakes at the corners.
-    3. The same farm burned and trampled: the four plots with scorched black patches, burned crops and broken plot fences, a thin wisp of smoke.
+    1. Farmland in production: golden wheat, pale green barley, dark green vegetable rows, a small vineyard and a row of olive trees, with low fences.
+    2. The same farmland just being prepared: every field freshly ploughed into brown furrows (still striped, in the same directions), nothing grown yet, the fences and the olive trees already there, a few wooden stakes.
+    3. The same farmland burned and trampled: scorched black and dark brown fields with burned stubble, broken fences, charred olive trees, a thin wisp of smoke.
 - No numbers, labels or text in the image.
 
-NOTE: here the right side of the attached image is not old art but a LAYOUT SKETCH: it shows where the four plots go and that the cross-shaped gap and the margin stay plain green. Paint the plots in the painted style; keep that layout.
+NOTE: here the right side of the attached image is not old art but a LAYOUT SKETCH: a patchwork of striped fields with plain green gaps and margin. Paint it in the galley's painted style, with the Civilization VI farm look described above; keep the idea of the layout, not its exact shapes. If a SECOND image is attached (a screenshot of farms in Civilization VI), use it only as a reference for the farm look (patchwork, stripes, fences, trees): ignore its icons, buildings and vehicles, and keep the galley's painted style.
 
 TEAM COLOR: none in this sheet (no blue at all).
 

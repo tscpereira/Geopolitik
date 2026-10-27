@@ -174,20 +174,26 @@ func _themes() -> Array:
 		# (tools/art/gemini/melhorias_folha.png). As fazendas vieram com uma casa e
 		# ocupando a casa inteira: o usuário quer só os canteiros, com a "cruz" entre
 		# eles e a margem transparentes (o terreno do mapa aparece por baixo).
-		{"name": "fazendas", "what": "3 versions of the same small farm, seen straight from above", "columns": 3, "cell": 170,
-		"camera": """CAMERA AND SHAPE (read carefully, this is the most important part):
-- Seen STRAIGHT from above (top-down, 90 degrees), like a drone photo: no perspective, no side walls visible.
-- Each farm is ONLY FOUR small separate field plots, arranged 2 x 2 like the four panes of a window.
-- Between the four plots there is a CROSS-shaped gap (a straight vertical gap and a straight horizontal gap, each about 1/8 of the cell wide), and around the four plots there is an empty margin (about 1/8 of the cell on each side). The four plots together cover only about 70% of the cell.
-- The cross-shaped gap and the margin contain NOTHING: they are the flat chroma-key green background (#00B140). The game makes that green transparent, so the map's own grass shows through between and around the plots. Do NOT paint grass, soil, paths, roads or shadows there.
-- NO farmhouse, NO barn, NO hut, NO building of any kind, NO trees, NO people, NO animals, NO tools lying around.
-- NO big fence around the whole farm. Each plot may have a thin low wooden fence or a neat dark edge of its own.
-- The 3 versions are the SAME four plots in the same places; only the crops change.""",
-		"extra": "NOTE: here the right side of the attached image is not old art but a LAYOUT SKETCH: it shows where the four plots go and that the cross-shaped gap and the margin stay plain green. Paint the plots in the painted style; keep that layout.",
+		# Fazendas no estilo das do Civilization VI (pedido do usuário, 26/10/2026):
+		# mosaico de campos pequenos com listras de plantio, cercas baixas e árvores
+		# nas bordas; à grega (vinhedo, oliveiras), sem construções, com o verde
+		# entre os campos e na borda transparente. A versão anterior (4 canteiros
+		# 2x2) está no jogo desde 26/10/2026.
+		{"name": "fazendas", "what": "3 versions of the same small patch of Greek farmland, seen from high above", "columns": 3, "cell": 170,
+		"camera": """LOOK (read carefully, this is the most important part):
+- Like the farms of the strategy game Civilization VI, painted in the galley's style: a cosy PATCHWORK of 5 or 6 small fields of different sizes and colours, each field covered with neat parallel PLANTING STRIPES (crop rows), the stripe direction changing from one field to the next so the patchwork reads clearly from far away.
+- Greek countryside crops: golden wheat, pale green barley, dark green vegetable rows, a VINEYARD (rows of low grapevines) and a few rows of small round OLIVE TREES. Warm, sunny, saturated but natural colours.
+- The fields are slightly irregular rectangles (not a perfect grid), separated by thin LOW WOODEN FENCES or low dry-stone walls along some of their edges, with a few small round bushes or trees at some corners.
+- High bird's-eye view, almost top-down (about 70-80 degrees): the fields are seen from above, and the fences and trees show just a little of their sides.
+- The whole patch covers about 75-80% of its cell; its outline is organic and slightly irregular, not a square.
+- Between the fields there are narrow gaps, and around the patch there is an empty margin: those gaps and the margin contain NOTHING, only the flat chroma-key green background (#00B140). The game makes that green transparent, so the map's own grass shows through. Do NOT paint grass, paths, roads or shadows in them.
+- NO farmhouse, NO barn, NO building of any kind, NO people, NO animals, NO carts or machines.
+- The 3 versions are the SAME patch with the same fields in the same places; only the crops change.""",
+		"extra": "NOTE: here the right side of the attached image is not old art but a LAYOUT SKETCH: a patchwork of striped fields with plain green gaps and margin. Paint it in the galley's painted style, with the Civilization VI farm look described above; keep the idea of the layout, not its exact shapes. If a SECOND image is attached (a screenshot of farms in Civilization VI), use it only as a reference for the farm look (patchwork, stripes, fences, trees): ignore its icons, buildings and vehicles, and keep the galley's painted style.",
 		"items": [
-			["fazenda", "esquema:producao", "Farm in production: plot 1 golden ripe wheat, plot 2 neat green vegetable rows, plot 3 young green sprouts in brown soil, plot 4 a second field of wheat or vegetables."],
-			["fazenda_obra", "esquema:obra", "Farm just being prepared: the same four plots, all freshly ploughed brown furrows, nothing grown yet, a few wooden stakes at the corners."],
-			["fazenda_destruida", "esquema:queimada", "The same farm burned and trampled: the four plots with scorched black patches, burned crops and broken plot fences, a thin wisp of smoke."],
+			["fazenda", "esquema:civ_producao", "Farmland in production: golden wheat, pale green barley, dark green vegetable rows, a small vineyard and a row of olive trees, with low fences."],
+			["fazenda_obra", "esquema:civ_obra", "The same farmland just being prepared: every field freshly ploughed into brown furrows (still striped, in the same directions), nothing grown yet, the fences and the olive trees already there, a few wooden stakes."],
+			["fazenda_destruida", "esquema:civ_queimada", "The same farmland burned and trampled: scorched black and dark brown fields with burned stubble, broken fences, charred olive trees, a thin wisp of smoke."],
 		]},
 		{"name": "tecnologias", "what": "16 small illustrations, one per technology, in ancient Greece", "columns": 4, "cell": 170, "wide": true,
 		"no_green": true,
@@ -305,7 +311,9 @@ func _reference(theme: Dictionary, path: String) -> void:
 		else:
 			number += 1
 			var image: Image
-			if item[1].begins_with("esquema:"):
+			if item[1].begins_with("esquema:civ_"):
+				image = _farm_patchwork(item[1].trim_prefix("esquema:"))
+			elif item[1].begins_with("esquema:"):
 				image = _farm_layout(item[1].trim_prefix("esquema:"))
 			else:
 				image = _tinted(item[1]) if theme.get("team_tint", false) else _load(item[1] + ".png")
@@ -367,8 +375,10 @@ Cada pasta é um pedido, com uma folha do tema:
                         relevo pintado e não serviram)
   08_terrenos_relevo    colinas e montanhas: só a superfície, SEM relevo
                         (o mapa já desenha morros e picos)
-  09_fazendas           as 3 fazendas, só os 4 canteiros (a "cruz" entre
-                        eles e a margem ficam no verde: transparentes).
+  09_fazendas           as 3 fazendas no estilo do Civilization VI
+                        (mosaico de campos listrados, vinhedo, oliveiras,
+                        cercas baixas; o verde entre os campos e na borda
+                        fica transparente; sem casa).
                         Madeireira, mina e ferro já vieram bons (folha em
                         tools/art/gemini/melhorias_folha.png)
   10_tecnologias        16 ilustrações (4x4, opcional)
@@ -457,6 +467,44 @@ func _farm_layout(kind: String) -> Image:
 		# Sulcos (linhas um pouco mais escuras)
 		for y in range(origin.y + 6, origin.y + plot - 4, 6):
 			image.fill_rect(Rect2i(origin.x + 3, y, plot - 6, 1), colors[i].darkened(0.25))
+	return image
+
+
+## Esquema do mosaico no estilo do Civilization VI: campos listrados de
+## tamanhos diferentes, com direções alternadas, e o verde entre eles e na
+## borda. [param kind]: "civ_producao", "civ_obra" ou "civ_queimada".
+func _farm_patchwork(kind: String) -> Image:
+	var size := 160
+	var image := Image.create(size, size, false, Image.FORMAT_RGBA8)
+	image.fill(Color8(0, 177, 64))
+	# Campos: [retângulo, listras na horizontal?]
+	var fields := [
+		[Rect2i(18, 22, 58, 38), true], [Rect2i(82, 16, 60, 30), false], [Rect2i(82, 52, 62, 40), true],
+		[Rect2i(14, 66, 36, 58), false], [Rect2i(56, 66, 20, 64), true], [Rect2i(82, 98, 56, 42), false],
+	]
+	var colors: Array = {
+		"civ_producao": [Color8(214, 178, 72), Color8(168, 196, 92), Color8(70, 120, 52), Color8(120, 150, 60), Color8(200, 168, 70), Color8(90, 110, 50)],
+		"civ_obra": [Color8(128, 92, 58), Color8(118, 84, 52), Color8(128, 92, 58), Color8(112, 80, 50), Color8(124, 88, 56), Color8(116, 82, 52)],
+		"civ_queimada": [Color8(70, 56, 40), Color8(48, 44, 38), Color8(86, 66, 44), Color8(40, 36, 32), Color8(66, 52, 38), Color8(52, 46, 40)],
+	}[kind]
+	for i in fields.size():
+		var r: Rect2i = fields[i][0]
+		image.fill_rect(r, colors[i])
+		var horizontal: bool = fields[i][1]
+		if horizontal:
+			for y in range(r.position.y + 3, r.end.y, 5):
+				image.fill_rect(Rect2i(r.position.x, y, r.size.x, 2), colors[i].darkened(0.22))
+		else:
+			for x in range(r.position.x + 3, r.end.x, 5):
+				image.fill_rect(Rect2i(x, r.position.y, 2, r.size.y), colors[i].darkened(0.22))
+		# Cerca baixa no lado de baixo
+		image.fill_rect(Rect2i(r.position.x, r.end.y - 2, r.size.x, 2), Color8(96, 66, 36))
+	# Arvorezinhas nas quinas
+	for c in [Vector2i(78, 62), Vector2i(52, 62), Vector2i(144, 96), Vector2i(16, 20)]:
+		for y in range(-4, 5):
+			for x in range(-4, 5):
+				if x * x + y * y <= 16:
+					image.set_pixelv(c + Vector2i(x, y), Color8(60, 92, 44) if kind != "civ_queimada" else Color8(40, 34, 28))
 	return image
 
 

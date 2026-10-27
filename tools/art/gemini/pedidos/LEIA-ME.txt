@@ -14,8 +14,10 @@ Cada pasta é um pedido, com uma folha do tema:
                         relevo pintado e não serviram)
   08_terrenos_relevo    colinas e montanhas: só a superfície, SEM relevo
                         (o mapa já desenha morros e picos)
-  09_fazendas           as 3 fazendas, só os 4 canteiros (a "cruz" entre
-                        eles e a margem ficam no verde: transparentes).
+  09_fazendas           as 3 fazendas no estilo do Civilization VI
+                        (mosaico de campos listrados, vinhedo, oliveiras,
+                        cercas baixas; o verde entre os campos e na borda
+                        fica transparente; sem casa).
                         Madeireira, mina e ferro já vieram bons (folha em
                         tools/art/gemini/melhorias_folha.png)
   10_tecnologias        16 ilustrações (4x4, opcional)
