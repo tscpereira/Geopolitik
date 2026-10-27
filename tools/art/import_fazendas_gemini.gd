@@ -25,6 +25,8 @@ const FARMS := ["fazenda", "fazenda_obra", "fazenda_destruida"]
 const PICKS := [[0, 1, 3, 5], [0, 1, 2, 3], [0, 1, 2, 3]]
 const KEY_RESIDUAL := 14.0 / 255.0
 const KEY_K := Vector2(0.55, 1.2)
+## Distância (pixels da folha) em que um pedaço solto ainda é do canteiro.
+const PIECE_REACH := 6
 ## Cor dos pixels transparentes (evita borda escura com os mipmaps).
 const CLEAR := Color(0.42, 0.31, 0.2, 0.0)
 
@@ -39,10 +41,17 @@ func _initialize() -> void:
 	sheet.convert(Image.FORMAT_RGBA8)
 	sheet.save_png(ProjectSettings.globalize_path(GEMINI + "fazendas_folha.png"))
 	_remove_backdrop(sheet)
-	var plots := _find_plots(sheet)
+	var plots := _split_tall(sheet, _find_plots(sheet))
 	# Grupos: os canteiros separados pelos 2 maiores vãos na horizontal
 	plots.sort_custom(func(a: Rect2i, b: Rect2i) -> bool: return a.get_center().x < b.get_center().x)
 	var groups := _split_groups(plots, FARMS.size())
+	# Confere antes de usar (um erro de script deixa o Godot preso aberto)
+	for g in groups.size():
+		for index: int in PICKS[g]:
+			if index >= groups[g].size():
+				print("ERRO: o grupo %d (%s) tem %d canteiros; precisa do %d" % [g, FARMS[g], groups[g].size(), index])
+				quit(1)
+				return
 	var scale := INF
 	var box := SIZE * (1.0 - MARGIN * 2.0 - GAP) / 2.0
 	for g in groups.size():
@@ -66,6 +75,8 @@ func _initialize() -> void:
 			var cell := Vector2(SIZE * MARGIN + (slot % 2) * (box + SIZE * GAP), SIZE * MARGIN + (slot / 2) * (box + SIZE * GAP))
 			var at := Vector2i(cell + (Vector2(box, box) - Vector2(target)) / 2.0)
 			farm.blend_rect(plot, Rect2i(Vector2i.ZERO, target), at)
+		if FARMS[g] == "fazenda_destruida":
+			_remove_green_smoke(farm)
 		_fill_clear(farm)
 		farm.save_png(ProjectSettings.globalize_path(IMPROVEMENTS + FARMS[g] + ".png"))
 		previews.append(farm)
@@ -85,7 +96,10 @@ func _remove_backdrop(img: Image) -> void:
 			var v := Vector3(p.r, p.g, p.b)
 			var k := v.dot(bg_v) / bg_v.dot(bg_v)
 			var backdrop := k > KEY_K.x and k < KEY_K.y and (v - bg_v * k).length() < KEY_RESIDUAL
-			var smoke := p.s < 0.14 and p.v > 0.5
+			# Só o cinza MUITO claro e sem cor é fumaça: as cinzas dos canteiros
+			# queimados também são cinza, mas escuras (o filtro antigo, com brilho
+			# > 0,5, apagava as cinzas e partia os canteiros)
+			var smoke := p.s < 0.08 and p.v > 0.72
 			if backdrop or smoke:
 				img.set_pixel(x, y, Color(0, 0, 0, 0))
 	for edge_pass in 3:
@@ -143,10 +157,31 @@ func _find_plots(img: Image) -> Array[Rect2i]:
 	var biggest := 0
 	for s in sizes:
 		biggest = maxi(biggest, s)
+	# Pedaços grandes que se tocam são o mesmo canteiro (um canteiro queimado
+	# pode se partir); pedaços pequenos encostados num canteiro entram nele; o
+	# resto (sujeira longe de tudo) é apagado.
 	var plots: Array[Rect2i] = []
 	for i in boxes.size():
-		if sizes[i] >= biggest * 0.25:
+		if sizes[i] < biggest * 0.1:
+			continue
+		var merged := false
+		for j in plots.size():
+			if plots[j].grow(PIECE_REACH).intersects(boxes[i]):
+				plots[j] = plots[j].merge(boxes[i])
+				merged = true
+				break
+		if not merged:
 			plots.append(boxes[i])
+	for i in boxes.size():
+		if sizes[i] >= biggest * 0.1:
+			continue
+		var owner := -1
+		for j in plots.size():
+			if plots[j].grow(PIECE_REACH).intersects(boxes[i]):
+				owner = j
+				break
+		if owner >= 0:
+			plots[owner] = plots[owner].merge(boxes[i])
 		else:
 			for y in range(boxes[i].position.y, boxes[i].end.y):
 				for x in range(boxes[i].position.x, boxes[i].end.x):
@@ -154,6 +189,50 @@ func _find_plots(img: Image) -> Array[Rect2i]:
 						img.set_pixel(x, y, Color(0, 0, 0, 0))
 	print("%d canteiros" % plots.size())
 	return plots
+
+
+## A fumaça dos canteiros queimados sobe até o canteiro de cima e liga os 3 da
+## coluna num bloco alto. As linhas dos canteiros normais (altura parecida com
+## a mediana) dão as faixas de cada linha; um bloco alto é cortado nelas: em
+## cada faixa, a caixa do que não é transparente (a fumaça entre as faixas
+## fica de fora).
+func _split_tall(img: Image, plots: Array[Rect2i]) -> Array[Rect2i]:
+	var heights: Array = plots.map(func(r: Rect2i) -> int: return r.size.y)
+	heights.sort()
+	var median: int = heights[heights.size() / 2]
+	var bands: Array[Vector2i] = []
+	for r in plots:
+		if r.size.y > median * 1.3:
+			continue
+		var placed := false
+		for b in bands.size():
+			if r.position.y < bands[b].y and r.end.y > bands[b].x:
+				bands[b] = Vector2i(mini(bands[b].x, r.position.y), maxi(bands[b].y, r.end.y))
+				placed = true
+		if not placed:
+			bands.append(Vector2i(r.position.y, r.end.y))
+	var result: Array[Rect2i] = []
+	for r in plots:
+		if r.size.y <= median * 1.5:
+			result.append(r)
+			continue
+		for band in bands:
+			var top := maxi(r.position.y, band.x)
+			var bottom := mini(r.end.y, band.y)
+			if bottom - top < median / 2:
+				continue
+			var piece := Rect2i()
+			var first := true
+			for y in range(top, bottom):
+				for x in range(r.position.x, r.end.x):
+					if img.get_pixel(x, y).a > 0.5:
+						piece = Rect2i(x, y, 1, 1) if first else piece.expand(Vector2i(x, y))
+						first = false
+			if not first:
+				piece.size += Vector2i.ONE
+				result.append(piece)
+	print("faixas das linhas: %s; %d canteiros depois de cortar os blocos altos" % [bands, result.size()])
+	return result
 
 
 ## Separa os canteiros (já em ordem de x) em [param count] grupos pelos maiores
@@ -182,6 +261,20 @@ func _split_groups(plots: Array[Rect2i], count: int) -> Array:
 		start = cut
 	print("grupos: %s canteiros" % [groups.map(func(g: Array) -> int: return g.size())])
 	return groups
+
+
+## Fazenda queimada: nada nela é verde de verdade. A fumaça que passou sobre o
+## fundo ficou esverdeada: o verde claro some e o resto perde o excesso de verde.
+func _remove_green_smoke(img: Image) -> void:
+	for y in img.get_height():
+		for x in img.get_width():
+			var p := img.get_pixel(x, y)
+			if p.a == 0.0 or p.g <= maxf(p.r, p.b):
+				continue
+			if p.g - maxf(p.r, p.b) > 0.06 and p.v > 0.4:
+				img.set_pixel(x, y, Color(0, 0, 0, 0))
+			else:
+				img.set_pixel(x, y, Color(p.r, maxf(p.r, p.b), p.b, p.a))
 
 
 ## Pixels transparentes com a cor da terra (os mipmaps misturam a cor deles

@@ -2551,8 +2551,8 @@ SITUAÇÃO DE CADA TEMA
                         e montanhas vieram com relevo pintado: não usar
   08_terrenos_relevo    FALTA (colinas e montanhas só a superfície, sem
                         relevo: o shader já desenha os morros e picos)
-  09_fazendas           RECEBIDA (tools/art/gemini/fazendas_folha.png),
-                        IMPORTAÇÃO FALHOU, ver abaixo
+  09_fazendas           FEITO (montadas a partir dos canteiros soltos;
+                        ver FAZENDAS DO GEMINI no histórico)
   (melhorias)           madeireira, madeireira destruída, mina, mina
                         destruída e a bigorna do ferro vieram BONS em
                         tools/art/gemini/melhorias_folha.png: FALTA o
@@ -2562,23 +2562,6 @@ SITUAÇÃO DE CADA TEMA
                         assets/sprites/resources/)
   10_tecnologias        ADIADO: o usuário não gostou das ilustrações;
                         refazer outro dia
-
-FAZENDAS (pendência técnica)
-  - A folha veio com 18 canteiros soltos (3 grupos de 6: em produção, em
-    obra, queimada), não com 3 fazendas prontas. Ideia aprovada: montar
-    cada fazenda em 2x2 com 4 canteiros, com a "cruz" e a margem
-    TRANSPARENTES (tools/art/import_fazendas_gemini.gd, já escrito).
-  - O shader do mapa (terrain.gdshader) JÁ usa o alfa da fazenda (as
-    fazendas antigas são opacas: nada mudou na tela ainda).
-  - Por que falhou: o filtro que apaga a fumaça (cinza claro sem cor:
-    saturação < 0,14 e brilho > 0,5) apagou também as cinzas dos
-    canteiros queimados; eles se partiram em pedaços pequenos, que o
-    script descartou, e só sobraram 14 canteiros (o grupo queimado com
-    2). Corrigir: fumaça só com brilho > ~0,72 e saturação < ~0,08, ou
-    não apagar fumaça e só limitar a caixa do canteiro ao miolo marrom.
-  - O script é LENTO (mais de 5 minutos: várias passadas pixel a pixel
-    em GDScript); rodar em segundo plano. Com SCRIPT ERROR o Godot fica
-    preso aberto: encerrar o processo (era o 26300/13984 em 26/10).
 
 AVISO SOBRE AS IMAGENS
   Imagens coladas na conversa enquanto o Claude ainda está trabalhando
@@ -4149,6 +4132,21 @@ PRÓXIMO PASSO GRANDE 2: CONJUNTOS CULTURAIS DE UNIDADES E CIDADES
   queimados); diagnóstico e correção no PLANO PARA 27/10/2026, no topo
   dos PRÓXIMOS PASSOS, junto com a integração com a API do Gemini e os
   conjuntos culturais (Medieval, Egípcio, Oriental).
+
+- FAZENDAS DO GEMINI (concluído): tools/art/import_fazendas_gemini.gd
+  monta as 3 fazendas (fazenda, fazenda_obra, fazenda_destruida; 160x160)
+  a partir dos 18 canteiros soltos da folha (3 grupos de 6): tira o
+  fundo verde e só a fumaça MUITO clara (as cinzas ficam), junta pedaços
+  do mesmo canteiro, corta nas faixas das linhas os blocos altos (a
+  fumaça liga os canteiros queimados da mesma coluna), escolhe 4 de cada
+  grupo (PICKS: trigo, couve, mudas e grãos; 4 arados; 4 queimados),
+  coloca em 2x2 com uma escala comum, margem e "cruz" de 1/8 da casa
+  TRANSPARENTES, e na queimada tira o verde da fumaça. O shader do mapa
+  usa o alfa (a grama aparece entre os canteiros); a fazenda destruída
+  e a janela da cidade usam a mesma imagem (draw_texture_rect, que já
+  respeita o alfa). Se faltar canteiro, o script avisa e fecha sem
+  travar o Godot. Validação: prévia sobre a pradaria e screenshot no
+  mapa com fazendas prontas, em obra e destruídas.
 
 --------------------------------------------------------------
 7. BACKLOG (ideias para depois)
