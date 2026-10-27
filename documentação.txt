@@ -2535,18 +2535,14 @@ tools/art/PROMPTS-GEMINI.txt; gerador tools/art/pedidos_gemini.gd).
 
 SITUAÇÃO DE CADA TEMA
   01_unidades           FEITO (9 unidades, folha 3x3; a Galé já era)
-  02_cidades_povoado    FALTA pedir/receber
+  02_cidades_povoado    FEITO o povoado normal (recortado do compilado,
+                        27/10/2026). FALTA o povoado com muralha (ainda
+                        é o desenho antigo)
   03_cidades_vila       FEITO (4 versões)
-  04_cidades_cidade     RECEBIDA, mas a imagem não ficou salva: salvar
-                        como resultado.png na pasta e importar (usar a
-                        linha de cima: veio com 2 linhas de 4 versões)
-  05_cidades_metropole  RECEBIDA, não salva (idem). Veio com 5 desenhos:
-                        usar 1º de cima (normal), 2º de cima (acrópole),
-                        1º de baixo (muralha), 2º de baixo (acrópole +
-                        muralha). A murada saiu bem maior que a sem
-                        muralha: com a escala comum, a sem muralha fica
-                        com ~95 px e a murada com 122. Ver se o usuário
-                        aceita ou se pede para refazer.
+  04_cidades_cidade     FEITO (27/10/2026, linha de cima da folha)
+  05_cidades_metropole  FEITO (27/10/2026). As muradas saíram bem maiores:
+                        importadas em separado das sem muralha, todas
+                        com 122 px de largura
   06_ruinas             RECEBIDA (boa, 4x2), não salva: salvar e importar
                         com import_cidades_gemini.gd (nomes <classe>_ruinas
                         e <classe>_muralha_ruinas)
@@ -4197,6 +4193,18 @@ PRÓXIMO PASSO GRANDE 2: CONJUNTOS CULTURAIS DE UNIDADES E CIDADES
   com draw_set_transform_matrix) e a fazenda destruída usam a mesma
   orientação da casa. Validação: screenshots do mapa (de perto) e da
   janela da cidade.
+
+27/10/2026
+- CIDADES DO GEMINI (o usuário salvou as folhas em
+  OneDrive/Desktop/Imagens/assets; cópias em tools/art/gemini/pedidos/
+  0N_*/resultado.png): cidade (4 versões, linha de cima), metrópole (as
+  4; as muradas, bem maiores, importadas em separado para todas ficarem
+  com 122 px, senão a metrópole sem muralha ficaria menor que a cidade)
+  e o povoado normal (recortado do compilado). O povoado com muralha
+  continua o antigo. import_cidades_gemini.gd agora descarta pedaços
+  pequenos que tocam a borda da imagem (resto do print: uma manchinha
+  no canto entrava na cidade capital murada). Validação: prévias e a
+  folha da evolução (tools/art/gemini/evolucao_cidades.png).
 
 --------------------------------------------------------------
 7. BACKLOG (ideias para depois)

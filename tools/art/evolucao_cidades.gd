@@ -17,7 +17,8 @@ const ZOOM := 2.0
 const CLASSES := [["povoado", "Povoado (1-5)"], ["vila", "Vila (6-15)"], ["cidade", "Cidade (16-30)"], ["metropole", "Metrópole (31+)"]]
 const VERSIONS := [["", "Normal"], ["_capital", "Capital (palácio)"], ["_muralha", "Com muralha"], ["_capital_muralha", "Capital com muralha"]]
 ## Desenhos que já vieram do Gemini (o resto ainda é o antigo).
-const GEMINI := ["vila", "vila_capital", "vila_muralha", "vila_capital_muralha"]
+const GEMINI := ["povoado", "vila", "vila_capital", "vila_muralha", "vila_capital_muralha", "cidade", "cidade_capital",
+	"cidade_muralha", "cidade_capital_muralha", "metropole", "metropole_capital", "metropole_muralha", "metropole_capital_muralha"]
 
 
 func _initialize() -> void:

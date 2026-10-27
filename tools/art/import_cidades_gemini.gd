@@ -152,8 +152,11 @@ func _find_drawings(img: Image) -> Array[Rect2i]:
 			if d < best_distance:
 				best_distance = d
 				best = j
-		# Só junta o que está encostado ou bem perto (pedaços longe são sujeira)
-		if best >= 0 and drawings[best].grow(30).intersects(groups[i]):
+		# Só junta o que está encostado ou bem perto (pedaços longe são sujeira);
+		# pedaço que toca a borda da imagem é resto de print (ex.: o ícone no canto)
+		var at_border: bool = groups[i].position.x <= 0 or groups[i].position.y <= 0 \
+				or groups[i].end.x >= w or groups[i].end.y >= h
+		if best >= 0 and not at_border and drawings[best].grow(30).intersects(groups[i]):
 			drawings[best] = drawings[best].merge(groups[i])
 		else:
 			for y in range(groups[i].position.y, groups[i].end.y):
