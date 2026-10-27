@@ -1991,10 +1991,10 @@ static func draw_star(canvas: CanvasItem, center: Vector2, radius: float) -> voi
 ## Melhoria destruída (pilhada): o PNG de RUIN_TEXTURES (a fazenda, com ou sem
 ## cerca como a da casa [param cell]: farm_fenced).
 static func draw_ruin(canvas: CanvasItem, build: int, rect: Rect2, cell := NO_CELL) -> void:
-	var texture: Texture2D = RUIN_TEXTURES[build]
-	if build == Build.FARM and farm_fenced(cell):
-		texture = FARM_RUIN_FENCE_TEXTURE
-	canvas.draw_texture_rect(texture, rect, false)
+	if build != Build.FARM:
+		canvas.draw_texture_rect(RUIN_TEXTURES[build], rect, false)
+		return
+	_draw_farm_texture(canvas, FARM_RUIN_FENCE_TEXTURE if farm_fenced(cell) else RUIN_TEXTURES[build], rect, cell)
 
 
 ## Se a fazenda da casa [param cell] tem cerca: sorteio fixo pela casa (sempre
@@ -2008,6 +2008,31 @@ static func farm_fenced(cell: Vector2i) -> bool:
 	return (cell.x * 73 + cell.y * 151 + (cell.x * cell.y) % 13 * 5) % 10 < 5
 
 
+## Orientação do desenho da fazenda na casa (0-7): bit 1 espelha na
+## horizontal, bit 2 na vertical, bit 4 troca x e y (gira). Sorteio fixo pela
+## casa, como farm_fenced, para os campos variarem de uma casa para outra. A
+## MESMA conta está em terrain.gdshader (farm_orientation). Sem casa: 0.
+static func farm_orientation(cell: Vector2i) -> int:
+	if cell == NO_CELL:
+		return 0
+	return (cell.x * 29 + cell.y * 47 + (cell.x * cell.y) % 7 * 3) % 8
+
+
+## Desenha [param texture] em [param rect] na orientação da casa (farm_orientation).
+static func _draw_farm_texture(canvas: CanvasItem, texture: Texture2D, rect: Rect2, cell: Vector2i) -> void:
+	var o := farm_orientation(cell)
+	if o == 0:
+		canvas.draw_texture_rect(texture, rect, false)
+		return
+	# O shader lê a textura em T(f) = troca(espelha(f)); aqui o desenho vai para
+	# a tela com o inverso, espelha(troca(v)) (as duas operações são o próprio inverso)
+	var flip := Transform2D(Vector2(-1.0 if o & 1 else 1.0, 0.0), Vector2(0.0, -1.0 if o & 2 else 1.0), Vector2.ZERO)
+	var swap := Transform2D(Vector2(0, 1), Vector2(1, 0), Vector2.ZERO) if o & 4 else Transform2D.IDENTITY
+	canvas.draw_set_transform_matrix(Transform2D(0.0, rect.get_center()) * flip * swap)
+	canvas.draw_texture_rect(texture, Rect2(-rect.size / 2.0, rect.size), false)
+	canvas.draw_set_transform_matrix(Transform2D.IDENTITY)
+
+
 ## Fazenda vista de cima (janela da cidade e ícones): lotes em retalhos de
 ## trigo, repolho e hortaliças com cerca (FARM_TEXTURE). [param planted] =
 ## false: em obra, só a terra lavrada (FARM_NEW_TEXTURE). No mapa principal,
@@ -2016,4 +2041,4 @@ static func farm_fenced(cell: Vector2i) -> bool:
 static func draw_farm(canvas: CanvasItem, rect: Rect2, planted := true, cell := NO_CELL) -> void:
 	var fenced := farm_fenced(cell)
 	var texture := (FARM_FENCE_TEXTURE if fenced else FARM_TEXTURE) if planted else (FARM_NEW_FENCE_TEXTURE if fenced else FARM_NEW_TEXTURE)
-	canvas.draw_texture_rect(texture, rect, false)
+	_draw_farm_texture(canvas, texture, rect, cell)

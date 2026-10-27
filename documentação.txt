@@ -4187,6 +4187,17 @@ PRÓXIMO PASSO GRANDE 2: CONJUNTOS CULTURAIS DE UNIDADES E CIDADES
   e de perto) e da janela da cidade com fazendas prontas, em obra e
   destruídas.
 
+- FAZENDAS VARIADAS (pedido do usuário: os campos em posições aleatórias):
+  além da cerca, cada casa sorteia uma de 8 ORIENTAÇÕES do desenho
+  (espelhar na horizontal, na vertical e trocar x e y: as 4 rotações e
+  os 4 espelhamentos), City.farm_orientation(casa), a mesma conta em
+  terrain.gdshader (farm_orientation). Com a cerca, 16 aparências; as
+  8 orientações saem por igual e vizinhas iguais só ~13% das vezes. O
+  mapa (shader), a janela da cidade e os ícones (City._draw_farm_texture,
+  com draw_set_transform_matrix) e a fazenda destruída usam a mesma
+  orientação da casa. Validação: screenshots do mapa (de perto) e da
+  janela da cidade.
+
 --------------------------------------------------------------
 7. BACKLOG (ideias para depois)
 --------------------------------------------------------------
