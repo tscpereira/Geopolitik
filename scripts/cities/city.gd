@@ -455,10 +455,17 @@ const MINE_TEXTURE: Texture2D = preload("res://assets/sprites/improvements/mina.
 const MINE_MAX_WORKERS := 2
 const IRON_PER_WORKER := 1
 
-## Fazenda vista de cima (80x80, tools/art/gen_art.gd): pronta e em obra. O
-## shader do terreno usa as mesmas imagens no mapa (GameMap).
+## Fazenda vista de cima (160x160, do Gemini, estilo do Civilization VI:
+## tools/art/import_fazendas_gemini.gd): pronta e em obra, cada uma sem e com
+## cerca (sorteio por casa: farm_fenced). O fundo entre os campos é
+## transparente. O shader do terreno usa as mesmas imagens no mapa (GameMap).
 const FARM_TEXTURE: Texture2D = preload("res://assets/sprites/improvements/fazenda.png")
 const FARM_NEW_TEXTURE: Texture2D = preload("res://assets/sprites/improvements/fazenda_obra.png")
+const FARM_FENCE_TEXTURE: Texture2D = preload("res://assets/sprites/improvements/fazenda_cerca.png")
+const FARM_NEW_FENCE_TEXTURE: Texture2D = preload("res://assets/sprites/improvements/fazenda_obra_cerca.png")
+const FARM_RUIN_FENCE_TEXTURE: Texture2D = preload("res://assets/sprites/improvements/fazenda_destruida_cerca.png")
+## Sem casa (ícones da lista de construções): a fazenda aparece com cerca.
+const NO_CELL := Vector2i(-1, -1)
 
 
 ## Uma obra da cidade: melhoria numa casa (com [member cell]) ou unidade.
@@ -1811,12 +1818,12 @@ func _draw() -> void:
 	for site_cell: Vector2i in sites:
 		var site_rect := Rect2(_local_center(site_cell) - tile / 2.0, tile)
 		if sites[site_cell]["build"] != Build.FARM: # fazendas: no shader do mapa
-			draw_improvement(self, sites[site_cell]["build"], site_rect, CONSTRUCTION_ALPHA)
+			draw_improvement(self, sites[site_cell]["build"], site_rect, CONSTRUCTION_ALPHA, site_cell)
 		LumberMill.draw_bar(self, site_rect, float(sites[site_cell]["progress"]) / BUILDS[sites[site_cell]["build"]]["cost"],
 				LumberMill.PROGRESS_BAR_COLOR)
 	for ruin_cell: Vector2i in ruins:
 		var ruin_rect := Rect2(_local_center(ruin_cell) - tile / 2.0, tile)
-		draw_ruin(self, ruins[ruin_cell]["build"], ruin_rect)
+		draw_ruin(self, ruins[ruin_cell]["build"], ruin_rect, ruin_cell)
 		if ruins[ruin_cell]["progress"] > 0:
 			LumberMill.draw_bar(self, ruin_rect, float(ruins[ruin_cell]["progress"]) / BUILDS[ruins[ruin_cell]["build"]]["cost"],
 					LumberMill.PROGRESS_BAR_COLOR)
@@ -1953,14 +1960,14 @@ static func draw_population_badge(canvas: CanvasItem, left_middle: Vector2, pop:
 
 ## Desenho da melhoria (fazenda, madeireira ou mina). [param alpha] menor = em
 ## obra (a fazenda em obra aparece só com a terra arada).
-static func draw_improvement(canvas: CanvasItem, build: int, rect: Rect2, alpha := 1.0) -> void:
+static func draw_improvement(canvas: CanvasItem, build: int, rect: Rect2, alpha := 1.0, cell := NO_CELL) -> void:
 	match build:
 		Build.LUMBER_MILL:
 			LumberMill.draw_icon(canvas, rect, alpha)
 		Build.MINE:
 			draw_mine(canvas, rect, alpha)
 		_:
-			draw_farm(canvas, rect, alpha >= 1.0)
+			draw_farm(canvas, rect, alpha >= 1.0, cell)
 
 
 ## Mina (MINE_TEXTURE): boca da galeria na pedra, trilhos e vagonete com
@@ -1981,14 +1988,32 @@ static func draw_star(canvas: CanvasItem, center: Vector2, radius: float) -> voi
 	canvas.draw_polyline(outline, Color.BLACK, maxf(1.0, radius / 5.0))
 
 
-## Melhoria destruída (pilhada): o PNG de RUIN_TEXTURES.
-static func draw_ruin(canvas: CanvasItem, build: int, rect: Rect2) -> void:
-	canvas.draw_texture_rect(RUIN_TEXTURES[build], rect, false)
+## Melhoria destruída (pilhada): o PNG de RUIN_TEXTURES (a fazenda, com ou sem
+## cerca como a da casa [param cell]: farm_fenced).
+static func draw_ruin(canvas: CanvasItem, build: int, rect: Rect2, cell := NO_CELL) -> void:
+	var texture: Texture2D = RUIN_TEXTURES[build]
+	if build == Build.FARM and farm_fenced(cell):
+		texture = FARM_RUIN_FENCE_TEXTURE
+	canvas.draw_texture_rect(texture, rect, false)
+
+
+## Se a fazenda da casa [param cell] tem cerca: sorteio fixo pela casa (sempre
+## o mesmo para a mesma casa, sem ir para o save), metade com cerca, bem
+## misturadas entre vizinhas (pesos de linha e coluna que não se anulam). A MESMA
+## conta está em terrain.gdshader (farm_fenced), para o mapa e a janela da
+## cidade mostrarem a mesma fazenda. Sem casa (ícones): com cerca.
+static func farm_fenced(cell: Vector2i) -> bool:
+	if cell == NO_CELL:
+		return true
+	return (cell.x * 73 + cell.y * 151 + (cell.x * cell.y) % 13 * 5) % 10 < 5
 
 
 ## Fazenda vista de cima (janela da cidade e ícones): lotes em retalhos de
 ## trigo, repolho e hortaliças com cerca (FARM_TEXTURE). [param planted] =
 ## false: em obra, só a terra lavrada (FARM_NEW_TEXTURE). No mapa principal,
 ## o shader do terreno usa as mesmas imagens.
-static func draw_farm(canvas: CanvasItem, rect: Rect2, planted := true) -> void:
-	canvas.draw_texture_rect(FARM_TEXTURE if planted else FARM_NEW_TEXTURE, rect, false)
+## [param cell]: a casa da fazenda (escolhe a versão com ou sem cerca).
+static func draw_farm(canvas: CanvasItem, rect: Rect2, planted := true, cell := NO_CELL) -> void:
+	var fenced := farm_fenced(cell)
+	var texture := (FARM_FENCE_TEXTURE if fenced else FARM_TEXTURE) if planted else (FARM_NEW_FENCE_TEXTURE if fenced else FARM_NEW_TEXTURE)
+	canvas.draw_texture_rect(texture, rect, false)

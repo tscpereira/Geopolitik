@@ -65,6 +65,9 @@ uniform bool draw_farms = true;
 // (terra lavrada): uma imagem por casa (City.FARM_TEXTURE / FARM_NEW_TEXTURE).
 uniform sampler2D farm_tex : filter_linear_mipmap;
 uniform sampler2D farm_new_tex : filter_linear_mipmap;
+// Versões com cerca (sorteio por casa: farm_fenced, igual a City.farm_fenced).
+uniform sampler2D farm_fence_tex : filter_linear_mipmap;
+uniform sampler2D farm_new_fence_tex : filter_linear_mipmap;
 // Borda suave da fazenda onde a casa vizinha não é fazenda (em casas).
 uniform float farm_edge_soft = 0.04;
 
@@ -110,6 +113,11 @@ int terrain_at(ivec2 cell) {
 		return WATER; // fora do mapa é mar
 	}
 	return int(round(texelFetch(terrain_map, cell, 0).r * 255.0));
+}
+
+// Fazenda com cerca? A mesma conta de City.farm_fenced (sorteio fixo por casa).
+bool farm_fenced(ivec2 cell) {
+	return (cell.x * 73 + cell.y * 151 + (cell.x * cell.y) % 13 * 5) % 10 < 5;
 }
 
 int improvement_at(ivec2 cell) {
@@ -318,8 +326,9 @@ void fragment() {
 				* (improvement_at(own_cell + ivec2(1, 0)) > 0 ? 1.0 : smoothstep(0.0, w, 1.0 - f.x))
 				* (improvement_at(own_cell + ivec2(0, -1)) > 0 ? 1.0 : smoothstep(0.0, w, f.y))
 				* (improvement_at(own_cell + ivec2(0, 1)) > 0 ? 1.0 : smoothstep(0.0, w, 1.0 - f.y));
-		vec4 planted = textureGrad(farm_tex, f, dFdx(p), dFdy(p));
-		vec4 tilled = textureGrad(farm_new_tex, f, dFdx(p), dFdy(p));
+		bool fenced = farm_fenced(own_cell);
+		vec4 planted = fenced ? textureGrad(farm_fence_tex, f, dFdx(p), dFdy(p)) : textureGrad(farm_tex, f, dFdx(p), dFdy(p));
+		vec4 tilled = fenced ? textureGrad(farm_new_fence_tex, f, dFdx(p), dFdy(p)) : textureGrad(farm_new_tex, f, dFdx(p), dFdy(p));
 		vec4 farm = own_improvement == 1 ? planted : tilled;
 		float in_farm = (own_improvement > 0 ? 1.0 : 0.0) * fade * (1.0 - trees) * farm.a;
 		land_color.rgb = mix(land_color.rgb, farm.rgb, in_farm);

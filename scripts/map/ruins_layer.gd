@@ -51,7 +51,7 @@ func _draw() -> void:
 	var tile := Vector2.ONE * GameMap.TILE_SIZE
 	var map: GameMap = get_parent().get_node("GameMap")
 	for cell: Vector2i in improvements:
-		City.draw_ruin(self, improvements[cell]["build"], Rect2(to_local(map.cell_to_world(cell)) - tile / 2.0, tile))
+		City.draw_ruin(self, improvements[cell]["build"], Rect2(to_local(map.cell_to_world(cell)) - tile / 2.0, tile), cell)
 	var font := ThemeDB.fallback_font
 	for cell: Vector2i in cities:
 		var center := to_local(map.cell_to_world(cell))

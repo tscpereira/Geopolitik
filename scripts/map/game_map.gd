@@ -126,6 +126,8 @@ func _ready() -> void:
 		material.set_shader_parameter(SHADER_TEXTURES[type], _terrain_textures[type])
 	material.set_shader_parameter("farm_tex", City.FARM_TEXTURE)
 	material.set_shader_parameter("farm_new_tex", City.FARM_NEW_TEXTURE)
+	material.set_shader_parameter("farm_fence_tex", City.FARM_FENCE_TEXTURE)
+	material.set_shader_parameter("farm_new_fence_tex", City.FARM_NEW_FENCE_TEXTURE)
 	material.set_shader_parameter("draw_grid", DRAW_GRID)
 	material.set_shader_parameter("grid_darken", GRID_LINE_DARKEN)
 	_view.material = material

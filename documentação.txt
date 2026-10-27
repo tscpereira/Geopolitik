@@ -2560,7 +2560,8 @@ SITUAÇÃO DE CADA TEMA
                         daquele visual): mosaico de campos listrados com
                         vinhedo e oliveiras, cercas baixas, sem casa, verde
                         entre os campos transparente. Anexar também o print
-                        do Civ VI do usuário ajuda.
+                        do Civ VI do usuário ajuda. FEITO: com e sem cerca,
+                        sorteio por casa.
   (melhorias)           madeireira, madeireira destruída, mina, mina
                         destruída e a bigorna do ferro vieram BONS em
                         tools/art/gemini/melhorias_folha.png: FALTA o
@@ -4167,6 +4168,24 @@ PRÓXIMO PASSO GRANDE 2: CONJUNTOS CULTURAIS DE UNIDADES E CIDADES
   (exigência, disponibilidade, ilustração, 17 tecnologias, coluna e
   "libera" na árvore, fazenda 2 -> 3 e saldo da cidade +1) e o teste
   da árvore (nenhum cartão sobreposto).
+
+- FAZENDAS NO ESTILO DO CIVILIZATION VI (pedido do usuário): o Gemini
+  fez duas folhas do mesmo mosaico de campos listrados (trigo, cevada,
+  horta, vinhedo, oliveiras), uma SEM e outra COM cerca, cada uma com a
+  fazenda pronta, em obra e queimada. import_fazendas_gemini.gd foi
+  refeito para essas folhas (acha as 3 fazendas pelas colunas ocupadas,
+  ignorando sobras esparsas do fundo; tira o verde também pelo matiz, que
+  pega o fundo escurecido nos vãos entre os campos) e grava
+  fazenda[_obra|_destruida][_cerca].png, 160x160, esticadas num QUADRADO
+  de 97% da casa (o usuário pediu que fazendas vizinhas parecessem uma
+  plantação contínua). SORTEIO DA CERCA: City.farm_fenced(casa), a mesma
+  conta em terrain.gdshader (farm_fenced): metade das casas com cerca,
+  bem misturadas, sempre igual para a mesma casa (não vai para o save).
+  O mapa, a janela da cidade (draw_farm, draw_improvement e draw_ruin
+  recebem a casa) e as ruínas usam a mesma versão; os ícones (sem casa)
+  mostram a com cerca. Validação: prévias, screenshots do mapa (de longe
+  e de perto) e da janela da cidade com fazendas prontas, em obra e
+  destruídas.
 
 --------------------------------------------------------------
 7. BACKLOG (ideias para depois)

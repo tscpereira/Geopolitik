@@ -889,7 +889,7 @@ func _rebuild_farms() -> void:
 		icon.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 		icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		icon.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
-		icon.draw.connect(func() -> void: City.draw_ruin(icon, ruin["build"], Rect2(Vector2.ZERO, icon.size)))
+		icon.draw.connect(func() -> void: City.draw_ruin(icon, ruin["build"], Rect2(Vector2.ZERO, icon.size), ruin_cell))
 		row.add_child(icon)
 		var name_label := Label.new()
 		name_label.text = "%s (%d, %d)" % [City.BUILDS[ruin["build"]]["name"], ruin_cell.x, ruin_cell.y]

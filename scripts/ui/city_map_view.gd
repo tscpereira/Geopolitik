@@ -197,15 +197,15 @@ func _draw() -> void:
 		if not map.is_in_bounds(cell):
 			draw_rect(rect, Color.BLACK)
 		elif _city.farms.has(cell):
-			City.draw_farm(self, rect)
+			City.draw_farm(self, rect, true, cell)
 		elif _city.lumber_mills.has(cell):
 			LumberMill.draw_icon(self, rect)
 		elif _city.mines.has(cell):
 			City.draw_mine(self, rect)
 		elif _city.ruins.has(cell):
-			City.draw_ruin(self, _city.ruins[cell]["build"], rect)
+			City.draw_ruin(self, _city.ruins[cell]["build"], rect, cell)
 		elif _city.sites.has(cell):
-			City.draw_improvement(self, _city.sites[cell]["build"], rect, City.CONSTRUCTION_ALPHA)
+			City.draw_improvement(self, _city.sites[cell]["build"], rect, City.CONSTRUCTION_ALPHA, cell)
 		elif _is_transferable(cell):
 			# De outra cidade do jogador: mostra a melhoria dela sob o vermelho
 			_draw_other_improvement(_game.territory_owner(cell), cell, rect)
@@ -264,7 +264,7 @@ func _draw() -> void:
 ## os cidadãos dela, para o jogador ver o que ganha ao trazer a casa.
 func _draw_other_improvement(other: City, cell: Vector2i, rect: Rect2) -> void:
 	if other.farms.has(cell):
-		City.draw_farm(self, rect)
+		City.draw_farm(self, rect, true, cell)
 		if other.farms[cell] > 0:
 			_draw_worker(rect, other.farms[cell])
 	elif other.lumber_mills.has(cell):
@@ -276,9 +276,9 @@ func _draw_other_improvement(other: City, cell: Vector2i, rect: Rect2) -> void:
 		if other.mines[cell] > 0:
 			_draw_worker(rect, other.mines[cell])
 	elif other.ruins.has(cell):
-		City.draw_ruin(self, other.ruins[cell]["build"], rect)
+		City.draw_ruin(self, other.ruins[cell]["build"], rect, cell)
 	elif other.sites.has(cell):
-		City.draw_improvement(self, other.sites[cell]["build"], rect, City.CONSTRUCTION_ALPHA)
+		City.draw_improvement(self, other.sites[cell]["build"], rect, City.CONSTRUCTION_ALPHA, cell)
 
 
 ## " (fazenda com 1 cidadão)", " (ruína de madeireira)"... ou "".

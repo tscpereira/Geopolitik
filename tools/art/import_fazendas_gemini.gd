@@ -1,32 +1,33 @@
 extends SceneTree
 
-## Monta as 3 FAZENDAS a partir da folha do Gemini (tools/art/gemini/pedidos/
-## 09_fazendas). Em 26/10/2026 a folha veio com canteiros SOLTOS: 3 grupos
-## (em produção, em obra, queimada), cada um com 6 canteiros em 2 colunas x 3
-## linhas, sobre o fundo verde. Este script tira o fundo e a fumaça, acha os
-## canteiros, escolhe 4 de cada grupo (PICKS) e monta cada fazenda em 2x2 num
-## quadro SIZE x SIZE, com a "cruz" entre os canteiros e a margem em volta
-## TRANSPARENTES (o terreno do mapa aparece por baixo; o shader usa o alfa).
-##   godot_console.cmd --headless --path . --script tools/art/import_fazendas_gemini.gd -- <folha.png>
-## Grava assets/sprites/improvements/fazenda.png, fazenda_obra.png e
-## fazenda_destruida.png; guarda a folha em tools/art/gemini/fazendas_folha.png
-## e uma prévia sobre a pradaria em tools/art/gemini/fazendas_previa.png.
+## Importa as 3 FAZENDAS do Gemini (tools/art/gemini/pedidos/09_fazendas: estilo
+## do Civilization VI, um mosaico de campos listrados) a partir de uma folha com
+## as 3 lado a lado (em produção, em obra, queimada) sobre o fundo verde.
+##   godot_console.cmd --headless --path . --script tools/art/import_fazendas_gemini.gd -- <folha.png> [cerca]
+## Com "cerca", grava a variante com cerca (<nome>_cerca.png); o mapa sorteia
+## por casa qual das duas usar (City.farm_fenced). O verde entre os campos e em
+## volta vira TRANSPARENTE (o terreno do mapa aparece; o shader usa o alfa).
+## As 3 fazendas são achadas pelas faixas verticais de colunas vazias e usam a
+## mesma escala (são o mesmo lugar): a maior cabe em FILL do quadro SIZE x SIZE,
+## centralizada. Grava em assets/sprites/improvements/; guarda a folha em
+## tools/art/gemini/fazendas[_cerca]_folha.png e uma prévia sobre a pradaria em
+## tools/art/gemini/fazendas[_cerca]_previa.png.
 
 const IMPROVEMENTS := "res://assets/sprites/improvements/"
 const GEMINI := "res://tools/art/gemini/"
 const SIZE := 160
-## Margem em volta e largura da "cruz" (fração do quadro): 1/8 cada.
-const MARGIN := 0.125
-const GAP := 0.125
-## Fazendas na ordem dos grupos da folha (da esquerda para a direita) e os 4
-## canteiros de cada uma (índices no grupo, por linhas: 0 1 / 2 3 / 4 5), na
-## ordem cima-esquerda, cima-direita, baixo-esquerda, baixo-direita.
+## Fração do quadro ocupada pela fazenda: quase a casa inteira, para fazendas
+## vizinhas parecerem uma plantação contínua (pedido do usuário). Cada fazenda é
+## esticada para um QUADRADO (as do Gemini são ~15% mais altas que largas).
+const FILL := 0.97
+## Vãos de colunas vazias menores que isto (pixels da folha) ficam dentro da
+## mesma fazenda (o vão entre dois campos).
+const MERGE_GAP := 14
 const FARMS := ["fazenda", "fazenda_obra", "fazenda_destruida"]
-const PICKS := [[0, 1, 3, 5], [0, 1, 2, 3], [0, 1, 2, 3]]
 const KEY_RESIDUAL := 14.0 / 255.0
 const KEY_K := Vector2(0.55, 1.2)
-## Distância (pixels da folha) em que um pedaço solto ainda é do canteiro.
-const PIECE_REACH := 6
+## Distância de matiz (0-1) até o verde do fundo que ainda é fundo.
+const BG_HUE_RANGE := 0.045
 ## Cor dos pixels transparentes (evita borda escura com os mipmaps).
 const CLEAR := Color(0.42, 0.31, 0.2, 0.0)
 
@@ -34,59 +35,48 @@ const CLEAR := Color(0.42, 0.31, 0.2, 0.0)
 func _initialize() -> void:
 	var args := OS.get_cmdline_user_args()
 	if args.is_empty():
-		print("uso: -- <folha.png>")
+		print("uso: -- <folha.png> [cerca]")
 		quit(1)
 		return
+	var suffix := "_cerca" if args.size() > 1 and args[1] == "cerca" else ""
 	var sheet := Image.load_from_file(args[0])
 	sheet.convert(Image.FORMAT_RGBA8)
-	sheet.save_png(ProjectSettings.globalize_path(GEMINI + "fazendas_folha.png"))
+	sheet.save_png(ProjectSettings.globalize_path(GEMINI + "fazendas%s_folha.png" % suffix))
 	_remove_backdrop(sheet)
-	var plots := _split_tall(sheet, _find_plots(sheet))
-	# Grupos: os canteiros separados pelos 2 maiores vãos na horizontal
-	plots.sort_custom(func(a: Rect2i, b: Rect2i) -> bool: return a.get_center().x < b.get_center().x)
-	var groups := _split_groups(plots, FARMS.size())
-	# Confere antes de usar (um erro de script deixa o Godot preso aberto)
-	for g in groups.size():
-		for index: int in PICKS[g]:
-			if index >= groups[g].size():
-				print("ERRO: o grupo %d (%s) tem %d canteiros; precisa do %d" % [g, FARMS[g], groups[g].size(), index])
-				quit(1)
-				return
+	var boxes := _find_farms(sheet)
+	if boxes.size() != FARMS.size():
+		print("ERRO: achei %d fazendas, esperava %d: %s" % [boxes.size(), FARMS.size(), boxes])
+		quit(1)
+		return
 	var scale := INF
-	var box := SIZE * (1.0 - MARGIN * 2.0 - GAP) / 2.0
-	for g in groups.size():
-		for index: int in PICKS[g]:
-			var r: Rect2i = groups[g][index]
-			scale = minf(scale, minf(box / r.size.x, box / r.size.y))
-	print("escala comum dos canteiros: %.3f" % scale)
+	for box in boxes:
+		scale = minf(scale, SIZE * FILL / maxf(box.size.x, box.size.y))
+	print("escala comum: %.3f" % scale)
 	var previews: Array[Image] = []
-	for g in groups.size():
+	for i in FARMS.size():
+		var crop := sheet.get_region(boxes[i])
+		if FARMS[i] == "fazenda_destruida":
+			_remove_green_smoke(crop)
+		var side := roundi(SIZE * FILL)
+		var target := Vector2i(side, side)
+		var current := crop.get_size()
+		while current.x > target.x * 2:
+			current /= 2
+			crop.resize(current.x, current.y, Image.INTERPOLATE_BILINEAR)
+		crop.resize(target.x, target.y, Image.INTERPOLATE_LANCZOS)
 		var farm := Image.create(SIZE, SIZE, false, Image.FORMAT_RGBA8)
 		farm.fill(CLEAR)
-		for slot in 4:
-			var r: Rect2i = groups[g][PICKS[g][slot]]
-			var plot := sheet.get_region(r)
-			var target := Vector2i(roundi(r.size.x * scale), roundi(r.size.y * scale))
-			var current := plot.get_size()
-			while current.x > target.x * 2:
-				current /= 2
-				plot.resize(current.x, current.y, Image.INTERPOLATE_BILINEAR)
-			plot.resize(target.x, target.y, Image.INTERPOLATE_LANCZOS)
-			var cell := Vector2(SIZE * MARGIN + (slot % 2) * (box + SIZE * GAP), SIZE * MARGIN + (slot / 2) * (box + SIZE * GAP))
-			var at := Vector2i(cell + (Vector2(box, box) - Vector2(target)) / 2.0)
-			farm.blend_rect(plot, Rect2i(Vector2i.ZERO, target), at)
-		if FARMS[g] == "fazenda_destruida":
-			_remove_green_smoke(farm)
+		farm.blend_rect(crop, Rect2i(Vector2i.ZERO, target), (Vector2i(SIZE, SIZE) - target) / 2)
 		_fill_clear(farm)
-		farm.save_png(ProjectSettings.globalize_path(IMPROVEMENTS + FARMS[g] + ".png"))
+		farm.save_png(ProjectSettings.globalize_path(IMPROVEMENTS + FARMS[i] + suffix + ".png"))
 		previews.append(farm)
-		print("ok: %s" % FARMS[g])
-	_preview(previews)
+		print("ok: %s%s (%s -> %s)" % [FARMS[i], suffix, boxes[i].size, target])
+	_preview(previews, GEMINI + "fazendas%s_previa.png" % suffix)
 	quit()
 
 
-## Tira o fundo verde (como nos outros importadores do Gemini), o verde vazado
-## na borda e a FUMAÇA (cinza claro sem cor: nada mais nos canteiros é assim).
+## Tira o fundo verde e o verde vazado na borda (só na borda: as plantas são
+## verdes de verdade).
 func _remove_backdrop(img: Image) -> void:
 	var bg := img.get_pixel(4, 4)
 	var bg_v := Vector3(bg.r, bg.g, bg.b)
@@ -95,12 +85,11 @@ func _remove_backdrop(img: Image) -> void:
 			var p := img.get_pixel(x, y)
 			var v := Vector3(p.r, p.g, p.b)
 			var k := v.dot(bg_v) / bg_v.dot(bg_v)
-			var backdrop := k > KEY_K.x and k < KEY_K.y and (v - bg_v * k).length() < KEY_RESIDUAL
-			# Só o cinza MUITO claro e sem cor é fumaça: as cinzas dos canteiros
-			# queimados também são cinza, mas escuras (o filtro antigo, com brilho
-			# > 0,5, apagava as cinzas e partia os canteiros)
-			var smoke := p.s < 0.08 and p.v > 0.72
-			if backdrop or smoke:
+			# Também pelo matiz: o verde do fundo na sombra dos campos (vãos
+			# estreitos) é mais escuro, mas continua verde-azulado e saturado; as
+			# plantas e as oliveiras são verde-amareladas
+			var hue_key := absf(p.h - bg.h) < BG_HUE_RANGE and p.s > 0.55
+			if hue_key or (k > KEY_K.x and k < KEY_K.y and (v - bg_v * k).length() < KEY_RESIDUAL):
 				img.set_pixel(x, y, Color(0, 0, 0, 0))
 	for edge_pass in 3:
 		var src: Image = img.duplicate()
@@ -121,150 +110,74 @@ func _remove_backdrop(img: Image) -> void:
 					img.set_pixel(x, y, Color(p.r, maxf(p.r, p.b), p.b, minf(p.a, 0.7)))
 
 
-## Caixas dos canteiros: grupos de pixels grandes (os pedaços pequenos que
-## sobram, como restos de fumaça, são apagados).
-func _find_plots(img: Image) -> Array[Rect2i]:
+## As fazendas: faixas de colunas com algum pixel (juntando vãos menores que
+## MERGE_GAP, que são os vãos entre campos, de ~10 px; entre as fazendas a
+## folha sem cerca de 26/10/2026 deixou só ~20 px) e, em cada faixa, a caixa do que
+## não é transparente.
+func _find_farms(img: Image) -> Array[Rect2i]:
 	var w := img.get_width()
 	var h := img.get_height()
-	var label := PackedInt32Array()
-	label.resize(w * h)
-	label.fill(-1)
-	var boxes: Array[Rect2i] = []
-	var sizes: Array[int] = []
-	for start in w * h:
-		if label[start] >= 0 or img.get_pixel(start % w, start / w).a <= 0.5:
-			continue
-		var id := boxes.size()
-		var box := Rect2i(start % w, start / w, 1, 1)
+	var used: Array[bool] = []
+	# Coluna ocupada: mais de 25% dos pixels da coluna mais cheia (a folha sem
+	# cerca de 26/10/2026 tem restos esparsos, 30-50 por coluna, nos vãos)
+	var counts: Array[int] = []
+	var fullest := 0
+	for x in w:
 		var count := 0
-		var stack := PackedInt32Array([start])
-		label[start] = id
-		while not stack.is_empty():
-			var i := stack[stack.size() - 1]
-			stack.resize(stack.size() - 1)
-			count += 1
-			var x := i % w
-			box = box.expand(Vector2i(x, i / w))
-			for n in [i - 1, i + 1, i - w, i + w]:
-				if n < 0 or n >= w * h or absi(n % w - x) > 1 or label[n] >= 0:
-					continue
-				if img.get_pixel(n % w, n / w).a > 0.5:
-					label[n] = id
-					stack.append(n)
-		box.size += Vector2i.ONE
+		for y in range(0, h, 2):
+			if img.get_pixel(x, y).a > 0.5:
+				count += 1
+		counts.append(count)
+		fullest = maxi(fullest, count)
+	for x in w:
+		used.append(counts[x] > fullest * 0.25)
+	var runs: Array[Vector2i] = []
+	var start := -1
+	for x in w + 1:
+		var u := x < w and used[x]
+		if u and start < 0:
+			start = x
+		elif not u and start >= 0:
+			if not runs.is_empty() and start - runs[-1].y < MERGE_GAP:
+				runs[-1].y = x
+			else:
+				runs.append(Vector2i(start, x))
+			start = -1
+	var boxes: Array[Rect2i] = []
+	for run in runs:
+		if run.y - run.x < w / 12:
+			continue # sujeira fina
+		# Linhas ocupadas da faixa, com o mesmo critério das colunas (as sobras
+		# esparsas não esticam a caixa até a borda da folha)
+		var rows: Array[int] = []
+		var fullest_row := 0
+		for y in h:
+			var count := 0
+			for x in range(run.x, run.y):
+				if img.get_pixel(x, y).a > 0.5:
+					count += 1
+			rows.append(count)
+			fullest_row = maxi(fullest_row, count)
+		var top := -1
+		var bottom := -1
+		for y in h:
+			if rows[y] > fullest_row * 0.1:
+				if top < 0:
+					top = y
+				bottom = y
+		var box := Rect2i(run.x, top, run.y - run.x, bottom - top + 1)
+		# Fora da caixa só há sobras: apaga
+		for y in h:
+			for x in range(run.x, run.y):
+				if not box.has_point(Vector2i(x, y)):
+					img.set_pixel(x, y, Color(0, 0, 0, 0))
 		boxes.append(box)
-		sizes.append(count)
-	var biggest := 0
-	for s in sizes:
-		biggest = maxi(biggest, s)
-	# Pedaços grandes que se tocam são o mesmo canteiro (um canteiro queimado
-	# pode se partir); pedaços pequenos encostados num canteiro entram nele; o
-	# resto (sujeira longe de tudo) é apagado.
-	var plots: Array[Rect2i] = []
-	for i in boxes.size():
-		if sizes[i] < biggest * 0.1:
-			continue
-		var merged := false
-		for j in plots.size():
-			if plots[j].grow(PIECE_REACH).intersects(boxes[i]):
-				plots[j] = plots[j].merge(boxes[i])
-				merged = true
-				break
-		if not merged:
-			plots.append(boxes[i])
-	for i in boxes.size():
-		if sizes[i] >= biggest * 0.1:
-			continue
-		var owner := -1
-		for j in plots.size():
-			if plots[j].grow(PIECE_REACH).intersects(boxes[i]):
-				owner = j
-				break
-		if owner >= 0:
-			plots[owner] = plots[owner].merge(boxes[i])
-		else:
-			for y in range(boxes[i].position.y, boxes[i].end.y):
-				for x in range(boxes[i].position.x, boxes[i].end.x):
-					if label[y * w + x] == i:
-						img.set_pixel(x, y, Color(0, 0, 0, 0))
-	print("%d canteiros" % plots.size())
-	return plots
+	return boxes
 
 
-## A fumaça dos canteiros queimados sobe até o canteiro de cima e liga os 3 da
-## coluna num bloco alto. As linhas dos canteiros normais (altura parecida com
-## a mediana) dão as faixas de cada linha; um bloco alto é cortado nelas: em
-## cada faixa, a caixa do que não é transparente (a fumaça entre as faixas
-## fica de fora).
-func _split_tall(img: Image, plots: Array[Rect2i]) -> Array[Rect2i]:
-	var heights: Array = plots.map(func(r: Rect2i) -> int: return r.size.y)
-	heights.sort()
-	var median: int = heights[heights.size() / 2]
-	var bands: Array[Vector2i] = []
-	for r in plots:
-		if r.size.y > median * 1.3:
-			continue
-		var placed := false
-		for b in bands.size():
-			if r.position.y < bands[b].y and r.end.y > bands[b].x:
-				bands[b] = Vector2i(mini(bands[b].x, r.position.y), maxi(bands[b].y, r.end.y))
-				placed = true
-		if not placed:
-			bands.append(Vector2i(r.position.y, r.end.y))
-	var result: Array[Rect2i] = []
-	for r in plots:
-		if r.size.y <= median * 1.5:
-			result.append(r)
-			continue
-		for band in bands:
-			var top := maxi(r.position.y, band.x)
-			var bottom := mini(r.end.y, band.y)
-			if bottom - top < median / 2:
-				continue
-			var piece := Rect2i()
-			var first := true
-			for y in range(top, bottom):
-				for x in range(r.position.x, r.end.x):
-					if img.get_pixel(x, y).a > 0.5:
-						piece = Rect2i(x, y, 1, 1) if first else piece.expand(Vector2i(x, y))
-						first = false
-			if not first:
-				piece.size += Vector2i.ONE
-				result.append(piece)
-	print("faixas das linhas: %s; %d canteiros depois de cortar os blocos altos" % [bands, result.size()])
-	return result
-
-
-## Separa os canteiros (já em ordem de x) em [param count] grupos pelos maiores
-## vãos entre eles; dentro de cada grupo, ordena por linhas (de cima para
-## baixo) e, na linha, da esquerda para a direita.
-func _split_groups(plots: Array[Rect2i], count: int) -> Array:
-	var gaps := []
-	for i in range(1, plots.size()):
-		gaps.append([plots[i].position.x - plots[i - 1].end.x, i])
-	gaps.sort_custom(func(a: Array, b: Array) -> bool: return a[0] > b[0])
-	var cuts := []
-	for i in count - 1:
-		cuts.append(gaps[i][1])
-	cuts.sort()
-	var groups := []
-	var start := 0
-	for cut: int in cuts + [plots.size()]:
-		var group: Array = plots.slice(start, cut)
-		group.sort_custom(func(a: Rect2i, b: Rect2i) -> bool:
-			var row_a := a.get_center().y
-			var row_b := b.get_center().y
-			if absf(row_a - row_b) > a.size.y * 0.5:
-				return row_a < row_b
-			return a.position.x < b.position.x)
-		groups.append(group)
-		start = cut
-	print("grupos: %s canteiros" % [groups.map(func(g: Array) -> int: return g.size())])
-	return groups
-
-
-## Fazenda queimada: nada nela é verde de verdade. A fumaça que passou sobre o
-## fundo ficou esverdeada: o verde claro some e o resto perde o excesso de verde.
+## Fazenda queimada: nada nela é verde de verdade (as árvores estão
+## carbonizadas). A fumaça que passou sobre o fundo ficou esverdeada: o verde
+## claro some e o resto perde o excesso de verde.
 func _remove_green_smoke(img: Image) -> void:
 	for y in img.get_height():
 		for x in img.get_width():
@@ -278,7 +191,7 @@ func _remove_green_smoke(img: Image) -> void:
 
 
 ## Pixels transparentes com a cor da terra (os mipmaps misturam a cor deles
-## na borda dos canteiros; preto faria um contorno escuro).
+## na borda; preto faria um contorno escuro).
 func _fill_clear(img: Image) -> void:
 	for y in img.get_height():
 		for x in img.get_width():
@@ -286,7 +199,7 @@ func _fill_clear(img: Image) -> void:
 				img.set_pixel(x, y, CLEAR)
 
 
-func _preview(farms: Array[Image]) -> void:
+func _preview(farms: Array[Image], path: String) -> void:
 	var grass := Image.load_from_file(ProjectSettings.globalize_path("res://assets/tiles/pradaria.png"))
 	grass.convert(Image.FORMAT_RGBA8)
 	grass.resize(SIZE, SIZE, Image.INTERPOLATE_BILINEAR)
@@ -298,4 +211,4 @@ func _preview(farms: Array[Image]) -> void:
 		var big := farms[i].duplicate()
 		big.resize(SIZE * 2, SIZE * 2, Image.INTERPOLATE_BILINEAR)
 		sheet.blend_rect(big, Rect2i(0, 0, SIZE * 2, SIZE * 2), Vector2i(i * SIZE * 2, 0))
-	sheet.save_png(ProjectSettings.globalize_path(GEMINI + "fazendas_previa.png"))
+	sheet.save_png(ProjectSettings.globalize_path(path))
