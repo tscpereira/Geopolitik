@@ -15,6 +15,7 @@ extends RefCounted
 ##   Escrita + Trabalho em Bronze -> Moeda
 ##   Construção -> Matemática -> Engenharia Civil -> Pão e Circo
 ##   Trabalho em Bronze -> Trabalho em Ferro -> Pão e Circo
+##   Trabalho em Ferro -> Feudalismo (26/10/2026)
 ##   Montaria + Trabalho em Bronze -> Guerra de movimento
 ##   Escrita -> Guerra a distância (25/10/2026; antes era raiz)
 ##   Escrita -> Navegação (25/10/2026)
@@ -28,7 +29,7 @@ extends RefCounted
 enum Tech {
 	CONSTRUCTION, MYSTICISM, WRITING, BRONZE_WORKING, HORSEBACK_RIDING, LITERATURE, MATHEMATICS,
 	IRON_WORKING, CURRENCY, MOBILE_WARFARE, LAW, CIVIL_ENGINEERING, REPUBLIC, BREAD_AND_CIRCUSES,
-	RANGED_WARFARE, NAVIGATION,
+	RANGED_WARFARE, NAVIGATION, FEUDALISM,
 }
 
 ##   name      nome mostrado
@@ -123,6 +124,12 @@ const DATA := {
 		"name": "Pão e Circo", "cost": 140, "requires": [Tech.CIVIL_ENGINEERING, Tech.IRON_WORKING],
 		"description": "Espetáculos para o povo. Libera a Arena, que dobra a alegria das festividades.",
 		"image": "res://assets/tech/pao_e_circo.png",
+	},
+	Tech.FEUDALISM: {
+		"name": "Feudalismo", "cost": 100, "requires": [Tech.IRON_WORKING],
+		"description": "Senhores, vassalos e servos presos à terra. Cada fazenda trabalhada rende +1 de alimento por turno.",
+		"image": "res://assets/tech/feudalismo.png",
+		"unlocks": ["+1 de alimento em cada fazenda"],
 	},
 }
 

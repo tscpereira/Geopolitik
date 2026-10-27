@@ -2302,6 +2302,9 @@ CIÊNCIA E PESQUISA (scripts/science/technology.gd, Player.research)
                                                      representativo:
                                                      ainda não existe)
     Pão e Circo (140)         Eng. Civil, Ferro      Arena
+    Feudalismo (100)          Trabalho em Ferro      +1 de alimento em
+                                                     cada fazenda
+                                                     trabalhada
   ("Código de Cavalaria", no diagrama, fica para a Idade Média.)
   O que libera está no campo "tech" de City.BUILDS (prédios e
   unidades) e nas regras (Direito, Trabalho em Ferro, Engenharia
@@ -4147,6 +4150,18 @@ PRÓXIMO PASSO GRANDE 2: CONJUNTOS CULTURAIS DE UNIDADES E CIDADES
   respeita o alfa). Se faltar canteiro, o script avisa e fecha sem
   travar o Godot. Validação: prévia sobre a pradaria e screenshot no
   mapa com fazendas prontas, em obra e destruídas.
+
+- FEUDALISMO (pedido do usuário, árvore atualizada): tecnologia nova
+  (100 pontos, exige Trabalho em Ferro): cada fazenda trabalhada rende
+  +1 de alimento por turno (City.FEUDALISM_FARM_BONUS, somado em
+  City.farm_food, que vale para o saldo da cidade, a janela e a
+  máquina). Ilustração trazida pelo usuário (o mês de outubro das Très
+  Riches Heures), reduzida para 800 px de largura em
+  assets/tech/feudalismo.png. Na árvore, fica na coluna depois do
+  Ferro, com "Libera: +1 de alimento em cada fazenda". Validação: teste
+  (exigência, disponibilidade, ilustração, 17 tecnologias, coluna e
+  "libera" na árvore, fazenda 2 -> 3 e saldo da cidade +1) e o teste
+  da árvore (nenhum cartão sobreposto).
 
 --------------------------------------------------------------
 7. BACKLOG (ideias para depois)

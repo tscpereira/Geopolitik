@@ -154,7 +154,7 @@ const BUILDS := {
 	Build.FARM: {
 		"name": "Fazenda", "article": "a", "category": Category.TERRAIN_IMPROVEMENT,
 		"cost": 4, "gold": 50, "on_tile": true,
-		"description": "Melhoria em pradaria ou cerrado, feita por um Trabalhador. Com 1 cidadão, produz +3 de alimento por turno na pradaria e +2 no cerrado.",
+		"description": "Melhoria em pradaria ou cerrado, feita por um Trabalhador. Com 1 cidadão, produz +3 de alimento por turno na pradaria e +2 no cerrado (+1 com Feudalismo).",
 	},
 	Build.LUMBER_MILL: {
 		"name": "Madeireira", "article": "a", "category": Category.TERRAIN_IMPROVEMENT,
@@ -331,6 +331,8 @@ const BUILDS := {
 ## Alimento que a fazenda soma ao da casa (Terrain.TILE_FOOD) por cidadão que
 ## trabalha nela: fazenda trabalhada na pradaria = 1 + 1 = 2 (farm_food).
 const FARM_BONUS := 1
+## Alimento a mais de cada fazenda trabalhada com a tecnologia Feudalismo.
+const FEUDALISM_FARM_BONUS := 1
 ## Alimento que a casa da cidade produz sozinha (sem isso, uma cidade nova
 ## passaria fome antes de terminar a primeira fazenda).
 const CENTER_FOOD := 2
@@ -1161,8 +1163,10 @@ func celebration_food() -> int:
 
 ## Alimento por turno da fazenda em [param farm_cell] com 1 cidadão: o da casa
 ## (Terrain.TILE_FOOD) mais o FARM_BONUS da fazenda (pradaria e cerrado: 2).
+## Com Feudalismo, +FEUDALISM_FARM_BONUS.
 func farm_food(farm_cell: Vector2i) -> int:
-	return tile_food(farm_cell) + FARM_BONUS
+	var feudal := FEUDALISM_FARM_BONUS if owner_player.researched.has(Technology.Tech.FEUDALISM) else 0
+	return tile_food(farm_cell) + FARM_BONUS + feudal
 
 
 func food_consumed() -> int:
