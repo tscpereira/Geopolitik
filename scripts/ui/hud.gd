@@ -44,9 +44,14 @@ const MESSAGE_TIME := 3.0
 @onready var tech_dialog: TechDialog = $TechDialog
 ## Árvore de tecnologias (criada pelo código, por cima das outras janelas).
 var tech_tree_dialog: TechTreeDialog
+## Ações da unidade selecionada (as mesmas dos botões), para o painel da unidade.
+var last_actions: Array[Dictionary] = []
 ## Minimapa (canto esquerdo, abaixo do painel do turno; o Game chama setup).
 var minimap: Minimap
 var _minimap_panel: PanelContainer
+## Painel da unidade selecionada (canto inferior esquerdo; no lugar das barras
+## de informação e de ações desde 28/10/2026).
+var unit_panel: UnitPanel
 
 var _prompt_tween: Tween
 var _message_tween: Tween
@@ -71,6 +76,7 @@ var _shown_science := []
 
 func _ready() -> void:
 	_build_minimap()
+	_build_unit_panel()
 	tech_tree_dialog = TechTreeDialog.new()
 	tech_tree_dialog.name = "TechTreeDialog"
 	add_child(tech_tree_dialog)
@@ -85,6 +91,38 @@ func _ready() -> void:
 	_iron_icon.tooltip_text = "Ferro: vem das minas nas colinas com ferro (1 por trabalhador por turno; a mina não se esgota)."
 	_build_arsenal_rows()
 	_build_science_panel()
+
+
+## Painel da unidade, preso ao canto inferior esquerdo. A barra de ações antiga
+## fica sempre escondida; a de informação só aparece sem unidade selecionada
+## (a casa e a cidade sob o mouse), sem a linha de atalhos (as teclas estão
+## nos botões).
+func _build_unit_panel() -> void:
+	unit_panel = UnitPanel.new()
+	unit_panel.name = "UnitPanel"
+	add_child(unit_panel)
+	move_child(unit_panel, $InfoPanel.get_index() + 1)
+	unit_panel.action_pressed.connect(func(id: String) -> void: action_pressed.emit(id))
+	$ActionPanel.hide()
+	$InfoPanel/VBox/HintLabel.hide()
+	var place := func() -> void:
+		unit_panel.position = Vector2(4.0, get_viewport().get_visible_rect().size.y - unit_panel.size.y - 4.0)
+	get_viewport().size_changed.connect(place)
+	place.call()
+
+
+func show_unit_panel(unit: Unit, map: GameMap, extra: String) -> void:
+	unit_panel.show_unit(unit, map, extra)
+	$InfoPanel.hide()
+
+
+func show_mill_panel(mill: LumberMill, map: GameMap, extra: String) -> void:
+	unit_panel.show_mill(mill, map, extra)
+	$InfoPanel.hide()
+
+
+func hide_unit_panel() -> void:
+	unit_panel.hide()
 
 
 ## Painel do minimapa, logo abaixo do painel do turno (acompanha a altura dele).
@@ -325,15 +363,18 @@ func hide_victory() -> void:
 func set_info(text: String) -> void:
 	_info_label.text = text
 	_info_label.visible = not text.is_empty()
+	$InfoPanel.visible = not text.is_empty()
 
 
 ## Mostra os botões de ação da unidade selecionada. Cada ação é um dicionário
 ## {"id", "label", "disabled" (opcional), "tooltip" (opcional)}. Lista vazia esconde.
 func set_unit_actions(title: String, actions: Array[Dictionary]) -> void:
+	last_actions = actions
 	for child in _action_buttons.get_children():
 		_action_buttons.remove_child(child)
 		child.queue_free()
-	_action_panel.visible = not actions.is_empty()
+	_action_panel.visible = false # substituída pelos botões do painel da unidade
+	unit_panel.set_actions(actions)
 	_action_title.text = title
 	for action in actions:
 		var button := Button.new()

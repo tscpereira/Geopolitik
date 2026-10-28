@@ -1541,6 +1541,7 @@ func _select_mill(mill: LumberMill) -> void:
 	_selected_mill = mill
 	move_overlay.show_moves(mill.cell, [], [])
 	_update_unit_actions()
+	_update_info() # painel da madeireira
 
 
 ## Botão "Retirar trabalhador": o trabalhador volta ao mapa e fica selecionado.
@@ -2262,7 +2263,7 @@ func _show_damage(unit: Unit, amount: int, delay := 0.0) -> void:
 ## Painel inferior: casa sob o mouse e a unidade nela (ou a selecionada).
 func _update_info() -> void:
 	var lines: Array[String] = []
-	var unit := selected_unit
+	var unit: Unit = null
 	if game_map.is_in_bounds(_hover_cell) and not fog.is_explored(_hover_cell):
 		lines.append("Casa (%d, %d): ainda não explorada" % [_hover_cell.x, _hover_cell.y])
 	elif game_map.is_in_bounds(_hover_cell):
@@ -2298,7 +2299,7 @@ func _update_info() -> void:
 				mill.workers.size(), LumberMill.MAX_WORKERS,
 			])
 		var hovered := visible_unit_at(_hover_cell)
-		if hovered:
+		if hovered and hovered != selected_unit:
 			unit = hovered
 	if unit:
 		var defense_notes: Array[String] = []
@@ -2325,6 +2326,7 @@ func _update_info() -> void:
 			var building_city := claiming_city(unit.cell)
 			lines[-1] += " | Construindo estrada" if game_map.road_progress.has(unit.cell) else \
 					" | Construindo" if building_city and building_city.sites.has(unit.cell) else " | Reconstruindo"
+	var preview := ""
 	if selected_unit and _attack_targets.has(_hover_cell):
 		var defender := get_unit_at(_hover_cell)
 		var from_cell: Vector2i = _attack_targets[_hover_cell] # de onde a unidade vai atacar
@@ -2336,7 +2338,7 @@ func _update_info() -> void:
 			target_notes.append("+%d atrás do rio" % Terrain.RIVER_DEFENSE_BONUS)
 		if Combat.anti_cavalry(defender, selected_unit) > 0:
 			target_notes.append("+%d contra cavalaria" % Combat.anti_cavalry(defender, selected_unit))
-		lines.append("%s: %s (força %.2f%s) x %s (força %.2f%s) - dano estimado: causa ~%d | recebe %s" % [
+		preview = ("%s: %s (força %.2f%s) x %s (força %.2f%s) - dano estimado: causa ~%d | recebe %s" % [
 			"Disparar" if selected_unit.is_ranged() else "Atacar",
 			selected_unit.type.display_name, Combat.attack_strength(selected_unit, defender), attack_note,
 			defender.type.display_name, Combat.defense_strength(selected_unit, defender, from_cell),
@@ -2344,7 +2346,19 @@ func _update_info() -> void:
 			roundi(expected["to_defender"]),
 			"0" if selected_unit.is_ranged() else "~%d" % roundi(expected["to_attacker"]),
 		])
-	hud.set_info("\n".join(lines))
+	# Com unidade (ou madeireira) selecionada: o painel dela, e a linha de baixo
+	# mostra a prévia do ataque, ou a unidade sob o mouse, ou a casa. Sem
+	# seleção: o painel some e a barra de informação mostra a casa sob o mouse.
+	if (selected_unit and is_instance_valid(selected_unit)) or _selected_mill:
+		var extra := preview if not preview.is_empty() else lines[-1] if not lines.is_empty() else ""
+		if selected_unit:
+			hud.show_unit_panel(selected_unit, game_map, extra)
+		else:
+			hud.show_mill_panel(_selected_mill, game_map, extra)
+		hud.set_info("")
+	else:
+		hud.hide_unit_panel()
+		hud.set_info("\n".join(lines))
 
 
 ## Nome do terreno com as regras dele (madeira que resta, defesa, movimento).

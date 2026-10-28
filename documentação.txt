@@ -1984,6 +1984,41 @@ MOVIMENTO (scripts/map/movement.gd)
   pelo menos uma casa livre ao alcance. Assim, uma unidade
   cercada não trava o fim do turno.
 
+PAINEL DA UNIDADE (scripts/ui/unit_panel.gd; desde 28/10/2026, a partir do
+mockup do usuário, no lugar das barras de informação e de ações de baixo)
+- Canto inferior esquerdo. Aparece com uma unidade (ou madeireira/mina
+  remota) selecionada; sem seleção, some, e a barra de informação volta a
+  mostrar a casa e a cidade sob o mouse (sem a linha de atalhos: as teclas
+  estão nos botões).
+- RETRATO: círculo grande com o desenho da unidade em alta resolução
+  (assets/sprites/units/retratos/, os originais do Gemini), na cor do dono,
+  sobre o terreno da casa em que ela está, com o anel na cor do dono. A
+  madeireira e a mina remotas mostram o desenho delas.
+- ENERGIA: arco em meia-lua no lado ESQUERDO do círculo, enchendo de baixo
+  para cima: verde acima de 60%, amarelo acima de 30%, vermelho abaixo.
+- MOVIMENTO: arco em meia-lua no lado DIREITO, azul-claro, cheio no começo
+  do turno e esvaziando conforme a unidade anda (escolha do usuário, no
+  lugar de bolinhas).
+- CARTÃO ao lado: nome e dono (na cor dele); Ataque (com o alcance, no
+  ataque à distância) e Defesa; Movimento e Energia; a situação em dourado
+  (fortificada, bônus de terreno e de muralha, a caminho, a bordo,
+  trabalhando); e uma linha de baixo: a PRÉVIA DO ATAQUE ("Disparar: ...
+  causa ~28 | recebe 0") com o mouse sobre um alvo, ou a unidade sob o
+  mouse, ou a casa sob o mouse.
+- AÇÕES: botões redondos em cima do cartão, um ícone por ação (fazenda,
+  madeireira e mina com os ícones do jogo; cidade, estrada, reconstruir,
+  migrar, pilhar, mover, cancelar, fortificar, pular, desembarcar, retirar
+  trabalhador desenhados no código) e a tecla no canto; o nome e a
+  explicação no tooltip; apagados quando indisponíveis. São as mesmas ações
+  de antes (Game._update_unit_actions -> Hud.set_unit_actions, que agora
+  guarda last_actions e passa para o painel).
+- Só o círculo e o cartão pegam o mouse (_has_point); o resto deixa o
+  clique passar para o mapa.
+- RETRATOS EM ALTA RESOLUÇÃO NO REPOSITÓRIO (regra do usuário: os mocks em
+  alta resolução ficam SEMPRE no repositório): import_folha_unidades.gd
+  grava o recorte grande também em assets/sprites/units/retratos/ (com a
+  máscara _time.png). Para uma unidade nova, o retrato sai junto.
+
 NÉVOA DE GUERRA E MINIMAPA (desde 27/10/2026, pedido do usuário;
 scripts/map/fog_of_war.gd, fog.gdshader, scripts/ui/minimap.gd)
 - O mapa começa todo ESCURO para o jogador humano e é desvendado pelas
@@ -4257,6 +4292,16 @@ PRÓXIMO PASSO GRANDE 2: CONJUNTOS CULTURAIS DE UNIDADES E CIDADES
   save, minimapa, névoa desligada sem humano) e screenshot; testes do
   ataque à distância, da Galé, da IA (dirigido e batalha), da árvore e
   do Feudalismo passaram.
+
+28/10/2026
+- PAINEL DA UNIDADE (mockup do usuário; ver a seção PAINEL DA UNIDADE):
+  círculo com o retrato em alta resolução, energia (esquerda) e movimento
+  (direita) em meias-luas, cartão com os atributos e a prévia do ataque,
+  ações em botões redondos. Retratos copiados para
+  assets/sprites/units/retratos/ e o importador passa a gravá-los sempre.
+  Validação: teste (painel e botões, retrato, ação pelo botão, prévia de
+  ataque, sem seleção, madeireira) e screenshots; testes da névoa, do
+  ataque à distância (ajustado para ler o painel), da Galé e da árvore.
 
 --------------------------------------------------------------
 7. BACKLOG (ideias para depois)

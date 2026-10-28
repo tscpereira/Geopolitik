@@ -26,6 +26,8 @@ extends SceneTree
 
 const NAMES := ["trabalhador", "colono", "guerreiro", "lanceiro", "guerreiro_espada", "arqueiro", "cavalaria_leve", "bigas", "catapulta"]
 const UNITS := "res://assets/sprites/units/"
+## Retratos em alta resolução usados pelo painel da unidade (UnitPanel).
+const RETRATOS := "res://assets/sprites/units/retratos/"
 const GRANDES := "res://tools/art/chatgpt/unidades/"
 const PRONTOS := "res://tools/art/chatgpt/prontos/"
 const ORIGINAL := "res://tools/art/chatgpt/folha_unidades.png"
@@ -294,6 +296,10 @@ func _install(crop: Image, unit_name: String, scale: float) -> void:
 			mask.set_pixel(x, y, Color(amount, amount, amount, 1.0))
 	crop.save_png(ProjectSettings.globalize_path(GRANDES) + unit_name + ".png")
 	mask.save_png(ProjectSettings.globalize_path(GRANDES) + unit_name + "_time.png")
+	# O desenho grande também fica no jogo (retrato do painel da unidade): os
+	# originais em alta resolução ficam SEMPRE no repositório (pedido do usuário)
+	crop.save_png(ProjectSettings.globalize_path(RETRATOS) + unit_name + ".png")
+	mask.save_png(ProjectSettings.globalize_path(RETRATOS) + unit_name + "_time.png")
 	var target := Vector2i(roundi(w * scale), roundi(h * scale))
 	for img: Image in [crop, mask]:
 		var current: Vector2i = img.get_size()
