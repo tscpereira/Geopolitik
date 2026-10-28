@@ -1984,6 +1984,49 @@ MOVIMENTO (scripts/map/movement.gd)
   pelo menos uma casa livre ao alcance. Assim, uma unidade
   cercada não trava o fim do turno.
 
+NÉVOA DE GUERRA E MINIMAPA (desde 27/10/2026, pedido do usuário;
+scripts/map/fog_of_war.gd, fog.gdshader, scripts/ui/minimap.gd)
+- O mapa começa todo ESCURO para o jogador humano e é desvendado pelas
+  unidades e cidades dele:
+    unidades            enxergam as 8 casas vizinhas (UnitType.vision = 1)
+    Arqueiro, Catapulta enxergam 2 casas em volta, um quadrado 5x5
+                        (vision = 2)
+    cidades             2 casas em volta (FogOfWar.CITY_VISION)
+- Casa nunca vista: preta. Casa já explorada, mas fora da visão agora: o
+  terreno aparece escurecido (50%) e as unidades de outros jogadores nela
+  NÃO aparecem (Unit.fog_hidden). As cidades dos outros só aparecem
+  depois de vistas e ficam como estavam da última vez
+  (Player.seen_cities): uma cidade fundada longe da vista não aparece, e
+  uma destruída longe da vista continua lembrada até a casa ser vista
+  de novo.
+- A névoa é uma camada logo depois das cidades na cena (cobre terreno,
+  fronteiras, ruínas e cidades; o destaque de movimento e as unidades
+  ficam por cima). Textura de 1 pixel por casa (vermelho = nunca vista,
+  verde = fora da vista), filtro linear e smoothstep no shader: a borda
+  da área vista é suave e arredondada.
+- O que o jogador vê e não vê:
+    passar o mouse   casa nunca vista: "ainda não explorada"; fora da
+                     vista: o terreno, mas sem as unidades dos outros
+    clicar           unidades e cidades dos outros só se vistas
+                     (Game.visible_unit_at, known_city_at)
+    atacar           só alvos à vista (os outros saem de _attack_targets)
+    jogada da máquina a câmera só acompanha as unidades dela que o
+                     humano vê (AIController._focus); o dano flutuante
+                     de combates fora da vista não aparece
+- O que foi explorado (Player.explored, 1 byte por casa) e as cidades
+  lembradas vão para o save; saves antigos começam sem nada explorado.
+- Sem jogador humano (máquina contra máquina, testes), a névoa fica
+  desligada. A máquina não usa a névoa (vê tudo).
+- Pontos que ainda vazam informação (para depois): ruínas de cidades e
+  madeireiras remotas dos outros aparecem sob a névoa de casas já
+  exploradas no estado atual, não no lembrado.
+- MINIMAPA, no canto esquerdo, abaixo do painel do turno: o mapa inteiro
+  (2 px por casa), preto onde nunca foi visto, a cor média de cada
+  terreno onde foi explorado (mais escura fora da vista), um ponto na
+  cor do dono para cada cidade conhecida (as próprias sempre, as dos
+  outros como lembradas) e um retângulo branco com a área que a câmera
+  mostra. Clicar ou arrastar no minimapa leva a câmera até lá.
+
 COMBATE (scripts/combat/combat.gd)
 Batalha por desgaste de energia, inspirada no Civilization V/VI:
 um ataque raramente decide a luta sozinho, e cada combate tira
@@ -4205,6 +4248,15 @@ PRÓXIMO PASSO GRANDE 2: CONJUNTOS CULTURAIS DE UNIDADES E CIDADES
   pequenos que tocam a borda da imagem (resto do print: uma manchinha
   no canto entrava na cidade capital murada). Validação: prévias e a
   folha da evolução (tools/art/gemini/evolucao_cidades.png).
+
+- NÉVOA DE GUERRA E MINIMAPA (pedido do usuário): ver a seção NÉVOA DE
+  GUERRA E MINIMAPA. Unidades enxergam 1 casa; Arqueiro e Catapulta, 2;
+  cidades, 2 (sugestão). Validação: teste (visão no começo, Arqueiro 5x5,
+  inimigo aparece e some, casa explorada fora da vista, cidade inimiga
+  só depois de vista e lembrada, sem alvos de ataque fora da vista,
+  save, minimapa, névoa desligada sem humano) e screenshot; testes do
+  ataque à distância, da Galé, da IA (dirigido e batalha), da árvore e
+  do Feudalismo passaram.
 
 --------------------------------------------------------------
 7. BACKLOG (ideias para depois)

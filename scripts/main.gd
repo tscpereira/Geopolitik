@@ -79,6 +79,8 @@ var _finished_workers: Array[Unit] = []
 @onready var units_root: Node2D = $Units
 @onready var camera: MapCamera = $MapCamera
 @onready var hud: Hud = $HUD
+## Névoa de guerra (criada em _ready, logo depois das cidades na cena).
+var fog: FogOfWar
 
 
 func _ready() -> void:
@@ -87,6 +89,11 @@ func _ready() -> void:
 	game_map.load_resources(MAP_RESOURCES_PATH)
 	camera.set_bounds(game_map.get_pixel_size())
 	camera.position = game_map.cell_to_world(START_CAMERA_CELL)
+	fog = FogOfWar.new()
+	fog.name = "Fog"
+	fog.setup(game_map)
+	add_child(fog)
+	move_child(fog, cities_root.get_index() + 1)
 
 	players = [
 		Player.new(1, "Jogador 1", Color8(220, 40, 40)),
@@ -99,11 +106,14 @@ func _ready() -> void:
 	hud.tech_tree_pressed.connect(_open_tech_tree)
 	hud.tech_tree_dialog.research_chosen.connect(_on_tree_research_chosen)
 	hud.city_window.closed.connect(_on_city_window_closed)
+	hud.minimap.setup(self)
+	_update_vision()
 	TurnManager.turn_started.connect(_on_turn_started)
 	TurnManager.start_game(players)
 
 
 func _process(_delta: float) -> void:
+	_update_vision()
 	var cell := game_map.world_to_cell(get_global_mouse_position())
 	if cell != _hover_cell:
 		_hover_cell = cell
@@ -184,6 +194,64 @@ func _unhandled_input(event: InputEvent) -> void:
 
 func get_unit_at(cell: Vector2i) -> Unit:
 	return occupants().get(cell)
+
+
+# --- Névoa de guerra (FogOfWar) ------------------------------------------------
+
+## O jogador humano: é a visão dele que a névoa mostra. null se todos são
+## máquinas (névoa desligada).
+func viewer() -> Player:
+	for player in players:
+		if not player.is_ai:
+			return player
+	return null
+
+
+func player_by_id(id: int) -> Player:
+	for player in players:
+		if player.id == id:
+			return player
+	return null
+
+
+## Recalcula a visão do jogador humano: a névoa, as unidades dos outros que ele
+## vê, as cidades dos outros de que ele sabe (Player.seen_cities) e o minimapa.
+## Barato quando nada mudou; chamado a cada quadro e antes de selecionar.
+func _update_vision() -> void:
+	if fog == null:
+		return
+	var watcher := viewer()
+	var changed := fog.update(watcher)
+	for player in players:
+		for unit in player.units:
+			unit.fog_hidden = watcher != null and player != watcher and not fog.is_visible_cell(unit.cell)
+	if watcher:
+		# O que ele vê agora atualiza a lembrança das cidades dos outros
+		for city in cities():
+			if city.owner_player != watcher and fog.is_visible_cell(city.cell):
+				watcher.seen_cities[city.cell] = city.owner_player.id
+		for cell: Vector2i in watcher.seen_cities.keys():
+			var there := get_city_at(cell)
+			if fog.is_visible_cell(cell) and (there == null or there.owner_player == watcher):
+				watcher.seen_cities.erase(cell)
+	for city in cities():
+		city.visible = watcher == null or city.owner_player == watcher or watcher.seen_cities.has(city.cell)
+	if changed:
+		hud.minimap.refresh()
+
+
+## A unidade na casa, se o jogador humano a vê (as dos outros na névoa não).
+func visible_unit_at(cell: Vector2i) -> Unit:
+	var unit := get_unit_at(cell)
+	if unit and unit.owner_player != viewer() and not fog.is_visible_cell(cell):
+		return null
+	return unit
+
+
+## A cidade na casa, se o jogador humano sabe dela (as dos outros só depois de vistas).
+func known_city_at(cell: Vector2i) -> City:
+	var city := get_city_at(cell)
+	return city if city and city.visible else null
 
 
 ## {casa: Unit} de todas as unidades no mapa. Trabalhadores dentro de uma
@@ -884,9 +952,15 @@ func select_unit(unit: Unit) -> void:
 	_set_goto_mode(false)
 	if unit:
 		unit.set_selected(true)
+		_update_vision()
 		var current := occupants()
 		_reachable = Movement.find_reachable(game_map, unit, current)
 		_attack_targets = Movement.attack_targets(game_map, unit, _reachable, current)
+		if unit.owner_player == viewer():
+			# O humano só ataca o que vê (névoa de guerra)
+			for target: Vector2i in _attack_targets.keys():
+				if not fog.is_visible_cell(target):
+					_attack_targets.erase(target)
 		move_overlay.show_moves(unit.cell, Movement.destinations(_reachable, current, unit), _attack_targets.keys(),
 				unit.is_ranged())
 		if unit.has_goto():
@@ -1039,8 +1113,8 @@ func free_cell_near(center: Vector2i, radius: int, ocean := false) -> Vector2i:
 # --- Jogador humano ---------------------------------------------------------
 
 func _on_cell_clicked(cell: Vector2i) -> void:
-	var unit := get_unit_at(cell)
-	var city := get_city_at(cell)
+	var unit := visible_unit_at(cell)
+	var city := known_city_at(cell)
 	var current := TurnManager.current_player()
 	# Unidade escondida na cidade não é selecionada pelo mapa: o clique abre a
 	# cidade, e ela é ativada pela janela da cidade.
@@ -1155,7 +1229,7 @@ func _on_goto_clicked(cell: Vector2i) -> void:
 	_set_goto_mode(false)
 	if unit == null:
 		return
-	var enemy := get_unit_at(cell)
+	var enemy := visible_unit_at(cell)
 	if enemy and enemy.owner_player != unit.owner_player:
 		if _attack_targets.has(cell):
 			unit.goto_target = Unit.NO_TARGET
@@ -1965,6 +2039,7 @@ func restore_state(data: Dictionary) -> void:
 			child.queue_free()
 
 	game_map.from_dict(data["map"])
+	fog.reset()
 	ruins_layer.from_dict(data.get("ruins", {}))
 	players = []
 	_ais = {}
@@ -2178,6 +2253,8 @@ func _spawn_unit(type: UnitType, player: Player, cell: Vector2i) -> void:
 
 
 func _show_damage(unit: Unit, amount: int, delay := 0.0) -> void:
+	if not fog.is_visible_cell(unit.cell):
+		return # combate longe da vista do humano
 	var top := unit.position - Vector2(0, GameMap.TILE_SIZE / 2.0)
 	FloatingText.spawn(units_root, top, "-%d" % amount, Color(1, 0.35, 0.3), delay)
 
@@ -2186,12 +2263,16 @@ func _show_damage(unit: Unit, amount: int, delay := 0.0) -> void:
 func _update_info() -> void:
 	var lines: Array[String] = []
 	var unit := selected_unit
-	if game_map.is_in_bounds(_hover_cell):
+	if game_map.is_in_bounds(_hover_cell) and not fog.is_explored(_hover_cell):
+		lines.append("Casa (%d, %d): ainda não explorada" % [_hover_cell.x, _hover_cell.y])
+	elif game_map.is_in_bounds(_hover_cell):
 		lines.append("Casa (%d, %d): %s" % [_hover_cell.x, _hover_cell.y, _terrain_text(_hover_cell)])
+		if not fog.is_visible_cell(_hover_cell):
+			lines[-1] += " (fora da vista: o que está lá agora não aparece)"
 		var owner_city := territory_owner(_hover_cell)
 		if owner_city:
 			lines[-1] += " - território de %s (%s)" % [owner_city.city_name, owner_city.owner_player.display_name]
-		var city := get_city_at(_hover_cell)
+		var city := known_city_at(_hover_cell)
 		var mill := lumber_mill_at(_hover_cell)
 		if city:
 			var mood := city.mood()
@@ -2216,7 +2297,7 @@ func _update_info() -> void:
 					"+%d de ferro por turno" % mill.iron_per_turn() if mill.is_mine else "+%d de madeira por turno" % mill.wood_per_turn(),
 				mill.workers.size(), LumberMill.MAX_WORKERS,
 			])
-		var hovered := get_unit_at(_hover_cell)
+		var hovered := visible_unit_at(_hover_cell)
 		if hovered:
 			unit = hovered
 	if unit:

@@ -44,6 +44,9 @@ const MESSAGE_TIME := 3.0
 @onready var tech_dialog: TechDialog = $TechDialog
 ## Árvore de tecnologias (criada pelo código, por cima das outras janelas).
 var tech_tree_dialog: TechTreeDialog
+## Minimapa (canto esquerdo, abaixo do painel do turno; o Game chama setup).
+var minimap: Minimap
+var _minimap_panel: PanelContainer
 
 var _prompt_tween: Tween
 var _message_tween: Tween
@@ -67,6 +70,7 @@ var _shown_science := []
 
 
 func _ready() -> void:
+	_build_minimap()
 	tech_tree_dialog = TechTreeDialog.new()
 	tech_tree_dialog.name = "TechTreeDialog"
 	add_child(tech_tree_dialog)
@@ -81,6 +85,24 @@ func _ready() -> void:
 	_iron_icon.tooltip_text = "Ferro: vem das minas nas colinas com ferro (1 por trabalhador por turno; a mina não se esgota)."
 	_build_arsenal_rows()
 	_build_science_panel()
+
+
+## Painel do minimapa, logo abaixo do painel do turno (acompanha a altura dele).
+func _build_minimap() -> void:
+	_minimap_panel = PanelContainer.new()
+	_minimap_panel.name = "MinimapPanel"
+	var style: StyleBoxFlat = $TurnPanel.get_theme_stylebox("panel").duplicate()
+	style.set_content_margin_all(5)
+	_minimap_panel.add_theme_stylebox_override("panel", style)
+	add_child(_minimap_panel)
+	move_child(_minimap_panel, $TurnPanel.get_index() + 1)
+	minimap = Minimap.new()
+	minimap.name = "Minimap"
+	_minimap_panel.add_child(minimap)
+	var place := func() -> void:
+		_minimap_panel.position = Vector2($TurnPanel.position.x, $TurnPanel.position.y + $TurnPanel.size.y + 8.0)
+	$TurnPanel.resized.connect(place)
+	place.call()
 
 
 ## Uma linha por arma no painel Arsenal: ícone + "Lanças N".

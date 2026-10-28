@@ -11,4 +11,5 @@ attack = 2
 defense = 1
 movement = 1
 attack_range = 1
+vision = 2
 sprite = ExtResource("2")

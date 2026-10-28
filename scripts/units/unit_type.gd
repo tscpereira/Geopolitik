@@ -16,6 +16,9 @@ extends Resource
 @export_range(0, 99) var movement := 1
 ## Energia com que a unidade começa; ao chegar a 0 ela é destruída.
 @export_range(1, 999) var max_energy := 100
+## Quantas casas a unidade enxerga em volta (névoa de guerra: 1 = as 8
+## vizinhas; Arqueiro e Catapulta: 2, um quadrado 5x5).
+@export_range(1, 9) var vision := 1
 ## Cavalaria (Cavalaria Leve, Bigas): é contra ela que vale o anti_cavalry_bonus.
 @export var is_mounted := false
 ## Bônus de ataque E de defesa quando luta contra cavalaria (Lanceiro: +1).

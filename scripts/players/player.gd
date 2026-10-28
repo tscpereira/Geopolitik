@@ -34,6 +34,13 @@ var research := -1
 ## Pontos de ciência já gastos em cada tecnologia: {Technology.Tech: pontos}.
 ## Trocar de pesquisa não perde o que já foi feito.
 var research_progress := {}
+## Névoa de guerra: casas que o jogador já viu alguma vez (1 byte por casa,
+## y * largura + x; vazio = nada explorado ainda). Ver FogOfWar.
+var explored := PackedByteArray()
+## Cidades de outros jogadores que ele já viu, como estavam da última vez:
+## {casa: id do dono}. Uma cidade fundada ou destruída longe da vista dele só
+## aparece (ou some) quando ele voltar a ver a casa.
+var seen_cities := {}
 
 
 func _init(p_id: int, p_display_name: String, p_color: Color, p_is_ai := false) -> void:
@@ -126,6 +133,8 @@ func to_dict() -> Dictionary:
 		"arsenal": SaveGame.int_map_to_json(arsenal),
 		"researched": researched.duplicate(), "research": research,
 		"research_progress": SaveGame.int_map_to_json(research_progress),
+		"explored": Marshalls.raw_to_base64(explored),
+		"seen_cities": seen_cities.keys().map(func(cell: Vector2i) -> Array: return [cell.x, cell.y, seen_cities[cell]]),
 		"units": units.map(func(unit: Unit) -> Dictionary: return unit.to_dict()),
 		"cities": cities.map(func(city: City) -> Dictionary: return city.to_dict()),
 		"lumber_mills": lumber_mills.map(func(mill: LumberMill) -> Dictionary: return mill.to_dict(units)),
@@ -145,6 +154,9 @@ static func from_dict(data: Dictionary) -> Player:
 		player.researched.append(int(tech))
 	player.research = int(data.get("research", -1))
 	player.research_progress = SaveGame.json_to_int_map(data.get("research_progress", []))
+	player.explored = Marshalls.base64_to_raw(data.get("explored", ""))
+	for entry in data.get("seen_cities", []):
+		player.seen_cities[Vector2i(int(entry[0]), int(entry[1]))] = int(entry[2])
 	return player
 
 

@@ -69,6 +69,13 @@ var transport: Unit = null:
 		_update_visibility()
 ## Unidades a bordo (só para quem tem UnitType.cargo_capacity).
 var cargo: Array[Unit] = []
+## Unidade de outro jogador fora da visão do jogador humano (névoa de guerra;
+## Game._update_vision): some do mapa.
+var fog_hidden := false:
+	set(value):
+		if value != fog_hidden:
+			fog_hidden = value
+			_update_visibility()
 ## Turnos seguidos terminados em águas profundas (ver UnitType.deep_water_turn_limit).
 var deep_water_turns := 0
 ## Destino da ordem "Mover" (tecla G): a unidade anda até lá sozinha, turno
@@ -322,7 +329,7 @@ func set_selected(selected: bool) -> void:
 
 
 func _update_visibility() -> void:
-	visible = not hidden_in_city and working_mill == null and transport == null
+	visible = not hidden_in_city and working_mill == null and transport == null and not fog_hidden
 
 
 func _update_exhausted_look() -> void:

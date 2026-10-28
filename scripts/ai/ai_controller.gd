@@ -307,8 +307,8 @@ func _distance_to_enemies(game: Game, player: Player) -> Dictionary:
 
 ## Mostra ao jogador qual unidade vai agir: seleciona, leva a câmera até ela e espera.
 func _focus(game: Game, unit: Unit) -> void:
-	if fast_mode:
-		return
+	if fast_mode or not game.fog.is_visible_cell(unit.cell):
+		return # unidade na névoa do humano: ele não vê a jogada
 	game.select_unit(unit)
 	await game.camera.pan_to(unit.position)
 	await game.get_tree().create_timer(ACTION_DELAY).timeout
