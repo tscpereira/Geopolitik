@@ -4360,6 +4360,13 @@ histórico):
 [ ] Diplomacia (paz, guerra, acordos entre jogadores)
 [ ] Escolher a personalidade de cada jogador máquina ao começar
     a partida
+[ ] Névoa de guerra para a máquina: hoje ela vê o mapa inteiro (só o
+    humano tem névoa). A IA passaria a decidir com o que explorou
+    (Player.explored/seen_cities já existem por jogador): explorar com
+    batedores, atacar e avançar só contra o que viu, lembrar cidades
+    inimigas. Também fechar os vazamentos da névoa do humano (ruínas e
+    madeireiras remotas dos outros aparecem no estado atual, não no
+    lembrado).
 [ ] Balancear o ritmo do jogo (crescimento das cidades e custo
     dos prédios), para a máquina e o jogador montarem exército
     mais cedo
