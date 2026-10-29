@@ -678,7 +678,6 @@ func pillage(unit: Unit) -> String:
 	unit.spend_moves(PILLAGE_COST)
 	unit.fortified = false
 	unit.goto_target = Unit.NO_TARGET
-	var top := unit.position - Vector2(0, GameMap.TILE_SIZE / 2.0)
 	var reward := ""
 	if target["unfinished"]:
 		reward = "obra destruída, sem nada para saquear"
@@ -687,11 +686,11 @@ func pillage(unit: Unit) -> String:
 		unit.energy += healed
 		reward = "+%d de energia" % healed if healed > 0 else "energia já estava cheia"
 		if healed > 0:
-			FloatingText.spawn(units_root, top, "+%d" % healed, Color(0.4, 1, 0.4))
+			_float_text(unit.cell, "+%d" % healed, Color(0.4, 1, 0.4))
 	else:
 		player.gold += PILLAGE_MILL_GOLD
 		reward = "+%d de ouro" % PILLAGE_MILL_GOLD
-		FloatingText.spawn(units_root, top, "+%d" % PILLAGE_MILL_GOLD, Icons.GOLD_COLOR)
+		_float_text(unit.cell, "+%d" % PILLAGE_MILL_GOLD, Icons.GOLD_COLOR)
 	var executed := 0
 	var victim := ""
 	if target["city"]:
@@ -920,7 +919,7 @@ func raze_city(city: City, raider: Player) -> String:
 	if city.is_capital:
 		_reassign_capital(old_owner)
 	refresh_territories()
-	FloatingText.spawn(units_root, city.position - Vector2(0, GameMap.TILE_SIZE / 2.0), "+%d" % loot, Icons.GOLD_COLOR)
+	_float_text(city.cell, "+%d" % loot, Icons.GOLD_COLOR)
 	var text := "%s saqueou e destruiu %s, de %s: +%d de ouro." % [raider.display_name, city.city_name, old_owner.display_name, loot]
 	print(text)
 	_check_victory()
@@ -1047,8 +1046,7 @@ func found_city(settler: Unit, city_name := "") -> City:
 	city.assign_idle_citizens() # o primeiro cidadão já trabalha uma casa (+1 de alimento)
 	print("%s fundou a cidade %s em %s (%s, território de %d casas)" % [
 		player.display_name, city.city_name, city.cell, city.rank_text(), city.territory.size()])
-	FloatingText.spawn(units_root, city.position - Vector2(0, GameMap.TILE_SIZE / 2.0),
-			city.city_name, Color.WHITE)
+	_float_text(city.cell, city.city_name, Color.WHITE)
 
 	if settler == selected_unit:
 		select_unit(null)
@@ -1693,8 +1691,7 @@ func _heal_fortified_units(player: Player) -> void:
 	for unit in player.units:
 		var healed := unit.heal_if_fortified()
 		if healed > 0:
-			var top := unit.position - Vector2(0, GameMap.TILE_SIZE / 2.0)
-			FloatingText.spawn(units_root, top, "+%d" % healed, Color(0.4, 1, 0.4))
+			_float_text(unit.cell, "+%d" % healed, Color(0.4, 1, 0.4))
 
 
 ## Início da vez do jogador: a Galé que terminou o turno anterior em águas
@@ -1775,8 +1772,15 @@ func _completion_notice_text(city: City, build: int) -> String:
 func _show_extraction(player: Player, cell: Vector2i, amount: int, is_mine: bool) -> void:
 	if player != viewer():
 		return
-	FloatingText.spawn(units_root, game_map.cell_to_world(cell) - Vector2(0, GameMap.TILE_SIZE / 2.0),
-			"+%d" % amount, Icons.IRON_COLOR if is_mine else LumberMill.WOOD_BAR_COLOR)
+	_float_text(cell, "+%d" % amount, Icons.IRON_COLOR if is_mine else LumberMill.WOOD_BAR_COLOR)
+
+
+## Texto subindo do topo da casa (ganhos, cura, nome da cidade fundada). Os
+## textos ficam por cima da névoa: só aparece se o jogador humano vê a casa.
+func _float_text(cell: Vector2i, text: String, color: Color) -> void:
+	if not fog.is_visible_cell(cell):
+		return
+	FloatingText.spawn(units_root, game_map.cell_to_world(cell) - Vector2(0, GameMap.TILE_SIZE / 2.0), text, color)
 
 
 ## Início da vez do jogador: as madeireiras e minas remotas avançam a obra ou

@@ -4422,6 +4422,15 @@ PRÓXIMO PASSO GRANDE 2: CONJUNTOS CULTURAIS DE UNIDADES E CIDADES
   save) e testes dos terrenos, Galé, ataque à distância, névoa, painel,
   desordem e IA (inclusive a partida da máquina contra ela mesma).
 
+- NÉVOA E TEXTOS FLUTUANTES (relato do usuário): o nome da cidade
+  fundada pela máquina subia no meio da névoa (os textos flutuantes
+  ficam por cima dela). Agora todo texto subindo no mapa (nome da
+  cidade fundada, cura, saque, ouro do saque da cidade, madeira e
+  ferro) passa por Game._float_text e só aparece se o jogador humano
+  vê a casa (o dano já fazia isso). Validação: teste (cidade inimiga
+  na névoa sem nome, cidade própria com nome), screenshot e testes da
+  derrota, terrenos, névoa, ataque à distância e IA.
+
 --------------------------------------------------------------
 7. BACKLOG (ideias para depois)
 --------------------------------------------------------------
