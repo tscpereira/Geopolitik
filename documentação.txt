@@ -1627,10 +1627,11 @@ INVASÃO E CONQUISTA (Game.check_invasion, occupy_city, raze_city)
 
 JANELA DA CIDADE (scripts/ui/city_window.gd e city_map_view.gd)
 - Abre ao clicar numa cidade sua e logo depois de fundar uma.
-- Clicar numa cidade do adversário abre a janela no modo
-  "observando": mostra tudo, mas os botões de ordem ficam
-  desabilitados. Serve para acompanhar como a IA cuida da cidade
-  dela.
+- Clicar numa cidade do adversário NÃO abre a janela (desde
+  29/10/2026, pedido do usuário): aparece só uma linha com o nome e
+  o dono. O modo "observando" (CityWindow com read_only: tudo
+  visível, botões de ordem desabilitados) continua no código e é
+  usado pelos testes da IA.
   Esc ou "Fechar" fecham. Com a janela aberta, o mapa e as
   teclas do jogo ficam bloqueados.
 - Esquerda, MAPA DA CIDADE: as 21 casas com terreno, fazendas,
@@ -2897,7 +2898,8 @@ PRÓXIMO PASSO GRANDE 2: CONJUNTOS CULTURAIS DE UNIDADES E CIDADES
 [ ] Desenho definitivo da cidade em ruínas
 [x] Cidades contam para a vitória (perde quem ficar sem
     unidades e sem cidades)
-[x] Observar a cidade do adversário (janela em modo leitura)
+[x] Observar a cidade do adversário (janela em modo leitura; desde
+    29/10/2026 o clique não abre mais, a pedido do usuário)
 [x] Cidades: produzir unidades (Guerreiro: 10 de produção + 1 de
     população)
 [x] Cidades: produzir o Arqueiro (tecnologia Guerra a distância,
@@ -4430,6 +4432,11 @@ PRÓXIMO PASSO GRANDE 2: CONJUNTOS CULTURAIS DE UNIDADES E CIDADES
   vê a casa (o dano já fazia isso). Validação: teste (cidade inimiga
   na névoa sem nome, cidade própria com nome), screenshot e testes da
   derrota, terrenos, névoa, ataque à distância e IA.
+
+- CIDADE INIMIGA (pedido do usuário): clicar numa cidade de outro
+  jogador não abre mais a janela dela (antes abria "observando");
+  mostra só o nome e o dono. Validação: teste (inimiga não abre,
+  própria abre) e testes da derrota, nome da cidade, painel e névoa.
 
 --------------------------------------------------------------
 7. BACKLOG (ideias para depois)

@@ -1131,8 +1131,11 @@ func _on_cell_clicked(cell: Vector2i) -> void:
 	elif selected_unit and _reachable.has(cell) and unit == null:
 		selected_unit.goto_target = Unit.NO_TARGET
 		_human_action(move_unit.bind(selected_unit, cell))
+	elif city and city.owner_player == current:
+		_open_city(city)
 	elif city:
-		_open_city(city) # cidade do adversário abre só para observar
+		# Cidade de outro jogador: a janela dela não abre (desde 29/10/2026)
+		hud.show_message("%s, cidade de %s." % [city.city_name, city.owner_player.display_name], Color(1, 0.85, 0.5))
 	elif mill and mill.owner_player == current and unit == null:
 		_select_mill(mill)
 	elif own_unit:
