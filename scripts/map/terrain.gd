@@ -16,7 +16,7 @@ extends RefCounted
 ##   Montanhas rochosas e intransponíveis: nenhuma unidade entra; não dão
 ##            alimento nem aceitam melhorias.
 ## Um cidadão trabalhando a casa sem melhoria tira TILE_FOOD de alimento por
-## turno (pradaria, floresta, cerrado e colinas: 1; água e montanhas: não dá
+## turno (pradaria: 2; floresta, cerrado e colinas: 1; água e montanhas: não dá
 ## para trabalhar). Casa
 ## que encosta num rio (Rivers, GameMap.has_river) tira RIVER_FOOD a mais.
 
@@ -71,7 +71,7 @@ const MOVE_PENALTY := {
 ## Alimento por turno de um cidadão trabalhando a casa sem melhoria. A fazenda
 ## soma City.FARM_BONUS a isso. Terreno fora da lista não pode ser trabalhado.
 const TILE_FOOD := {
-	Type.GRASSLAND: 1,
+	Type.GRASSLAND: 2,
 	Type.FOREST: 1,
 	Type.CERRADO: 1,
 	Type.HILLS: 1,

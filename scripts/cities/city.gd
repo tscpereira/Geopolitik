@@ -154,7 +154,7 @@ const BUILDS := {
 	Build.FARM: {
 		"name": "Fazenda", "article": "a", "category": Category.TERRAIN_IMPROVEMENT,
 		"cost": 4, "gold": 50, "on_tile": true,
-		"description": "Melhoria em pradaria ou cerrado, feita por um Trabalhador. Com 1 cidadão, produz 2 de alimento por turno (1 da casa + 1 da fazenda; 3 com Feudalismo; +1 à beira de um rio).",
+		"description": "Melhoria em pradaria ou cerrado, feita por um Trabalhador. Com 1 cidadão, produz +1 de alimento sobre a casa: 3 por turno na pradaria e 2 no cerrado (+1 com Feudalismo; +1 à beira de um rio).",
 	},
 	Build.LUMBER_MILL: {
 		"name": "Madeireira", "article": "a", "category": Category.TERRAIN_IMPROVEMENT,

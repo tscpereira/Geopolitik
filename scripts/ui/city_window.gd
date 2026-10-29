@@ -328,7 +328,7 @@ func _refresh() -> void:
 	_rebuild_units()
 	_hint.text = ("Cidade de outro jogador: você pode observar, mas não dar ordens. Passe o mouse sobre uma casa para ver detalhes."
 			if _read_only else
-			"Clique numa casa do território para pôr ou tirar o cidadão (sem melhoria: +1 de alimento; fazenda: +2); nas madeireiras e minas, use as setas. Os números brancos indicam os cidadãos trabalhando ali. Fazendas, madeireiras e minas novas são feitas por Trabalhadores, no mapa."
+			"Clique numa casa do território para pôr ou tirar o cidadão (sem melhoria: +2 de alimento na pradaria, +1 nas outras; a fazenda soma +1); nas madeireiras e minas, use as setas. Os números brancos indicam os cidadãos trabalhando ali. Fazendas, madeireiras e minas novas são feitas por Trabalhadores, no mapa."
 			+ (" Casas em vermelho são de outra cidade sua: clique para trazê-las." if _has_transferable() else ""))
 	_rebuild_mood()
 	_rebuild_build_button()
