@@ -43,6 +43,7 @@ func _build_layout() -> void:
 
 	var panel := PanelContainer.new()
 	panel.add_theme_stylebox_override("panel", CityWindow.make_panel_style())
+	panel.theme = StoneStyle.theme()
 	center.add_child(panel)
 
 	var box := VBoxContainer.new()

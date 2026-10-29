@@ -21,14 +21,14 @@ extends Control
 
 signal closed
 
-const PANEL_COLOR := Color(0.1, 0.1, 0.12, 0.96)
-const SECTION_COLOR := Color(1, 0.85, 0.2)
-const MUTED_COLOR := Color(0.75, 0.75, 0.75)
-const WARNING_COLOR := Color(1, 0.6, 0.4)
-const POSITIVE_COLOR := Color(0.45, 1, 0.45)
-const NEGATIVE_COLOR := Color(1, 0.4, 0.35)
-## Obra parada por falta de mão de obra: fundo da barra e explicação.
-const NEEDS_WORKERS_BAR_COLOR := Color(0.55, 0.15, 0.13)
+## Cores das janelas de pedra (desde 28/10/2026: mármore claro, texto escuro;
+## ver StoneStyle). O HUD do mapa, escuro, tem as suas (Hud).
+const SECTION_COLOR := StoneStyle.BRONZE
+const MUTED_COLOR := StoneStyle.INK_MUTED
+const WARNING_COLOR := StoneStyle.WARNING
+const POSITIVE_COLOR := StoneStyle.POSITIVE
+const NEGATIVE_COLOR := StoneStyle.NEGATIVE
+## Obra parada por falta de mão de obra: explicação (a vala da barra fica avermelhada).
 const NEEDS_WORKERS_TIP := "Ninguém está trabalhando nesta obra, então ela não avança. Use + para alocar cidadãos livres; se não houver, tire alguns das fazendas e madeireiras (clique no mapa da cidade) ou dos impostos (botão -)."
 const RIGHT_COLUMN_WIDTH := 620
 ## Largura do controle "- N trab. +" (para alinhar o X das linhas sem ele).
@@ -150,15 +150,10 @@ func _has_transferable() -> bool:
 	return false
 
 
-## Fundo dos painéis das janelas (também usado pela pergunta do nome da cidade).
-static func make_panel_style() -> StyleBoxFlat:
-	var style := StyleBoxFlat.new()
-	style.bg_color = PANEL_COLOR
-	style.set_corner_radius_all(6)
-	style.set_content_margin_all(16)
-	style.set_border_width_all(2)
-	style.border_color = Color(1, 1, 1, 0.25)
-	return style
+## Fundo dos painéis das janelas: mármore com chanfro de lápide (StonePanelBox).
+## Usado por todas as janelas, que também recebem o tema de pedra (StoneStyle.theme).
+static func make_panel_style() -> StyleBox:
+	return StonePanelBox.new()
 
 
 # --- Montagem da janela -----------------------------------------------------
@@ -174,7 +169,7 @@ func _build_layout() -> void:
 	_title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	header.add_child(_title)
 	header.add_child(_make_button("Fechar [Esc]", close))
-	root.add_child(HSeparator.new())
+	root.add_child(StoneStyle.separator())
 
 	var body := HBoxContainer.new()
 	body.add_theme_constant_override("separation", 24)
@@ -223,27 +218,26 @@ func _build_layout() -> void:
 	_food_bar.custom_minimum_size = Vector2(0, 18)
 	_food_bar.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_food_bar.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	_food_bar.add_theme_stylebox_override("background", _bar_style(Color(0.3, 0.3, 0.33)))
-	_food_bar.add_theme_stylebox_override("fill", _bar_style(City.FOOD_BAR_COLOR))
+	StoneStyle.style_progress(_food_bar, City.FOOD_BAR_COLOR)
 	food_row.add_child(_food_bar)
 	_food_bar_label = Label.new()
 	_food_bar_label.custom_minimum_size.x = 70
 	food_row.add_child(_food_bar_label)
-	right.add_child(_make_section("Bem-estar social"))
+	_add_carved_section(right, "Bem-estar social")
 	_mood_box = VBoxContainer.new()
 	right.add_child(_mood_box)
 	_build_box = VBoxContainer.new()
 	right.add_child(_build_box)
-	right.add_child(_make_section("Prédios da cidade"))
+	_add_carved_section(right, "Prédios da cidade")
 	_buildings_box = VBoxContainer.new()
 	right.add_child(_buildings_box)
-	right.add_child(_make_section("Obras em andamento"))
+	_add_carved_section(right, "Obras em andamento")
 	_constructions_box = VBoxContainer.new()
 	right.add_child(_constructions_box)
-	right.add_child(_make_section("Melhorias em obra"))
+	_add_carved_section(right, "Melhorias em obra")
 	_farms_box = VBoxContainer.new()
 	right.add_child(_farms_box)
-	right.add_child(_make_section("Unidades na cidade"))
+	_add_carved_section(right, "Unidades na cidade")
 	_units_box = VBoxContainer.new()
 	right.add_child(_units_box)
 
@@ -275,7 +269,7 @@ func _build_modal_layout() -> void:
 	_treasury_label.add_theme_color_override("font_color", Icons.GOLD_COLOR)
 	header.add_child(_treasury_label)
 	header.add_child(_make_button("Cancelar [Esc]", _build_modal.hide))
-	root.add_child(HSeparator.new())
+	root.add_child(StoneStyle.separator())
 	# Com rolagem, para quando a lista crescer além da tela
 	var scroll := ScrollContainer.new()
 	scroll.custom_minimum_size = Vector2(760, BUILD_LIST_HEIGHT)
@@ -300,6 +294,7 @@ func _add_centered_panel(parent: Control) -> VBoxContainer:
 
 	var panel := PanelContainer.new()
 	panel.add_theme_stylebox_override("panel", make_panel_style())
+	panel.theme = StoneStyle.theme()
 	center.add_child(panel)
 
 	var root := VBoxContainer.new()
@@ -348,25 +343,13 @@ func _refresh() -> void:
 func _summary_text() -> String:
 	var lines: Array[String] = []
 	lines.append("População: %d   (livres: %d)" % [_city.population, _city.free_citizens()])
-	lines.append("Classe: %s (%s de população)%s   Território: %d casas" % [
-		City.RANK_NAMES[_city.rank()], City.rank_range_text(_city.rank()),
-		"  -  capital" if _city.is_capital else "", _city.territory.size()])
 	var food := _city.food_per_turn()
 	var growth := _city.turns_to_grow()
 	# Saldo de alimento colorido: verde sobrando, vermelho faltando
-	var food_color := POSITIVE_COLOR if food > 0 else NEGATIVE_COLOR if food < 0 else Color.WHITE
+	var food_color := POSITIVE_COLOR if food > 0 else NEGATIVE_COLOR if food < 0 else StoneStyle.INK
 	lines.append("Estoque de alimentos: %d/%d   [color=#%s]%+d[/color] por turno%s" % [
 		_city.food_stock, _city.food_capacity(), food_color.to_html(false), food,
 		("   (cresce em %d %s)" % [growth, "turno" if growth == 1 else "turnos"]) if growth > 0 else "",
-	])
-	var center_food := _city.center_food()
-	var party_food := _city.celebration_food()
-	var tiles_food := 0
-	for tile_cell: Vector2i in _city.worked_tiles:
-		tiles_food += _city.tile_food(tile_cell)
-	lines.append("    produção %d (cidade %d + fazendas %d + casas sem melhoria %d%s)  -  consumo %d" % [
-		_city.food_produced(), center_food, _city.food_produced() - center_food - party_food - tiles_food, tiles_food,
-		" + celebração %d" % party_food if party_food > 0 else "", _city.food_consumed(),
 	])
 	if not _city.lumber_mills.is_empty():
 		lines.append("Madeira: [color=#%s]+%d[/color] por turno   (%d em madeireiras)" % [
@@ -382,7 +365,7 @@ func _summary_text() -> String:
 		])
 	if _city.science_per_turn() > 0:
 		lines.append("Ciência: [color=#%s]+%d[/color] por turno   (Prefeitura, Escola e Biblioteca)" % [
-			Icons.SCIENCE_COLOR.to_html(false), _city.science_per_turn(),
+			StoneStyle.SCIENCE.to_html(false), _city.science_per_turn(),
 		])
 	lines.append("Produção (força de trabalho): %d por turno   (%d em obras e prédios)" % [
 		_city.production, _city.construction_workers(),
@@ -437,8 +420,8 @@ func _rebuild_mood() -> void:
 	counts.autowrap_mode = TextServer.AUTOWRAP_OFF
 	counts.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	counts.text = "[color=#%s]%d felizes[/color]  [color=#%s]%d contentes[/color]  [color=#%s]%d infelizes[/color]" % [
-		City.HAPPY_COLOR.to_html(false), mood["happy"], City.CONTENT_COLOR.to_html(false), mood["content"],
-		City.UNHAPPY_COLOR.to_html(false), mood["unhappy"]]
+		StoneStyle.BRONZE.to_html(false), mood["happy"], StoneStyle.INK.to_html(false), mood["content"],
+		NEGATIVE_COLOR.to_html(false), mood["unhappy"]]
 	faces_row.add_child(counts)
 
 	var status := RichTextLabel.new()
@@ -449,7 +432,7 @@ func _rebuild_mood() -> void:
 		status.text = "[color=#%s]DESORDEM CIVIL: a maioria da cidade está infeliz. A cidade não avança obras nem rende ouro ou ciência. Ponha cidadãos nas festividades, fortifique soldados na cidade ou construa um Templo.[/color]" % NEGATIVE_COLOR.to_html(false)
 	elif _city.is_celebrating():
 		status.text = "[color=#%s]CELEBRAÇÃO: nenhum infeliz e pelo menos metade feliz. +%d de alimento por turno (+%d por feliz).[/color]" % [
-			City.HAPPY_COLOR.to_html(false), _city.celebration_food(), City.CELEBRATION_FOOD_PER_HAPPY]
+			StoneStyle.BRONZE.to_html(false), _city.celebration_food(), City.CELEBRATION_FOOD_PER_HAPPY]
 	else:
 		var margin := _city.unrest_margin()
 		status.text = "[color=#%s]Em ordem.[/color] %s Desordem: mais da metade infeliz (cada feliz compensa um infeliz). Celebração: nenhum infeliz e metade feliz (%d+ de população)." % [
@@ -480,7 +463,7 @@ func _rebuild_mood() -> void:
 	var joy := Label.new()
 	joy.text = "+%d alegria" % _city.festival_joy()
 	joy.custom_minimum_size.x = 120
-	joy.add_theme_color_override("font_color", City.HAPPY_COLOR if _city.festival_workers > 0 else MUTED_COLOR)
+	joy.add_theme_color_override("font_color", StoneStyle.BRONZE if _city.festival_workers > 0 else MUTED_COLOR)
 	row.add_child(joy)
 	_add_worker_controls(row, _city.festival_workers, _city.festival_workers + _city.free_citizens(), _city.set_festival_workers)
 	var x_space := Control.new()
@@ -708,7 +691,7 @@ func _add_science_row(building: int) -> void:
 	var status := Label.new()
 	status.text = "+%d ciência" % info["science"]
 	status.custom_minimum_size.x = 120
-	status.add_theme_color_override("font_color", Icons.SCIENCE_COLOR)
+	status.add_theme_color_override("font_color", StoneStyle.SCIENCE)
 	row.add_child(status)
 	var controls_space := Control.new()
 	controls_space.custom_minimum_size.x = WORKER_CONTROLS_WIDTH + 30 # alinha com as outras linhas
@@ -786,7 +769,7 @@ func _add_idle_science_row(building: int) -> void:
 	var status := Label.new()
 	status.text = "+%d ciência" % (info.get("science", 0) + workers * info["idle_science"])
 	status.custom_minimum_size.x = 120
-	status.add_theme_color_override("font_color", Icons.SCIENCE_COLOR)
+	status.add_theme_color_override("font_color", StoneStyle.SCIENCE)
 	row.add_child(status)
 	_add_worker_controls(row, workers, mini(City.idle_max_workers(building), workers + _city.free_citizens()),
 			func(value: int) -> void: _city.set_building_workers(building, value))
@@ -821,8 +804,7 @@ func _add_construction_row(box: VBoxContainer, construction: City.Construction, 
 	bar.custom_minimum_size = Vector2(90, 20)
 	bar.size_flags_horizontal = Control.SIZE_EXPAND_FILL # empurra trabalhadores e X para a direita
 	bar.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	bar.add_theme_stylebox_override("background", _bar_style(Color(0.3, 0.3, 0.33)))
-	bar.add_theme_stylebox_override("fill", _bar_style(Color(0.3, 0.8, 1.0)))
+	StoneStyle.style_progress(bar, Color(0.3, 0.75, 1.0))
 	row.add_child(bar)
 
 	var turns := _city.turns_to_finish(construction)
@@ -847,7 +829,7 @@ func _add_construction_row(box: VBoxContainer, construction: City.Construction, 
 		status.tooltip_text = NEEDS_WORKERS_TIP
 		status.add_theme_color_override("font_color", NEGATIVE_COLOR)
 		name_label.add_theme_color_override("font_color", NEGATIVE_COLOR)
-		bar.add_theme_stylebox_override("background", _bar_style(NEEDS_WORKERS_BAR_COLOR))
+		bar.set_meta("stone_alert", true) # vala avermelhada: obra parada
 		bar.tooltip_text = NEEDS_WORKERS_TIP
 	row.add_child(status)
 
@@ -977,18 +959,23 @@ func _make_section(text: String) -> Label:
 	return label
 
 
+## Título de seção com um sulco entalhado acima (o sulco some junto se o
+## título for escondido).
+func _add_carved_section(parent: Container, text: String) -> Label:
+	var groove := StoneStyle.separator(14.0)
+	parent.add_child(groove)
+	var label := _make_section(text)
+	label.visibility_changed.connect(func() -> void: groove.visible = label.visible)
+	parent.add_child(label)
+	return label
+
+
 func _make_muted(text: String) -> Label:
 	var label := Label.new()
 	label.text = text
 	label.add_theme_color_override("font_color", MUTED_COLOR)
 	return label
 
-
-func _bar_style(color: Color) -> StyleBoxFlat:
-	var style := StyleBoxFlat.new()
-	style.bg_color = color
-	style.set_corner_radius_all(3)
-	return style
 
 
 func _make_button(text: String, on_pressed: Callable) -> Button:
@@ -1000,23 +987,9 @@ func _make_button(text: String, on_pressed: Callable) -> Button:
 	return button
 
 
-## Botões com fundo visível sobre o painel escuro (o tema padrão some nele).
-## Também usado pela pergunta do nome da cidade.
+## Botões de pedra em relevo (StoneStyle). Usado por todas as janelas.
 static func style_button(button: Button) -> void:
-	var colors := {
-		"normal": Color(0.26, 0.28, 0.34), "hover": Color(0.36, 0.39, 0.47),
-		"pressed": Color(0.2, 0.22, 0.27), "disabled": Color(0.17, 0.17, 0.2),
-	}
-	for state: String in colors:
-		var style := StyleBoxFlat.new()
-		style.bg_color = colors[state]
-		style.set_corner_radius_all(4)
-		style.content_margin_left = 10
-		style.content_margin_right = 10
-		style.content_margin_top = 4
-		style.content_margin_bottom = 4
-		button.add_theme_stylebox_override(state, style)
-	button.add_theme_color_override("font_disabled_color", Color(0.5, 0.5, 0.5))
+	StoneStyle.style_button(button)
 
 
 func _clear(box: Container) -> void:

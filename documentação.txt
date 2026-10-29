@@ -1984,6 +1984,40 @@ MOVIMENTO (scripts/map/movement.gd)
   pelo menos uma casa livre ao alcance. Assim, uma unidade
   cercada não trava o fim do turno.
 
+JANELAS DE PEDRA (desde 28/10/2026, pedido do usuário; scripts/ui/stone_style.gd,
+stone_panel_box.gd; textura assets/ui/marmore.png, gerada por
+tools/art/gen_marmore.gd)
+- Todas as JANELAS (cidade, escolha da pesquisa, árvore de tecnologias,
+  salvar/carregar, avisos, invasão, nome da cidade, tecnologia descoberta)
+  são uma placa de MÁRMORE BRANCO com veios cinza (versão A; a B, com veios
+  dourados, também está em assets/ui/marmore_dourado.png). O HUD do mapa
+  continua escuro (fica sobre o mapa e distrai menos).
+- BORDA CHANFRADA de lápide (StonePanelBox, o StyleBox devolvido por
+  CityWindow.make_panel_style): faixa inclinada de 16 px, clara em cima e à
+  esquerda (a luz vem de lá), escura embaixo e à direita, com arestas e as
+  diagonais dos cantos.
+- SULCOS ENTALHADOS (StoneStyle.separator): linha escura com um fio claro
+  logo abaixo, sumindo nas pontas; no lugar das linhas de separação e, na
+  janela da cidade, acima de cada seção (Bem-estar, Prédios, Obras...).
+- BOTÕES DE PEDRA EM RELEVO (CityWindow.style_button -> StoneStyle):
+  placa de mármore mais clara, chanfrada, com sombra projetada; mais clara
+  com o mouse em cima, afunda ao clicar (sem sombra, chanfro invertido),
+  plana e apagada quando desabilitada; texto em bronze escuro. A placa é
+  desenhada num filho atrás do botão (o sinal draw do botão vem depois do
+  texto e o cobriria).
+- BARRAS EM VALA (StoneStyle.style_progress: estoque de alimentos e obras):
+  canaleta funda talhada na pedra, paredes com sombra em cima e à esquerda,
+  lábio iluminado embaixo, a barra colorida no fundo; obra parada por falta
+  de mão de obra: a vala fica avermelhada (meta "stone_alert").
+- TEXTO ESCURO (StoneStyle.theme, posto no painel de cada janela): grafite
+  (INK), títulos e destaques em bronze, e as cores com significado em tons
+  escuros (POSITIVE verde, NEGATIVE vermelho, WARNING laranja, SCIENCE
+  azul). As constantes de cor de CityWindow agora são essas; o HUD tem as
+  suas, claras (Hud.WARNING_COLOR...). Cartões da árvore: mármore
+  translúcido com a borda da cor do estado.
+- Resumo da cidade sem a linha da Classe/Território (a classe e a capital
+  estão no título) e sem a linha do detalhe da produção de alimento.
+
 PAINEL DA UNIDADE (scripts/ui/unit_panel.gd; desde 28/10/2026, a partir do
 mockup do usuário, no lugar das barras de informação e de ações de baixo)
 - Canto inferior esquerdo. Aparece com uma unidade (ou madeireira/mina
@@ -4302,6 +4336,15 @@ PRÓXIMO PASSO GRANDE 2: CONJUNTOS CULTURAIS DE UNIDADES E CIDADES
   Validação: teste (painel e botões, retrato, ação pelo botão, prévia de
   ataque, sem seleção, madeireira) e screenshots; testes da névoa, do
   ataque à distância (ajustado para ler o painel), da Galé e da árvore.
+
+- JANELAS DE PEDRA (pedido do usuário, a partir de referências de mármore):
+  ver a seção JANELAS DE PEDRA. Mármore gerado por código (as imagens de
+  referência da internet não podem ser usadas), chanfro de lápide, sulcos
+  entalhados, botões em relevo, barras em vala, texto escuro. Resumo da
+  cidade sem as linhas de Classe e do detalhe da produção. Corrigido também
+  um aviso do save da névoa com jogador sem nada explorado. Validação:
+  screenshots das 8 janelas e testes da árvore, desordem, painel da
+  unidade, névoa, ataque à distância e Galé.
 
 --------------------------------------------------------------
 7. BACKLOG (ideias para depois)

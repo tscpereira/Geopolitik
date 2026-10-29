@@ -15,6 +15,12 @@ signal research_pressed
 ## Botão "Árvore [T]" do painel de Ciência: abrir a árvore de tecnologias.
 signal tech_tree_pressed
 
+## Cores do HUD (fundo escuro sobre o mapa; as janelas de pedra têm as delas).
+const WARNING_COLOR := Color(1, 0.6, 0.4)
+const MUTED_COLOR := Color(0.75, 0.75, 0.75)
+const POSITIVE_COLOR := Color(0.45, 1, 0.45)
+const NEGATIVE_COLOR := Color(1, 0.4, 0.35)
+
 ## Tempo que uma mensagem fica na tela antes de sumir.
 const MESSAGE_TIME := 3.0
 
@@ -253,7 +259,7 @@ func set_science(player: Player) -> void:
 	_science_label.text = "[color=#%s]%+d[/color] por turno" % [_rate_color(per_turn).to_html(false), per_turn]
 	if player.research < 0:
 		_research_label.text = "Sem pesquisa: clique para escolher"
-		_research_label.add_theme_color_override("font_color", CityWindow.WARNING_COLOR)
+		_research_label.add_theme_color_override("font_color", WARNING_COLOR)
 		_research_bar.visible = false
 		return
 	var done: int = player.research_progress.get(player.research, 0)
@@ -277,7 +283,7 @@ func set_arsenal(arsenal: Dictionary, in_production: Dictionary) -> void:
 			continue
 		var label: RichTextLabel = _weapon_labels[weapon]
 		label.text = "%s [b]%d[/b]%s" % [Arsenal.PLURAL_NAMES[weapon], amount,
-				"   [color=#%s](+%d em produção)[/color]" % [CityWindow.MUTED_COLOR.to_html(false), making] if making > 0 else ""]
+				"   [color=#%s](+%d em produção)[/color]" % [MUTED_COLOR.to_html(false), making] if making > 0 else ""]
 		label.tooltip_text = "Estoque de %s no arsenal e quantas estão na fila das Marcenarias." % Arsenal.PLURAL_NAMES[weapon].to_lower()
 		if _shown_arsenal.has(weapon) and _shown_arsenal[weapon].x != amount:
 			_flash(label, amount > _shown_arsenal[weapon].x)
@@ -313,14 +319,14 @@ func set_resources(gold: int, gold_per_turn: int, wood: int, wood_per_turn: int,
 
 
 func _rate_color(rate: int) -> Color:
-	return CityWindow.POSITIVE_COLOR if rate > 0 else CityWindow.NEGATIVE_COLOR if rate < 0 else CityWindow.MUTED_COLOR
+	return POSITIVE_COLOR if rate > 0 else NEGATIVE_COLOR if rate < 0 else MUTED_COLOR
 
 
 ## O número pisca em verde (subiu) ou vermelho (caiu) e volta ao normal.
 func _flash(label: Control, increased: bool) -> void:
 	if _flash_tweens.has(label):
 		_flash_tweens[label].kill()
-	label.modulate = CityWindow.POSITIVE_COLOR if increased else CityWindow.NEGATIVE_COLOR
+	label.modulate = POSITIVE_COLOR if increased else NEGATIVE_COLOR
 	var tween := create_tween()
 	tween.tween_property(label, "modulate", Color.WHITE, 1.2)
 	_flash_tweens[label] = tween

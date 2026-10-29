@@ -72,6 +72,7 @@ func _build_layout() -> void:
 	add_child(dim)
 	var panel := PanelContainer.new()
 	panel.add_theme_stylebox_override("panel", CityWindow.make_panel_style())
+	panel.theme = StoneStyle.theme()
 	panel.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	for side in [SIDE_LEFT, SIDE_TOP, SIDE_RIGHT, SIDE_BOTTOM]:
 		panel.set("offset_" + ["left", "top", "right", "bottom"][side], 24.0 if side < 2 else -24.0)
@@ -98,7 +99,7 @@ func _build_layout() -> void:
 	close_button.pressed.connect(close)
 	CityWindow.style_button(close_button)
 	header.add_child(close_button)
-	box.add_child(HSeparator.new())
+	box.add_child(StoneStyle.separator())
 	_scroll = ScrollContainer.new()
 	_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	box.add_child(_scroll)
@@ -213,10 +214,14 @@ func _card(tech: int) -> Control:
 	card.custom_minimum_size = CARD_SIZE
 	card.clip_contents = true
 	card.tooltip_text = Technology.DATA[tech]["description"]
+	# Mármore translúcido (o da janela aparece), um pouco esverdeado se pesquisada
+	# e mais apagado se bloqueada; a borda tem a cor do estado
 	var style := StyleBoxFlat.new()
-	style.bg_color = Color(0.13, 0.14, 0.17) if state == "locked" else Color(0.16, 0.18, 0.22)
+	style.bg_color = Color(1, 1, 1, 0.55)
 	if state == "researched":
-		style.bg_color = Color(0.13, 0.22, 0.15)
+		style.bg_color = Color(0.86, 0.95, 0.86, 0.7)
+	elif state == "locked":
+		style.bg_color = Color(0.85, 0.85, 0.85, 0.35)
 	style.border_color = accent
 	style.set_border_width_all(3 if state in ["researching", "available"] else 2)
 	style.set_corner_radius_all(6)
@@ -232,10 +237,13 @@ func _card(tech: int) -> Control:
 	box.add_theme_constant_override("separation", 2)
 	box.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	card.add_child(box)
-	var name_label := _label(Technology.tech_name(tech), 17, Color.WHITE if state != "locked" else Color(0.7, 0.7, 0.72))
+	var name_label := _label(Technology.tech_name(tech), 17, StoneStyle.INK if state != "locked" else StoneStyle.INK_MUTED)
 	name_label.clip_text = true
 	box.add_child(name_label)
-	var status := _label(_status_text(tech, state), 12, accent)
+	# Texto do estado em tom escuro da mesma cor (legível sobre o mármore)
+	var ink: Color = {"researched": StoneStyle.POSITIVE, "researching": StoneStyle.SCIENCE,
+			"available": StoneStyle.BRONZE, "locked": StoneStyle.INK_MUTED}[state]
+	var status := _label(_status_text(tech, state), 12, ink)
 	status.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	status.max_lines_visible = 2
 	box.add_child(status)
@@ -255,7 +263,7 @@ func _card(tech: int) -> Control:
 		box.add_child(bar)
 	var unlocks := unlocks_of(tech)
 	if not unlocks.is_empty():
-		var label := _label("Libera: " + ", ".join(unlocks), 12, Color(0.82, 0.82, 0.85) if state != "locked" else Color(0.6, 0.6, 0.62))
+		var label := _label("Libera: " + ", ".join(unlocks), 12, StoneStyle.INK if state != "locked" else StoneStyle.INK_MUTED)
 		label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		label.max_lines_visible = 3
 		box.add_child(label)

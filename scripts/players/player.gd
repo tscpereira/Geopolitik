@@ -133,7 +133,7 @@ func to_dict() -> Dictionary:
 		"arsenal": SaveGame.int_map_to_json(arsenal),
 		"researched": researched.duplicate(), "research": research,
 		"research_progress": SaveGame.int_map_to_json(research_progress),
-		"explored": Marshalls.raw_to_base64(explored),
+		"explored": Marshalls.raw_to_base64(explored) if not explored.is_empty() else "",
 		"seen_cities": seen_cities.keys().map(func(cell: Vector2i) -> Array: return [cell.x, cell.y, seen_cities[cell]]),
 		"units": units.map(func(unit: Unit) -> Dictionary: return unit.to_dict()),
 		"cities": cities.map(func(city: City) -> Dictionary: return city.to_dict()),
@@ -154,7 +154,8 @@ static func from_dict(data: Dictionary) -> Player:
 		player.researched.append(int(tech))
 	player.research = int(data.get("research", -1))
 	player.research_progress = SaveGame.json_to_int_map(data.get("research_progress", []))
-	player.explored = Marshalls.base64_to_raw(data.get("explored", ""))
+	var explored_text: String = data.get("explored", "")
+	player.explored = Marshalls.base64_to_raw(explored_text) if not explored_text.is_empty() else PackedByteArray()
 	for entry in data.get("seen_cities", []):
 		player.seen_cities[Vector2i(int(entry[0]), int(entry[1]))] = int(entry[2])
 	return player

@@ -47,6 +47,7 @@ func _build_layout() -> void:
 	add_child(center)
 	var panel := PanelContainer.new()
 	panel.add_theme_stylebox_override("panel", CityWindow.make_panel_style())
+	panel.theme = StoneStyle.theme()
 	center.add_child(panel)
 	var box := VBoxContainer.new()
 	box.add_theme_constant_override("separation", 12)
@@ -69,7 +70,7 @@ func _build_layout() -> void:
 	frame_style.bg_color = Color.BLACK
 	frame_style.set_content_margin_all(3)
 	frame_style.set_border_width_all(1)
-	frame_style.border_color = Color(1, 0.85, 0.2, 0.6)
+	frame_style.border_color = Color(StoneStyle.BRONZE, 0.8)
 	frame.add_theme_stylebox_override("panel", frame_style)
 	box.add_child(frame)
 	_image = TextureRect.new()

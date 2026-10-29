@@ -62,6 +62,7 @@ func _build_layout() -> void:
 	add_child(center)
 	var panel := PanelContainer.new()
 	panel.add_theme_stylebox_override("panel", CityWindow.make_panel_style())
+	panel.theme = StoneStyle.theme()
 	center.add_child(panel)
 	var box := VBoxContainer.new()
 	box.add_theme_constant_override("separation", 12)
@@ -80,7 +81,7 @@ func _build_layout() -> void:
 	header.add_child(_title)
 	_close_button = _make_button("Fechar [Esc]", _finish.bind(-1))
 	header.add_child(_close_button)
-	box.add_child(HSeparator.new())
+	box.add_child(StoneStyle.separator())
 	_rows = VBoxContainer.new()
 	_rows.add_theme_constant_override("separation", 8)
 	box.add_child(_rows)
@@ -106,7 +107,7 @@ func _add_row(player: Player, tech: int, per_turn: int) -> void:
 	var done: int = player.research_progress.get(tech, 0)
 	cost_label.text = "%d pontos de ciência%s" % [Technology.cost(tech), "  (%d feitos)" % done if done > 0 else ""]
 	cost_label.custom_minimum_size.x = 260
-	cost_label.add_theme_color_override("font_color", Icons.SCIENCE_COLOR)
+	cost_label.add_theme_color_override("font_color", StoneStyle.SCIENCE)
 	row.add_child(cost_label)
 	var turns_label := Label.new()
 	turns_label.text = "%d turnos" % ceili(float(Technology.cost(tech) - done) / per_turn) if per_turn > 0 else "sem ciência"

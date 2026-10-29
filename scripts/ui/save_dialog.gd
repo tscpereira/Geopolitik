@@ -51,6 +51,7 @@ func _build_layout() -> void:
 	add_child(center)
 	var panel := PanelContainer.new()
 	panel.add_theme_stylebox_override("panel", CityWindow.make_panel_style())
+	panel.theme = StoneStyle.theme()
 	center.add_child(panel)
 	var box := VBoxContainer.new()
 	box.add_theme_constant_override("separation", 12)
@@ -64,7 +65,7 @@ func _build_layout() -> void:
 	_title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	header.add_child(_title)
 	header.add_child(_make_button("Cancelar [Esc]", _finish.bind(-1)))
-	box.add_child(HSeparator.new())
+	box.add_child(StoneStyle.separator())
 	_rows = VBoxContainer.new()
 	_rows.add_theme_constant_override("separation", 8)
 	box.add_child(_rows)
@@ -86,7 +87,7 @@ func _add_row(slot: int) -> void:
 	var info := Label.new()
 	info.text = SaveGame.summary(slot)
 	info.custom_minimum_size.x = 430
-	info.add_theme_color_override("font_color", Color.WHITE if SaveGame.has_save(slot) else CityWindow.MUTED_COLOR)
+	info.add_theme_color_override("font_color", StoneStyle.INK if SaveGame.has_save(slot) else CityWindow.MUTED_COLOR)
 	row.add_child(info)
 	var button := _make_button("Salvar" if _saving else "Carregar", _finish.bind(slot))
 	button.custom_minimum_size.x = 100
