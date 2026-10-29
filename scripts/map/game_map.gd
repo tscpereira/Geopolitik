@@ -49,6 +49,11 @@ const SHADER_TEXTURES := {
 	Terrain.Type.CERRADO: "cerrado_tex",
 	Terrain.Type.HILLS: "hill_tex",
 	Terrain.Type.MOUNTAINS: "mountain_tex",
+	Terrain.Type.DEEP_WATER: "deep_water_tex",
+	Terrain.Type.JUNGLE: "jungle_tex",
+	Terrain.Type.DESERT: "desert_tex",
+	Terrain.Type.TUNDRA: "tundra_tex",
+	Terrain.Type.SNOW: "snow_tex",
 }
 
 var width := 0
@@ -88,7 +93,7 @@ var _ocean := {}
 ## Rios: cada um é a lista dos cantos da grade por onde passa (ver Rivers).
 var rivers: Array = []
 ## Madeira que resta nas florestas já exploradas: {casa: quantidade}. Casa de
-## floresta fora daqui ainda tem Terrain.WOOD_PER_FOREST.
+## mata (floresta ou selva) fora daqui ainda tem a madeira toda (Terrain.WOOD).
 var _wood := {}
 ## Casas que encostam num rio: {casa: true} (ver has_river).
 var _river_cells := {}
@@ -166,6 +171,9 @@ func load_from_image(image: Image) -> void:
 	for y in height:
 		for x in width:
 			_terrain[y * width + x] = Terrain.from_color(image.get_pixel(x, y))
+	mark_deep_water()
+	for y in height:
+		for x in width:
 			_terrain_image.set_pixel(x, y, Color8(_terrain[y * width + x], 0, 0))
 	_terrain_map = ImageTexture.create_from_image(_terrain_image)
 	_view.texture = _terrain_map
@@ -429,7 +437,7 @@ func _find_ocean() -> void:
 	for y in height:
 		for x in width:
 			var cell := Vector2i(x, y)
-			if (x == 0 or y == 0 or x == width - 1 or y == height - 1) and get_terrain(cell) == Terrain.Type.WATER:
+			if (x == 0 or y == 0 or x == width - 1 or y == height - 1) and Terrain.is_navigable(get_terrain(cell)):
 				_ocean[cell] = true
 				queue.append(cell)
 	var head := 0
@@ -438,9 +446,33 @@ func _find_ocean() -> void:
 		head += 1
 		for direction in Movement.DIRECTIONS:
 			var next := cell + direction
-			if is_in_bounds(next) and not _ocean.has(next) and get_terrain(next) == Terrain.Type.WATER:
+			if is_in_bounds(next) and not _ocean.has(next) and Terrain.is_navigable(get_terrain(next)):
 				_ocean[next] = true
 				queue.append(next)
+
+
+## Águas Profundas: o oceano longe da terra. Toda casa de Água Rasa do oceano
+## (is_ocean) que não encosta em terra (nenhuma das 8 vizinhas) vira Água
+## Profunda; ficam rasas só a faixa da costa e os lagos. Chamado ao montar o
+## mapa (load_from_image); o PNG também pode pintar Água Profunda direto.
+func mark_deep_water() -> void:
+	_ocean = {}
+	var deep: Array[Vector2i] = []
+	for y in height:
+		for x in width:
+			var cell := Vector2i(x, y)
+			if get_terrain(cell) != Terrain.Type.WATER or not is_ocean(cell):
+				continue
+			var near_land := false
+			for direction in Movement.DIRECTIONS:
+				var next := cell + direction
+				if is_in_bounds(next) and not Terrain.is_navigable(get_terrain(next)):
+					near_land = true
+					break
+			if not near_land:
+				deep.append(cell)
+	for cell in deep:
+		_terrain[cell.y * width + cell.x] = Terrain.Type.DEEP_WATER
 
 
 ## Troca o terreno da casa (ex.: floresta esgotada vira cerrado) e redesenha.
@@ -494,15 +526,20 @@ func from_dict(data: Dictionary) -> void:
 	_improvement_map.update(_improvement_image)
 
 
-## Madeira que ainda resta na casa (0 se não for floresta).
+## Madeira que ainda resta na casa (0 se não for mata: floresta ou selva).
 func wood_left(cell: Vector2i) -> int:
-	if not is_in_bounds(cell) or get_terrain(cell) != Terrain.Type.FOREST:
+	if not is_in_bounds(cell) or not Terrain.has_wood(get_terrain(cell)):
 		return 0
-	return _wood.get(cell, Terrain.WOOD_PER_FOREST)
+	return _wood.get(cell, wood_total(cell))
 
 
-## Tira até [param amount] de madeira da floresta e retorna quanto tirou.
-## Quando a madeira acaba, a floresta vira cerrado.
+## Madeira da casa ainda inteira (Terrain.WOOD: floresta 100, selva 150; 0 fora da mata).
+func wood_total(cell: Vector2i) -> int:
+	return Terrain.WOOD.get(get_terrain(cell), 0) if is_in_bounds(cell) else 0
+
+
+## Tira até [param amount] de madeira da mata e retorna quanto tirou.
+## Quando a madeira acaba, a floresta (ou a selva) vira cerrado.
 func harvest_wood(cell: Vector2i, amount: int) -> int:
 	var taken := mini(amount, wood_left(cell))
 	if taken <= 0:

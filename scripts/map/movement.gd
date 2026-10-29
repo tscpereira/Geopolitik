@@ -119,7 +119,7 @@ static func in_attack_range(map: GameMap, unit: Unit, from: Vector2i, target: Ve
 
 ## Terrenos que bloqueiam o disparo quando estão ENTRE quem atira e o alvo (o
 ## alvo pode estar neles).
-const BLOCKS_FIRE: Array[Terrain.Type] = [Terrain.Type.FOREST, Terrain.Type.HILLS, Terrain.Type.MOUNTAINS]
+const BLOCKS_FIRE: Array[Terrain.Type] = [Terrain.Type.FOREST, Terrain.Type.JUNGLE, Terrain.Type.HILLS, Terrain.Type.MOUNTAINS]
 
 
 ## Linha de tiro de [param from] até [param target]: em cada passo da reta entre

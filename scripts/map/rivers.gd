@@ -168,7 +168,7 @@ static func cells_around(corner: Vector2i) -> Array[Vector2i]:
 
 static func _all_land_around(map: GameMap, corner: Vector2i) -> bool:
 	for cell in cells_around(corner):
-		if not map.is_in_bounds(cell) or map.get_terrain(cell) == Terrain.Type.WATER:
+		if not map.is_in_bounds(cell) or Terrain.is_navigable(map.get_terrain(cell)):
 			return false
 	return true
 
@@ -183,7 +183,7 @@ static func edge_cells(a: Vector2i, b: Vector2i) -> Array[Vector2i]:
 
 static func _is_land_edge(map: GameMap, a: Vector2i, b: Vector2i) -> bool:
 	for cell in edge_cells(a, b):
-		if not map.is_in_bounds(cell) or map.get_terrain(cell) in [Terrain.Type.WATER, Terrain.Type.MOUNTAINS]:
+		if not map.is_in_bounds(cell) or Terrain.is_navigable(map.get_terrain(cell)) or map.get_terrain(cell) == Terrain.Type.MOUNTAINS:
 			return false # rio não corre colado na montanha (a rocha cobre a borda)
 	return true
 
@@ -308,7 +308,7 @@ static func _curve(map: GameMap, river: Array, cell_size: float, origin: Vector2
 	var water := Vector2.ZERO
 	var count := 0
 	for cell in cells_around(last):
-		if map.is_in_bounds(cell) and map.get_terrain(cell) == Terrain.Type.WATER:
+		if map.is_in_bounds(cell) and Terrain.is_navigable(map.get_terrain(cell)):
 			water += origin + (Vector2(cell) + Vector2(0.5, 0.5)) * cell_size
 			count += 1
 	if count > 0:

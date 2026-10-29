@@ -21,6 +21,9 @@ Cada pasta é um pedido, com uma folha do tema:
                         Madeireira, mina e ferro já vieram bons (folha em
                         tools/art/gemini/melhorias_folha.png)
   10_tecnologias        16 ilustrações (4x4, opcional)
+  11_terrenos_novos     águas profundas, selva (com palmeiras), deserto,
+                        tundra e neve (5x1; no jogo, provisórias geradas
+                        por tools/art/gen_terrenos_novos.gd)
   (As 14 cidades numa folha só o Gemini não conseguiu: copiou a
   referência. Por isso uma classe por pedido.)
 

@@ -218,6 +218,23 @@ func _themes() -> Array:
 			["republica", "res://assets/tech/republica", "Republic: a citizens' assembly on a hill, a speaker on a stone platform."],
 			["pao_e_circo", "res://assets/tech/pao_e_circo", "Bread and circuses: games in an arena, a cheering crowd, bread handed out."],
 		]},
+		# Terrenos de 28/10/2026 (no jogo com texturas provisórias geradas por
+		# tools/art/gen_terrenos_novos.gd). Importar com import_terrenos_gemini.gd:
+		#   ... -- resultado.png aguas_profundas selva deserto tundra neve
+		{"name": "terrenos_novos", "what": "5 square terrain textures", "columns": 5, "cell": 150, "tile": true,
+		"camera": """THESE ARE TERRAIN TEXTURES, not objects:
+- Each one seen straight from above (top-down) and filling its whole square cell edge to edge.
+- Each one SEAMLESS: it must tile perfectly when repeated side by side and top to bottom.
+- No object in the middle, no horizon, no border inside the squares.
+- FLAT lighting, no big relief: the game draws hills and mountains by itself.""",
+		"extra": "The squares are separated by thin flat green (#00B140) gutters.",
+		"items": [
+			["aguas_profundas", t + "aguas_profundas", "Deep open ocean from above: very dark navy-blue water, darker than the coastal teal sea, with a few small painted wave crests."],
+			["selva", t + "selva", "Tropical jungle canopy from above: very dense, lush rainforest of round tree crowns in many greens, with many PALM TREES (star-shaped palm fronds) mixed in, deep shadows between them."],
+			["deserto", t + "deserto", "Sand desert from above: warm golden sand with soft wind ripples and gentle dune shading, a few tiny pebbles."],
+			["tundra", t + "tundra", "Tundra from above: cold brown-olive ground with low moss and lichen patches, small grey stones and thin patches of old snow."],
+			["neve", t + "neve", "Snow field from above: clean white snow with soft blue-grey shadows of small drifts, a little sparkle."],
+		]},
 	]
 	# As cidades, uma classe por pedido (as 14 juntas o Gemini não conseguiu)
 	return list.slice(0, 1) + _city_themes(c) + list.slice(1)
@@ -382,6 +399,9 @@ Cada pasta é um pedido, com uma folha do tema:
                         Madeireira, mina e ferro já vieram bons (folha em
                         tools/art/gemini/melhorias_folha.png)
   10_tecnologias        16 ilustrações (4x4, opcional)
+  11_terrenos_novos     águas profundas, selva (com palmeiras), deserto,
+                        tundra e neve (5x1; no jogo, provisórias geradas
+                        por tools/art/gen_terrenos_novos.gd)
   (As 14 cidades numa folha só o Gemini não conseguiu: copiou a
   referência. Por isso uma classe por pedido.)
 

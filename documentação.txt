@@ -622,7 +622,7 @@ UNIDADES (scripts/units/)
   frente a frente no centro da ilha, a 3 casas de distância
   (J1 em x=57-58, J2 em x=61-62).
 - Uma unidade só é criada em casa andável (qualquer terreno menos
-  Água e Montanhas). Se não for, ou se estiver fora do mapa,
+  as águas, rasas ou profundas, e Montanhas). Se não for, ou se estiver fora do mapa,
   aparece um aviso no console.
 
 RIOS (scripts/map/rivers.gd; desde 25/10/2026, pedido do usuário)
@@ -712,7 +712,7 @@ FLORESTA (scripts/map/terrain.gd)
     * Cidade fundada na floresta: a casa vira Pradaria.
     * A madeira é da FLORESTA, não da madeireira: cada casa de
       floresta tem o seu próprio estoque, 100 de madeira
-      (Terrain.WOOD_PER_FOREST), guardado no mapa (GameMap, salvo
+      (Terrain.WOOD; a Selva tem 150), guardado no mapa (GameMap, salvo
       no save). A madeireira (da cidade ou remota) só extrai a
       madeira da casa em que está, para o estoque do jogador.
       Quando a madeira da casa acaba, ela vira Cerrado.
@@ -721,6 +721,40 @@ FLORESTA (scripts/map/terrain.gd)
   mesmo nos dois; antes o cerrado rendia menos).
 - Passar o mouse sobre uma floresta mostra a madeira que resta
   (ex.: "Floresta (madeira 85/100, defesa +1...)").
+
+TERRENOS NOVOS (desde 29/10/2026, pedido do usuário; scripts/map/terrain.gd)
+- Águas Rasas: a água de antes, renomeada (Terrain.Type.WATER). Fica só
+  na faixa da costa (casas de mar que encostam em terra) e nos lagos.
+- Águas Profundas (DEEP_WATER): todo o resto do oceano.
+  GameMap.mark_deep_water as cria sozinha ao montar o mapa (casa de
+  oceano sem nenhuma terra entre as 8 vizinhas); o PNG também pode
+  pintá-la direto (azul-marinho 0,0,128). A Galé anda nas duas, mas
+  AFUNDA se terminar 2 turnos seguidos nas profundas
+  (Main._check_deep_water, UnitType.deep_water_turn_limit), com quem
+  estiver a bordo. No mapa, a água escurece aos poucos longe da costa.
+- Selva (JUNGLE): as regras da Floresta (defesa +1, movimento -1 para
+  quem anda mais de 1, bloqueia o tiro da catapulta, 1 de alimento,
+  sem fazenda, aceita madeireira, cidade fundada nela vira pradaria),
+  mas com 150 de madeira (Terrain.WOOD). Esgotada, vira Cerrado.
+  Terrain.has_wood(tipo) = floresta ou selva.
+- Deserto (DESERT) e Tundra (TUNDRA): como o Cerrado (1 de alimento,
+  sem defesa nem custo extra), mas NÃO aceitam fazenda.
+- Neve (SNOW): não dá alimento (não dá para trabalhar) nem aceita
+  fazenda; dá para andar e fundar cidade.
+- Os tipos novos entraram no FIM do enum (o número do tipo vai no save e
+  no mapa do shader): saves antigos continuam valendo.
+- Mapa de teste: duas ilhas novas, uma gelada ao norte (neve no meio,
+  tundra em volta, 2 montanhas) e uma tropical ao sul (selva a oeste,
+  cerrado no meio, deserto a leste, 2 colinas). Cores no PNG: selva
+  0,100,30; deserto 255,201,14; tundra 185,122,87; neve branco.
+- Desenho (terrain.gdshader): a selva entra no lugar das árvores da
+  floresta; deserto, tundra e neve se misturam no chão aberto como o
+  cerrado. Texturas PROVISÓRIAS em assets/tiles/ (aguas_profundas, selva
+  com palmeiras, deserto com dunas, tundra, neve), geradas por
+  tools/art/gen_terrenos_novos.gd; o pedido da arte final está em
+  tools/art/gemini/pedidos/11_terrenos_novos (importar com
+  import_terrenos_gemini.gd -- resultado.png aguas_profundas selva
+  deserto tundra neve).
 
 COLINAS E MONTANHAS (scripts/map/terrain.gd; desde 25/10/2026, pedido
 do usuário)
@@ -1083,9 +1117,9 @@ CIDADES (scripts/cities/city.gd)
     * numa obra: gera 1 ponto de produção por turno para ela;
     * numa casa do território SEM melhoria (desde 24/10/2026,
       decisão do usuário): gera 2 de alimento por turno na
-      pradaria (desde 28/10/2026) e 1 na floresta, no cerrado e nas
-      colinas (Terrain.TILE_FOOD; água
-      não pode ser trabalhada; 1 cidadão por casa;
+      pradaria (desde 28/10/2026) e 1 na floresta, na selva, no
+      cerrado, no deserto, na tundra e nas colinas (Terrain.TILE_FOOD;
+      água, montanhas e neve não podem ser trabalhadas; 1 cidadão por casa;
       City.worked_tiles);
     * numa fazenda pronta: a casa + a fazenda (+1 por
       trabalhador, City.FARM_BONUS) = 3 de alimento por turno na
@@ -2883,6 +2917,11 @@ PRÓXIMO PASSO GRANDE 2: CONJUNTOS CULTURAIS DE UNIDADES E CIDADES
     executados)
 [ ] Madeireiras remotas: captura pelo inimigo
 [ ] Cerrado com regras próprias (hoje é igual à Pradaria)
+[x] Terrenos novos: Águas Rasas/Profundas, Selva, Deserto, Tundra e
+    Neve (29/10/2026)
+[ ] Arte final dos terrenos novos (pedido 11_terrenos_novos no Gemini)
+[ ] Gerar o mapa com os terrenos por latitude (neve/tundra nos polos,
+    selva/deserto no equador), em vez de pintar à mão
 [ ] Desenhos definitivos de pradaria, floresta, cerrado,
     madeireira e Trabalhador
 [x] Aviso de construção concluída (câmera na cidade, "Abrir
@@ -4352,6 +4391,18 @@ PRÓXIMO PASSO GRANDE 2: CONJUNTOS CULTURAIS DE UNIDADES E CIDADES
   alimento por cidadão (antes 1; floresta, cerrado e colinas continuam 1).
   A fazenda soma +1: 3 na pradaria, 2 no cerrado (+1 com Feudalismo).
   Textos da Fazenda e da dica da janela da cidade atualizados.
+
+29/10/2026
+- TERRENOS NOVOS (pedido do usuário): ver a seção TERRENOS NOVOS. Águas
+  Profundas dominam o oceano (a água de antes virou Águas Rasas, só na
+  costa); a Galé afunda depois de 2 turnos nelas. Selva (floresta com 150
+  de madeira e palmeiras), Deserto e Tundra (cerrado sem fazenda), Neve
+  (sem alimento nem fazenda). Duas ilhas novas no mapa de teste. Texturas
+  provisórias por código e pedido 11 para o Gemini. Validação: teste
+  novo (águas, ilhas, regras, madeira da selva, Galé afundando,
+  save/load) e testes da Galé (ajustado: a Galé também vai para as
+  águas profundas), ataque à distância, névoa, Feudalismo, pradaria,
+  desordem, árvore, painel da unidade e IA; screenshots das ilhas.
 
 --------------------------------------------------------------
 7. BACKLOG (ideias para depois)

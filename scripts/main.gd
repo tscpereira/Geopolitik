@@ -606,8 +606,8 @@ func lumber_mill_error(unit: Unit) -> String:
 		if not mill.has_room():
 			return "A madeireira já tem %d trabalhadores (o máximo)." % LumberMill.MAX_WORKERS
 		return ""
-	if game_map.get_terrain(unit.cell) != Terrain.Type.FOREST:
-		return "Madeireiras só podem ser construídas na floresta."
+	if not Terrain.has_wood(game_map.get_terrain(unit.cell)):
+		return "Madeireiras só podem ser construídas na floresta ou na selva."
 	if claiming_city(unit.cell):
 		return "Esta casa já é usada por %s." % claiming_city(unit.cell).city_name
 	var owner_city := territory_owner(unit.cell)
@@ -1028,12 +1028,12 @@ func attack(attacker: Unit, target_cell: Vector2i) -> void:
 
 
 ## O colono funda uma cidade na casa em que está e deixa de existir.
-## Cidade fundada na floresta transforma a casa em pradaria.
+## Cidade fundada na floresta (ou na selva) transforma a casa em pradaria.
 ## Use city_site_error antes para saber se o lugar é válido.
 ## [param city_name] vazio = próximo nome da lista City.NAMES.
 func found_city(settler: Unit, city_name := "") -> City:
 	var player := settler.owner_player
-	if game_map.get_terrain(settler.cell) == Terrain.Type.FOREST:
+	if Terrain.has_wood(game_map.get_terrain(settler.cell)):
 		game_map.set_terrain(settler.cell, Terrain.Type.GRASSLAND)
 	var city := City.new()
 	city.setup(city_name if not city_name.is_empty() else _next_city_name(), player, settler.cell, game_map)
@@ -2365,14 +2365,20 @@ func _update_info() -> void:
 func _terrain_text(cell: Vector2i) -> String:
 	var type := game_map.get_terrain(cell)
 	var text: String = Terrain.NAMES[type]
-	if type == Terrain.Type.FOREST:
+	if Terrain.has_wood(type):
 		text += " (madeira %d/%d, defesa +%d, movimento -%d para quem anda mais de 1)" % [
-			game_map.wood_left(cell), Terrain.WOOD_PER_FOREST, Terrain.DEFENSE_BONUS[type], Terrain.MOVE_PENALTY[type]]
+			game_map.wood_left(cell), game_map.wood_total(cell), Terrain.DEFENSE_BONUS[type], Terrain.MOVE_PENALTY[type]]
 	elif type == Terrain.Type.HILLS:
 		text += " (defesa +%d, movimento -%d para quem anda mais de 1, sem fazenda)" % [
 			Terrain.DEFENSE_BONUS[type], Terrain.MOVE_PENALTY[type]]
 	elif type == Terrain.Type.MOUNTAINS:
 		text += " (intransponível)"
+	elif type == Terrain.Type.DESERT or type == Terrain.Type.TUNDRA:
+		text += " (1 de alimento, sem fazenda)"
+	elif type == Terrain.Type.SNOW:
+		text += " (sem alimento, sem fazenda)"
+	elif type == Terrain.Type.DEEP_WATER:
+		text += " (a Galé afunda se ficar 2 turnos seguidos aqui)"
 	if game_map.roads.has(cell):
 		text += ", com estrada"
 	elif game_map.road_progress.has(cell):

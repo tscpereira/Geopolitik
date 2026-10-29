@@ -122,12 +122,17 @@ func _get_tooltip(at_position: Vector2) -> String:
 		return ""
 	var map := _game.game_map
 	var text := "(%d, %d) %s" % [cell.x, cell.y, Terrain.NAMES[map.get_terrain(cell)]]
-	if map.get_terrain(cell) == Terrain.Type.FOREST:
-		text += " (madeira %d/%d)" % [map.wood_left(cell), Terrain.WOOD_PER_FOREST]
-	elif map.get_terrain(cell) == Terrain.Type.HILLS:
+	var type := map.get_terrain(cell)
+	if Terrain.has_wood(type):
+		text += " (madeira %d/%d)" % [map.wood_left(cell), map.wood_total(cell)]
+	elif type == Terrain.Type.HILLS:
 		text += " (defesa +%d, sem fazenda)" % Terrain.DEFENSE_BONUS[Terrain.Type.HILLS]
-	elif map.get_terrain(cell) == Terrain.Type.MOUNTAINS:
+	elif type == Terrain.Type.MOUNTAINS:
 		text += " (intransponível, não dá para trabalhar)"
+	elif type == Terrain.Type.DESERT or type == Terrain.Type.TUNDRA:
+		text += " (sem fazenda)"
+	elif type == Terrain.Type.SNOW:
+		text += " (sem alimento, não dá para trabalhar)"
 	if map.has_iron(cell) and map.iron_visible:
 		text += ", com ferro"
 	if map.has_river(cell):
@@ -221,7 +226,7 @@ func _draw() -> void:
 				_draw_food(rect, _city.farm_food(cell) * _city.farms[cell])
 				_draw_worker(rect, _city.farms[cell])
 		elif _city.lumber_mills.has(cell):
-			LumberMill.draw_wood_bar(self, rect, map.wood_left(cell))
+			LumberMill.draw_wood_bar(self, rect, map.wood_left(cell), map.wood_total(cell))
 			if editable:
 				_draw_mill_controls(rect, _city.lumber_mills[cell], LumberMill.MAX_WORKERS)
 			elif _city.lumber_mills[cell] > 0:

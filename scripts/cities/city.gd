@@ -1010,14 +1010,14 @@ func add_citizen() -> void:
 
 
 ## Se a melhoria [param build] pode ser feita num terreno do tipo [param type]:
-## fazenda em pradaria ou cerrado; madeireira só em floresta; mina só em colina
+## fazenda em pradaria ou cerrado; madeireira só na mata (floresta ou selva); mina só em colina
 ## (e só onde há ferro: ver Game.improvement_error).
 static func allows_terrain(build: int, type: Terrain.Type) -> bool:
 	match build:
 		Build.FARM:
 			return Terrain.can_farm(type)
 		Build.LUMBER_MILL:
-			return type == Terrain.Type.FOREST
+			return Terrain.has_wood(type)
 		Build.MINE:
 			return type == Terrain.Type.HILLS
 	return false
@@ -1808,7 +1808,7 @@ func _draw() -> void:
 	for mill_cell in lumber_mills:
 		var mill_rect := Rect2(_local_center(mill_cell) - tile / 2.0, tile)
 		LumberMill.draw_icon(self, mill_rect)
-		LumberMill.draw_wood_bar(self, mill_rect, _map.wood_left(mill_cell))
+		LumberMill.draw_wood_bar(self, mill_rect, _map.wood_left(mill_cell), _map.wood_total(mill_cell))
 	for mine_cell in mines:
 		# A mina não se esgota: sem barra. A bigorna continua no canto
 		var mine_rect := Rect2(_local_center(mine_cell) - tile / 2.0, tile)

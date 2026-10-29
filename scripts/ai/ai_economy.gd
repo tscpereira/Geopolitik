@@ -649,9 +649,9 @@ func _best_city_site(settler: Unit) -> Vector2i:
 			match map.get_terrain(area_cell):
 				Terrain.Type.GRASSLAND:
 					score += 3.0
-				Terrain.Type.CERRADO, Terrain.Type.FOREST, Terrain.Type.HILLS:
+				Terrain.Type.CERRADO, Terrain.Type.FOREST, Terrain.Type.JUNGLE, Terrain.Type.HILLS:
 					score += 2.0
-				Terrain.Type.WATER:
+				Terrain.Type.DESERT, Terrain.Type.TUNDRA, Terrain.Type.WATER, Terrain.Type.DEEP_WATER:
 					score += 1.0
 			if map.has_river(area_cell):
 				score += 1.5 # casa à beira do rio: +1 de alimento
@@ -674,7 +674,7 @@ func _best_forest(worker: Unit) -> Vector2i:
 	var best := Unit.NO_TARGET
 	var best_distance := INF
 	for cell: Vector2i in reachable:
-		if occupants.has(cell) or map.get_terrain(cell) != Terrain.Type.FOREST or _game.claiming_city(cell):
+		if occupants.has(cell) or not Terrain.has_wood(map.get_terrain(cell)) or _game.claiming_city(cell):
 			continue
 		var owner_city := _game.territory_owner(cell)
 		if owner_city and owner_city.owner_player != _player:

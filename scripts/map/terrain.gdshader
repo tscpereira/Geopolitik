@@ -8,7 +8,10 @@
 //   - costa: limite em 0,5 entre terra e água, com areia e espuma, e água
 //     mais clara perto da praia;
 //   - floresta: borda recortada em "moitas", com sombra na pradaria ao lado;
-//   - pradaria <-> cerrado: mistura gradual;
+//   - pradaria <-> cerrado: mistura gradual; deserto, tundra e neve entram
+//     na mistura do chão aberto do mesmo jeito (desde 28/10/2026);
+//   - selva: como a floresta (as árvores), com a textura da selva;
+//   - águas profundas: a água escurece aos poucos longe da costa;
 //   - colinas e montanhas: relevo visto de cima (como no Civilization do
 //     SNES). Cada casa tem uma altura (montanha: pirâmides de pedra de faces
 //     planas e bordas recortadas, com cristas até as montanhas vizinhas, que
@@ -37,6 +40,11 @@ uniform sampler2D forest_tex : repeat_enable, filter_linear_mipmap;
 uniform sampler2D cerrado_tex : repeat_enable, filter_linear_mipmap;
 uniform sampler2D hill_tex : repeat_enable, filter_linear_mipmap;
 uniform sampler2D mountain_tex : repeat_enable, filter_linear_mipmap;
+uniform sampler2D deep_water_tex : repeat_enable, filter_linear_mipmap;
+uniform sampler2D jungle_tex : repeat_enable, filter_linear_mipmap;
+uniform sampler2D desert_tex : repeat_enable, filter_linear_mipmap;
+uniform sampler2D tundra_tex : repeat_enable, filter_linear_mipmap;
+uniform sampler2D snow_tex : repeat_enable, filter_linear_mipmap;
 uniform bool draw_grid = true;
 uniform float grid_darken = 0.15;
 // Largura das rampas nas bordas (em "peso"; 0 = borda dura).
@@ -77,6 +85,11 @@ const int FOREST = 2;
 const int CERRADO = 3;
 const int HILLS = 4;
 const int MOUNTAINS = 5;
+const int DEEP_WATER = 6;
+const int JUNGLE = 7;
+const int DESERT = 8;
+const int TUNDRA = 9;
+const int SNOW = 10;
 
 // Número pseudoaleatório de 0 a 1 para um ponto da grade do ruído (hash12 de
 // Dave Hoskins). Não usa sin() de números grandes: com as coordenadas do mapa,
@@ -132,9 +145,15 @@ int improvement_at(ivec2 cell) {
 	return int(round(texelFetch(improvement_map, cell, 0).r * 255.0));
 }
 
-// (água, pradaria, floresta, cerrado) com 1 no terreno [param t].
+// (água, pradaria, floresta, cerrado) com 1 no terreno [param t]. A água
+// profunda também conta como água (a costa é a mesma).
 vec4 one_hot(int t) {
-	return vec4(t == WATER ? 1.0 : 0.0, t == GRASSLAND ? 1.0 : 0.0, t == FOREST ? 1.0 : 0.0, t == CERRADO ? 1.0 : 0.0);
+	return vec4(t == WATER || t == DEEP_WATER ? 1.0 : 0.0, t == GRASSLAND ? 1.0 : 0.0, t == FOREST ? 1.0 : 0.0, t == CERRADO ? 1.0 : 0.0);
+}
+
+// (selva, deserto, tundra, neve) com 1 no terreno [param t].
+vec4 extra_hot(int t) {
+	return vec4(t == JUNGLE ? 1.0 : 0.0, t == DESERT ? 1.0 : 0.0, t == TUNDRA ? 1.0 : 0.0, t == SNOW ? 1.0 : 0.0);
 }
 
 // (colinas, montanhas) com 1 no terreno [param t].
@@ -144,19 +163,24 @@ vec2 relief_hot(int t) {
 
 // Pesos dos terrenos no ponto p (em casas): spline quadrática das 3x3 casas ao
 // redor, puxada para o terreno da própria casa no miolo. [param land] =
-// (água, pradaria, floresta, cerrado), [param relief] = (colinas, montanhas).
-void terrain_weights(vec2 p, out vec4 land, out vec2 relief) {
+// (água, pradaria, floresta, cerrado), [param relief] = (colinas, montanhas),
+// [param extra] = (selva, deserto, tundra, neve), [param deep] = água profunda.
+void terrain_weights(vec2 p, out vec4 land, out vec2 relief, out vec4 extra, out float deep) {
 	ivec2 own_cell = ivec2(floor(p));
 	vec2 t = fract(p) - 0.5; // -0,5..0,5 a partir do centro da casa
 	vec3 wx = vec3(0.5 * (0.5 - t.x) * (0.5 - t.x), 0.75 - t.x * t.x, 0.5 * (0.5 + t.x) * (0.5 + t.x));
 	vec3 wy = vec3(0.5 * (0.5 - t.y) * (0.5 - t.y), 0.75 - t.y * t.y, 0.5 * (0.5 + t.y) * (0.5 + t.y));
 	land = vec4(0.0);
 	relief = vec2(0.0);
+	extra = vec4(0.0);
+	deep = 0.0;
 	for (int j = 0; j < 3; j++) {
 		for (int i = 0; i < 3; i++) {
 			int type = terrain_at(own_cell + ivec2(i - 1, j - 1));
 			land += wx[i] * wy[j] * one_hot(type);
 			relief += wx[i] * wy[j] * relief_hot(type);
+			extra += wx[i] * wy[j] * extra_hot(type);
+			deep += wx[i] * wy[j] * (type == DEEP_WATER ? 1.0 : 0.0);
 		}
 	}
 	// Miolo da casa: puxa para o terreno dela
@@ -164,6 +188,8 @@ void terrain_weights(vec2 p, out vec4 land, out vec2 relief) {
 	int own = terrain_at(own_cell);
 	land = mix(land, one_hot(own), core);
 	relief = mix(relief, relief_hot(own), core);
+	extra = mix(extra, extra_hot(own), core);
+	deep = mix(deep, own == DEEP_WATER ? 1.0 : 0.0, core);
 }
 
 // Pirâmide de faces planas (5 lados, girada por [param turn]) com o pico em
@@ -283,12 +309,18 @@ void fragment() {
 	ivec2 own_cell = ivec2(floor(p));
 	vec4 weights;
 	vec2 relief;
-	terrain_weights(p, weights, relief);
+	vec4 extra;
+	float deep;
+	terrain_weights(p, weights, relief, extra, deep);
 	int own_improvement = improvement_at(own_cell);
 	float water = weights.x;
 	float grass = weights.y;
 	float forest = weights.z;
 	float cerrado = weights.w;
+	float jungle = extra.x;
+	float desert = extra.y;
+	float tundra = extra.z;
+	float snow = extra.w;
 
 	float n_coast = fbm(p * 1.8) - 0.5;
 	float n_land = fbm(p * 2.4 + 50.0) - 0.5;
@@ -298,11 +330,26 @@ void fragment() {
 	// recortada, mas com uma rampa suave
 	float hills = relief.x;
 	float mountains = relief.y;
-	float land_total = max(grass + forest + cerrado + hills + mountains, 0.0001);
-	float forest_share = forest / land_total;
+	float open_total = max(grass + cerrado + desert + tundra + snow, 0.0001);
+	float land_total = max(open_total + forest + jungle + hills + mountains, 0.0001);
+	float forest_share = (forest + jungle) / land_total;
 	float cerrado_share = cerrado / max(grass + cerrado, 0.0001);
 	float c = smoothstep(0.15, 0.85, cerrado_share + n_land * 0.35);
 	vec4 open_land = mix(tile_color(grass_tex, p, 0.31), tile_color(cerrado_tex, p, -0.47), c);
+	// Deserto, tundra e neve por cima, cada um pela sua parte do chão aberto
+	// (com ruídos diferentes, para as bordas não coincidirem)
+	if (desert > 0.0) {
+		float k = smoothstep(0.15, 0.85, desert / open_total + (fbm(p * 2.2 + 140.0) - 0.5) * 0.35);
+		open_land = mix(open_land, tile_color(desert_tex, p, 0.83), k);
+	}
+	if (tundra > 0.0) {
+		float k = smoothstep(0.15, 0.85, tundra / open_total + (fbm(p * 2.2 + 170.0) - 0.5) * 0.35);
+		open_land = mix(open_land, tile_color(tundra_tex, p, -0.71), k);
+	}
+	if (snow > 0.0) {
+		float k = smoothstep(0.15, 0.85, snow / open_total + (fbm(p * 2.2 + 200.0) - 0.5) * 0.35);
+		open_land = mix(open_land, tile_color(snow_tex, p, 0.17), k);
+	}
 	// Colinas: o chão verde delas, iluminado pela inclinação dos morrinhos
 	// (diferença finita da altura, em casas)
 	float eps = 0.02;
@@ -318,7 +365,12 @@ void fragment() {
 	float trees = soft_step(0.5, forest_edge);
 	// Sombra das árvores sobre a pradaria logo ao lado da floresta
 	open_land.rgb *= 1.0 - 0.18 * smoothstep(0.2, 0.5, forest_edge);
-	vec4 land_color = mix(open_land, tile_color(forest_tex, p, 0.58), trees);
+	vec4 tree_color = tile_color(forest_tex, p, 0.58);
+	if (jungle > 0.0) {
+		float k = smoothstep(0.3, 0.7, jungle / max(forest + jungle, 0.0001) + n_land * 0.3);
+		tree_color = mix(tree_color, tile_color(jungle_tex, p, -0.36), k);
+	}
+	vec4 land_color = mix(open_land, tree_color, trees);
 
 	// Fazendas: a imagem da fazenda (pronta ou em obra) na casa, com borda suave
 	// só nos lados em que a casa vizinha não é fazenda. Desde 26/10/2026 a
@@ -364,6 +416,11 @@ void fragment() {
 	// Água: mais clara perto da costa
 	float land = 1.0 - water + n_coast * coast_noise * 2.0;
 	vec4 water_color = tile_color(water_tex, p, -0.22);
+	// Águas profundas: escurecem aos poucos, de uma casa da costa para longe
+	if (deep > 0.0) {
+		float k = smoothstep(0.2, 0.8, deep + n_coast * 0.4);
+		water_color = mix(water_color, tile_color(deep_water_tex, p, 0.47), k);
+	}
 	water_color.rgb = mix(water_color.rgb, shallow_color.rgb, smoothstep(0.05, 0.5, land) * 0.45);
 	water_color.rgb *= 0.9 + 0.18 * n_color; // manchas mais escuras e mais claras (profundidade)
 

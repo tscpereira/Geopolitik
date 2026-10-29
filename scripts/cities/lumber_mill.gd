@@ -155,7 +155,7 @@ func _draw() -> void:
 	draw_rect(tile.grow(-MARGIN), owner_player.color, false, MARGIN)
 	if is_done():
 		if not is_mine: # a mina não se esgota: sem barra
-			draw_wood_bar(self, tile, _map.wood_left(cell))
+			draw_wood_bar(self, tile, _map.wood_left(cell), _map.wood_total(cell))
 	elif not pillaged or progress > 0:
 		draw_bar(self, tile, float(progress) / cost(), PROGRESS_BAR_COLOR)
 	if not workers.is_empty():
@@ -169,9 +169,10 @@ static func draw_icon(canvas: CanvasItem, rect: Rect2, alpha := 1.0) -> void:
 	canvas.draw_texture_rect(TEXTURE, rect, false, Color(1, 1, 1, alpha))
 
 
-## Barra azul no topo da casa: madeira que resta na floresta (de Terrain.WOOD_PER_FOREST).
-static func draw_wood_bar(canvas: CanvasItem, rect: Rect2, wood: int) -> void:
-	draw_bar(canvas, rect, float(wood) / Terrain.WOOD_PER_FOREST, WOOD_BAR_COLOR)
+## Barra azul no topo da casa: madeira que resta na mata ([param wood] de
+## [param total]: GameMap.wood_total).
+static func draw_wood_bar(canvas: CanvasItem, rect: Rect2, wood: int, total: int) -> void:
+	draw_bar(canvas, rect, float(wood) / maxi(total, 1), WOOD_BAR_COLOR)
 
 
 ## Barrinha no topo da casa, preenchida em [param ratio] (0 a 1).
