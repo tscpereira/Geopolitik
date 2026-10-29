@@ -876,6 +876,7 @@ func occupy_city(city: City, new_owner: Player) -> String:
 	var was_capital := city.is_capital
 	city.is_capital = new_owner.cities.is_empty()
 	new_owner.cities.append(city)
+	new_owner.founded_city = true
 	city.change_owner(new_owner)
 	if was_capital:
 		_reassign_capital(old_owner)
@@ -1041,6 +1042,7 @@ func found_city(settler: Unit, city_name := "") -> City:
 	_claim_territory(city)
 	cities_root.add_child(city)
 	player.cities.append(city)
+	player.founded_city = true
 	refresh_territories()
 	city.assign_idle_citizens() # o primeiro cidadão já trabalha uma casa (+1 de alimento)
 	print("%s fundou a cidade %s em %s (%s, território de %d casas)" % [
@@ -1721,6 +1723,8 @@ func _process_cities(player: Player) -> void:
 	for city in player.cities:
 		for event in city.process_turn(_spawn_city_unit):
 			messages.append("%s: %s" % [city.city_name, event])
+		for cell: Vector2i in city.extracted:
+			_show_extraction(player, cell, city.extracted[cell][0], city.extracted[cell][1])
 		if not player.is_ai:
 			for build in city.completed:
 				_completion_notices.append([city, build])
@@ -1766,6 +1770,15 @@ func _completion_notice_text(city: City, build: int) -> String:
 	return text
 
 
+## "+N" de madeira ou ferro subindo da casa da madeireira ou mina. Só para o
+## jogador humano: o que os outros extraem não aparece.
+func _show_extraction(player: Player, cell: Vector2i, amount: int, is_mine: bool) -> void:
+	if player != viewer():
+		return
+	FloatingText.spawn(units_root, game_map.cell_to_world(cell) - Vector2(0, GameMap.TILE_SIZE / 2.0),
+			"+%d" % amount, Icons.IRON_COLOR if is_mine else LumberMill.WOOD_BAR_COLOR)
+
+
 ## Início da vez do jogador: as madeireiras e minas remotas avançam a obra ou
 ## tiram madeira ou ferro (com um "+N" subindo). Floresta esgotada vira cerrado: a
 ## madeireira some e os trabalhadores voltam ao mapa.
@@ -1779,8 +1792,7 @@ func _process_lumber_mills(player: Player) -> void:
 		else:
 			player.wood += taken
 		if taken > 0:
-			FloatingText.spawn(units_root, mill.position - Vector2(0, GameMap.TILE_SIZE / 2.0),
-					"+%d" % taken, Icons.IRON_COLOR if mill.is_mine else LumberMill.WOOD_BAR_COLOR)
+			_show_extraction(player, mill.cell, taken, mill.is_mine)
 		if mill.is_done() and not was_done:
 			messages.append("%s em (%d, %d) pronta" % [mill.display_name(), mill.cell.x, mill.cell.y])
 		if mill.is_exhausted():
@@ -1955,11 +1967,16 @@ func _destroy_unit(unit: Unit) -> void:
 	await unit.play_death()
 
 
-## Objetivo da partida: eliminar o adversário. Um jogador continua vivo enquanto
-## tiver unidades ou cidades; vence quem for o último vivo. Cidades se perdem
-## por invasão (ocupadas ou destruídas, ver check_invasion).
+## Objetivo da partida: eliminar o adversário. Quem já fundou uma cidade é
+## DERROTADO ao perder a última (ocupada ou destruída, ver check_invasion),
+## mesmo que ainda tenha unidades, madeireiras ou minas; antes da primeira
+## cidade, só ao perder todas as unidades (Player.is_defeated). O derrotado
+## sai do jogo (_eliminate) e vence quem for o último vivo.
 func _check_victory() -> void:
-	var alive := players.filter(func(player: Player) -> bool: return not player.units.is_empty() or not player.cities.is_empty())
+	for player in players:
+		if player.is_defeated() and not player.eliminated:
+			_eliminate(player)
+	var alive := players.filter(func(player: Player) -> bool: return not player.eliminated)
 	if alive.size() != 1:
 		return
 	game_over = true
@@ -1967,6 +1984,31 @@ func _check_victory() -> void:
 	hud.show_end_turn_prompt(false)
 	hud.show_victory(alive[0])
 	print("%s venceu!" % alive[0].display_name)
+
+
+## Tira do jogo o jogador derrotado: as unidades que restam (inclusive os
+## Trabalhadores das madeireiras) e as madeireiras e minas remotas somem, e ele
+## não joga mais (TurnManager pula a vez dele).
+func _eliminate(player: Player) -> void:
+	player.eliminated = true
+	print("%s foi derrotado" % player.display_name)
+	if player != viewer() and viewer() != null and not viewer().eliminated:
+		hud.show_message("%s foi derrotado: perdeu todas as cidades." % player.display_name, Color(1, 0.85, 0.5))
+	for mill: LumberMill in player.lumber_mills.duplicate():
+		if mill == _selected_mill:
+			select_unit(null)
+		mill.workers.clear()
+		player.lumber_mills.erase(mill)
+		mill.queue_free()
+	for unit: Unit in player.units.duplicate():
+		if unit == selected_unit:
+			select_unit(null)
+		for passenger in unit.cargo:
+			passenger.transport = null
+		unit.cargo.clear()
+		player.units.erase(unit)
+		unit.queue_free()
+	_update_vision()
 
 
 # --- Salvar e carregar (ver SaveGame) ----------------------------------------

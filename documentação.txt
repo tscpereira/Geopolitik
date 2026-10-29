@@ -248,8 +248,14 @@ COMO JOGAR
 6. Na vez da máquina, o HUD mostra "Vez do Jogador 2 (máquina)".
    Você assiste às jogadas dela; seus cliques ficam bloqueados.
    Ao terminar, ela passa a vez sozinha.
-7. Quando um jogador perde todas as unidades e cidades, aparece a tela
-   "Jogador X venceu!". Enter começa uma nova partida.
+7. DERROTA (desde 29/10/2026): quem já teve uma cidade é derrotado ao
+   perder a ÚLTIMA (ocupada ou destruída), mesmo que ainda tenha
+   unidades, madeireiras ou minas; antes da primeira cidade, só ao
+   perder todas as unidades (Player.is_defeated; Player.founded_city vai
+   no save). O derrotado sai do jogo (Game._eliminate): as unidades e
+   as madeireiras/minas remotas dele somem e o TurnManager pula a vez
+   dele. Quando sobra um só, aparece a tela "Jogador X venceu!". Enter
+   começa uma nova partida.
 
 INTELIGÊNCIA DA MÁQUINA (scripts/ai/ai_controller.gd)
 - O jogador com is_ai = true (o Jogador 2) é controlado pela
@@ -956,7 +962,10 @@ TRABALHADOR (data/units/trabalhador.tres)
       4 (o custo da madeireira). Uma barra de progresso aparece no
       topo da madeireira;
     * pronta: cada Trabalhador tira 1 de madeira por turno, com um
-      "+N" azul subindo no mapa. A barra vira azul e vai diminuindo
+      "+N" azul subindo no mapa (desde 29/10/2026, só nas madeireiras
+      e minas do jogador humano, as remotas e as da cidade; o ferro das
+      minas sobe em "+N" na cor do ferro; Game._show_extraction,
+      City.extracted). A barra vira azul e vai diminuindo
       com a madeira que resta na floresta da casa (de 100).
 - Um segundo Trabalhador pode entrar: ande até a casa da
   madeireira e aperte M ("Trabalhar na madeireira [M]"). Precisa
@@ -4403,6 +4412,15 @@ PRÓXIMO PASSO GRANDE 2: CONJUNTOS CULTURAIS DE UNIDADES E CIDADES
   save/load) e testes da Galé (ajustado: a Galé também vai para as
   águas profundas), ataque à distância, névoa, Feudalismo, pradaria,
   desordem, árvore, painel da unidade e IA; screenshots das ilhas.
+
+- AJUSTES (pedido do usuário): o "+N" da madeira não aparece mais nas
+  madeireiras dos outros jogadores; as madeireiras e minas da cidade
+  também mostram o "+N" (o ferro das minas, na cor do ferro). Derrota:
+  perder a última cidade derrota o jogador, mesmo com madeireiras, minas
+  ou unidades (antes ele continuava vivo). Validação: teste novo (+N só
+  do humano, ferro da mina da cidade, derrota com unidades, vitória,
+  save) e testes dos terrenos, Galé, ataque à distância, névoa, painel,
+  desordem e IA (inclusive a partida da máquina contra ela mesma).
 
 --------------------------------------------------------------
 7. BACKLOG (ideias para depois)

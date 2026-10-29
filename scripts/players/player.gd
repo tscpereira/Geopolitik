@@ -16,6 +16,11 @@ var is_ai := false
 ## Estilo de jogo da máquina (só vale com is_ai).
 var personality := AIPersonality.balanced()
 var units: Array[Unit] = []
+## Se o jogador já teve alguma cidade (fundada ou ocupada): daí em diante, perder
+## a última cidade é a derrota (is_defeated).
+var founded_city := false
+## Derrotado e fora do jogo (Game._eliminate): não joga mais.
+var eliminated := false
 var cities: Array[City] = []
 ## Madeireiras construídas por Trabalhadores longe das cidades.
 var lumber_mills: Array[LumberMill] = []
@@ -129,6 +134,7 @@ func weapons_in_production(weapon: Arsenal.Weapon) -> int:
 func to_dict() -> Dictionary:
 	return {
 		"id": id, "name": display_name, "color": color.to_html(), "is_ai": is_ai,
+		"founded_city": founded_city or not cities.is_empty(), "eliminated": eliminated,
 		"personality": personality.to_dict(), "wood": wood, "iron": iron, "gold": gold,
 		"arsenal": SaveGame.int_map_to_json(arsenal),
 		"researched": researched.duplicate(), "research": research,
@@ -146,6 +152,9 @@ func to_dict() -> Dictionary:
 static func from_dict(data: Dictionary) -> Player:
 	var player := Player.new(int(data["id"]), data["name"], Color.html(data["color"]), data["is_ai"])
 	player.personality = AIPersonality.from_dict(data["personality"])
+	# Save antigo: quem tinha cidade já tinha fundado uma
+	player.founded_city = data.get("founded_city", not data.get("cities", []).is_empty())
+	player.eliminated = data.get("eliminated", false)
 	player.wood = int(data["wood"])
 	player.iron = int(data.get("iron", 0))
 	player.gold = int(data["gold"])
@@ -159,6 +168,14 @@ static func from_dict(data: Dictionary) -> Player:
 	for entry in data.get("seen_cities", []):
 		player.seen_cities[Vector2i(int(entry[0]), int(entry[1]))] = int(entry[2])
 	return player
+
+
+## Derrotado: já teve cidade e perdeu todas; ou, antes da primeira cidade,
+## ficou sem unidades.
+func is_defeated() -> bool:
+	if not cities.is_empty():
+		return false
+	return founded_city or units.is_empty()
 
 
 func start_turn() -> void:

@@ -21,11 +21,16 @@ func start_game(p_players: Array[Player]) -> void:
 	_begin_turn()
 
 
+## Passa a vez para o próximo jogador que ainda está no jogo (o derrotado,
+## Player.eliminated, é pulado).
 func end_turn() -> void:
 	turn_ended.emit(current_player())
-	current_index = (current_index + 1) % players.size()
-	if current_index == 0:
-		turn_number += 1
+	for i in players.size():
+		current_index = (current_index + 1) % players.size()
+		if current_index == 0:
+			turn_number += 1
+		if not current_player().eliminated:
+			break
 	_begin_turn()
 
 

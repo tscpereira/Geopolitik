@@ -569,6 +569,10 @@ var sites := {}
 ## Construções (City.Build) concluídas no último turno: melhorias prontas e
 ## unidades que saíram da cidade. O Game mostra um aviso para cada uma.
 var completed: Array[int] = []
+## O que as madeireiras e minas da cidade tiraram no último turno:
+## {casa: [quantidade, é_mina]}. O Game mostra um "+N" subindo de cada uma
+## (só para o jogador humano: Game._show_extraction).
+var extracted := {}
 var constructions: Array[Construction] = []
 ## Prédios prontos (City.Build), na ordem em que ficaram prontos. Toda cidade
 ## nasce com os prédios "native" (a Prefeitura).
@@ -1619,12 +1623,19 @@ func process_turn(spawn_unit: Callable) -> Array[String]:
 			else:
 				_trim_idle_workers(building) # parado, cabem só idle_max_workers (Forja)
 
+	extracted = {}
 	for mill_cell: Vector2i in lumber_mills.keys():
-		owner_player.wood += _map.harvest_wood(mill_cell, lumber_mills[mill_cell] * LumberMill.WOOD_PER_WORKER)
+		var wood := _map.harvest_wood(mill_cell, lumber_mills[mill_cell] * LumberMill.WOOD_PER_WORKER)
+		owner_player.wood += wood
+		if wood > 0:
+			extracted[mill_cell] = [wood, false]
 		if _map.wood_left(mill_cell) <= 0:
 			lumber_mills.erase(mill_cell) # os cidadãos dela ficam livres
 			events.append("a floresta da madeireira em (%d, %d) acabou e virou cerrado" % [mill_cell.x, mill_cell.y])
 	owner_player.iron += iron_per_turn()
+	for mine_cell: Vector2i in mines:
+		if mines[mine_cell] > 0:
+			extracted[mine_cell] = [mines[mine_cell] * IRON_PER_WORKER, true]
 
 	food_stock += food_per_turn()
 	if food_stock >= food_capacity():
