@@ -1,0 +1,166 @@
+{
+	"_leia": "Mapa gerado por tools/mapas/gera_tres_continentes.gd (não edite à mão: rode o gerador). ferro: colinas [x, y]; jogadores: nome, cor (hex), maquina (IA) e a casa inicial do Colono; camera: casa onde a câmera começa.",
+	"ferro": [
+		[
+			19,
+			44
+		],
+		[
+			21,
+			43
+		],
+		[
+			21,
+			44
+		],
+		[
+			23,
+			72
+		],
+		[
+			23,
+			75
+		],
+		[
+			25,
+			73
+		],
+		[
+			26,
+			42
+		],
+		[
+			28,
+			48
+		],
+		[
+			29,
+			63
+		],
+		[
+			30,
+			22
+		],
+		[
+			30,
+			53
+		],
+		[
+			37,
+			58
+		],
+		[
+			38,
+			35
+		],
+		[
+			40,
+			45
+		],
+		[
+			47,
+			56
+		],
+		[
+			50,
+			54
+		],
+		[
+			51,
+			55
+		],
+		[
+			73,
+			65
+		],
+		[
+			88,
+			19
+		],
+		[
+			88,
+			70
+		],
+		[
+			89,
+			10
+		],
+		[
+			91,
+			10
+		],
+		[
+			93,
+			63
+		],
+		[
+			94,
+			60
+		],
+		[
+			98,
+			64
+		],
+		[
+			100,
+			26
+		],
+		[
+			102,
+			31
+		],
+		[
+			104,
+			32
+		],
+		[
+			106,
+			33
+		],
+		[
+			114,
+			57
+		],
+		[
+			121,
+			58
+		],
+		[
+			122,
+			79
+		]
+	],
+	"jogadores": [
+		{
+			"nome": "Jogador 1",
+			"cor": "dc2828",
+			"maquina": false,
+			"inicio": [
+				33,
+				46
+			]
+		},
+		{
+			"nome": "Jogador 2",
+			"cor": "fadc28",
+			"maquina": true,
+			"inicio": [
+				98,
+				24
+			]
+		},
+		{
+			"nome": "Jogador 3",
+			"cor": "a050dc",
+			"maquina": true,
+			"inicio": [
+				100,
+				66
+			]
+		}
+	],
+	"camera": [
+		33,
+		46
+	]
+}

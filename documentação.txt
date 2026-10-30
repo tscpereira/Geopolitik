@@ -398,8 +398,8 @@ MAPA (scripts/map/)
     cinza-escuro (127, 127, 127) -> Montanhas
   Cada pixel vira o terreno de cor mais parecida
   (Terrain.from_color). Para criar ou editar um mapa, basta
-  desenhar um PNG (no Paint, por exemplo) e trocar o arquivo em
-  data/maps/. O tamanho da imagem define o tamanho do mapa.
+  desenhar um PNG (no Paint, por exemplo) em data/maps/ (ver
+  MAPAS E JOGADORES). O tamanho da imagem define o tamanho do mapa.
   O mapa de teste atual (repintado pelo usuário em 25/10/2026) tem
   704 casas de pradaria, 44 de floresta, 23 de colinas e 36 de
   montanhas.
@@ -625,19 +625,52 @@ UNIDADES (scripts/units/)
   perto e sem serrilhado com o zoom afastado).
 - Unidade fortificada: muralha de pedra de cantos arredondados, com
   ameias arredondadas no topo.
-- Partida de teste atual: cada jogador começa com 1 Colono e 1
-  Trabalhador (desde 24/10/2026; o Trabalhador é quem faz as
-  fazendas), sem tropas e sem guerra, para observar o
-  gerenciamento das cidades. Para voltar a ter tropas, use WITH_TROOPS = true no
-  topo de scripts/main.gd. Com isso, cada jogador também recebe
-  1 Guerreiro, 1 Arqueiro e 1 Cavalaria Leve, e os dois lados começam
-  frente a frente no centro da ilha, a 3 casas de distância
-  (J1 em x=57-58, J2 em x=61-62).
+- Início da partida: cada jogador começa com 1 Colono na casa inicial
+  dele (do JSON do mapa, ver MAPAS E JOGADORES) e 1 Trabalhador logo
+  abaixo (desde 24/10/2026; o Trabalhador é quem faz as fazendas),
+  sem tropas. Com WITH_TROOPS = true no topo de scripts/main.gd, cada
+  jogador também recebe 1 Guerreiro, 1 Arqueiro e 1 Cavalaria Leve em
+  volta do Colono (Game._spawn_starting_units).
+
+MAPAS E JOGADORES (desde 29/10/2026, pedido do usuário)
+- Cada mapa são dois arquivos em data/maps/: <nome>.png (1 pixel por
+  casa, as cores acima) e <nome>_recursos.json com "ferro" (colinas
+  [x, y]), "jogadores" (nome, cor em hex, "maquina" true/false e a
+  casa "inicio" do Colono) e "camera" (casa onde a câmera começa).
+  Game._load_map monta o mapa e a lista de jogadores (quantos o
+  mapa tiver; o primeiro humano é quem vê o jogo).
+- O mapa da partida é Game.map_name (static var; padrão
+  "tres_continentes"; "Enter" na tela de vitória recomeça no mesmo
+  mapa). O save guarda "map_name"; carregar um save de outro mapa
+  recarrega a cena com o mapa dele e carrega o save em seguida (save
+  antigo, sem o nome: mapa_teste). Os testes antigos usam
+  "mapa_teste" (a ilha de 2 jogadores).
+- TRES_CONTINENTES (140x90): três continentes separados por mar,
+  cada um com um jogador. Jogador 1 (humano, vermelho) no
+  continente do OESTE, que vai do norte frio ao sul quente; Jogador
+  2 (máquina, amarelo) no do NORDESTE, com tundra e neve no norte;
+  Jogador 3 (máquina, roxo) no do SUDESTE, com selva e deserto.
+  Tem todos os terrenos, lagos, 32 colinas com ferro (cada jogador
+  com uma a até 7 casas do Colono) e uns 46 rios (31 afluentes).
+  Gerado por tools/mapas/gera_tres_continentes.gd (ruído com
+  semente fixa: relevo, umidade e latitude ondulada; a casa inicial
+  é a que tem mais pradaria perto do meio do continente, e a área
+  dela é ajeitada). Para mudar o mapa, ajuste o gerador e rode de
+  novo (não edite o PNG à mão: o gerador o sobrescreve).
+- O passo seguinte é um EDITOR DE MAPAS (backlog).
 - Uma unidade só é criada em casa andável (qualquer terreno menos
   as águas, rasas ou profundas, e Montanhas). Se não for, ou se estiver fora do mapa,
   aparece um aviso no console.
 
 RIOS (scripts/map/rivers.gd; desde 25/10/2026, pedido do usuário)
+- AFLUENTES (desde 29/10/2026): depois dos rios principais, cada um
+  com 12 trechos ou mais recebe até 2 afluentes, rios menores que
+  nascem a 4-9 cantos dele e descem até ele (Rivers._add_tributaries,
+  pela distância até o rio). No desenho, o afluente chega mais fino
+  (TRIBUTARY_END_WIDTH) e o rio que o recebe alarga dali para baixo
+  (TRIBUTARY_WIDEN). O número de rios principais cresce com o mapa:
+  1 a cada 300 casas de terra (no mínimo 8). Afluente é um rio comum
+  da lista (has_river, travessia e save não mudaram).
 - Os rios correm pelas BORDAS das casas, no limiar entre uma casa e
   outra, de um canto da grade ao próximo (cada rio é a lista dos
   cantos por onde passa; o canto (x, y) é o de cima à esquerda da
@@ -3010,6 +3043,13 @@ PRÓXIMO PASSO GRANDE 2: CONJUNTOS CULTURAIS DE UNIDADES E CIDADES
 [ ] IA: fazer e usar Galés (transporte de tropas)
 [x] Cartografia, Quadrirreme e Docas (29/10/2026)
 [ ] IA: fazer e usar Quadrirremes e construir Docas (pescar)
+[x] Afluentes nos rios e mapa de três continentes com 3 jogadores
+    (29/10/2026)
+[ ] EDITOR DE MAPAS (pedido do usuário para depois): pintar terrenos,
+    ferro, rios e a casa inicial de cada jogador, gravando o PNG e o
+    JSON de data/maps/
+[ ] Escolher o mapa ao começar a partida (hoje: Game.map_name)
+[ ] IA: atravessar o mar (Galés) para alcançar os outros continentes
 [x] Desenho definitivo do Quadrirreme (Gemini, pedido 12_quadrirreme:
     a 1ª tentativa, com a Galé de referência, voltou uma cópia dela; o
     pedido refeito usa Lanceiro, Arqueiro e Catapulta como estilo)
@@ -4534,6 +4574,17 @@ PRÓXIMO PASSO GRANDE 2: CONJUNTOS CULTURAIS DE UNIDADES E CIDADES
   gerador do provisório (tools/art/gen_quadrirreme.gd) foi apagado.
   Validação: screenshot ao lado da Galé e testes da Cartografia, painel
   da unidade, Galé, ataque à distância, névoa e IA.
+
+- AFLUENTES E TRÊS CONTINENTES (pedido do usuário): ver RIOS e MAPAS E
+  JOGADORES. Rios com afluentes (o principal alarga a cada um); mapa
+  novo de três continentes com 3 jogadores (1 humano e 2 máquinas),
+  todos os terrenos e ferro; mapa e jogadores vêm do JSON do mapa; o
+  save guarda o mapa. Validação: teste novo do mapa (3 jogadores sem
+  caminho por terra entre eles, ferro perto de cada um, rios e
+  afluentes, 3 turnos com as máquinas fundando cidades, save com o
+  nome), teste do save de outro mapa (recarrega com o mapa certo),
+  screenshots (visão geral e afluente) e todos os testes antigos no
+  mapa_teste (o da pradaria ajustado: sem rios).
 
 --------------------------------------------------------------
 7. BACKLOG (ideias para depois)

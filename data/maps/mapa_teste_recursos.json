@@ -1,4 +1,9 @@
 {
-	"_leia": "Recursos estratégicos do mapa mapa_teste.png: casas [x, y]. O ferro só aparece em colinas.",
-	"ferro": [[59, 38], [71, 36]]
+	"_leia": "Recursos estratégicos do mapa mapa_teste.png: casas [x, y]. O ferro só aparece em colinas. jogadores: nome, cor (hex), maquina (IA) e a casa inicial do Colono; camera: casa onde a câmera começa.",
+	"ferro": [[59, 38], [71, 36]],
+	"jogadores": [
+		{"nome": "Jogador 1", "cor": "dc2828", "maquina": false, "inicio": [55, 41]},
+		{"nome": "Jogador 2", "cor": "fadc28", "maquina": true, "inicio": [66, 41]}
+	],
+	"camera": [60, 41]
 }

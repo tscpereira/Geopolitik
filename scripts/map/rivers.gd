@@ -13,6 +13,12 @@ extends RefCounted
 ## distância até a água, com desvios para os lados (fica sinuoso). Termina ao
 ## chegar à costa ou ao encontrar outro rio (afluente). Só corre entre casas de
 ## terra, e nunca encostado numa montanha; o save guarda os rios.
+## AFLUENTES (desde 29/10/2026): depois dos rios principais, cada um com pelo
+## menos TRIBUTARY_MIN_MAIN trechos recebe até TRIBUTARIES_PER_RIVER rios menores,
+## que nascem perto dele e descem até ele (pela distância até o rio, não até o
+## mar). Um afluente é um rio comum da lista que termina num canto de outro rio
+## (não no mar). No desenho, o afluente chega mais fino e o rio que o recebe
+## alarga dali para baixo (TRIBUTARY_WIDEN).
 ##
 ## DESENHO (draw), no estilo do rio do Civilization do SNES: três camadas ao
 ## longo de uma curva suavizada que ondula em volta das bordas: a margem de
@@ -22,7 +28,10 @@ extends RefCounted
 ## antes, junto da praia): ele se integra ao oceano em vez de entrar nele.
 
 ## Quantos rios o gerador tenta criar e o tamanho mínimo de cada um (trechos).
+## Em mapa grande, 1 rio a cada LAND_PER_RIVER casas de terra (se der mais que
+## RIVER_COUNT).
 const RIVER_COUNT := 8
+const LAND_PER_RIVER := 300
 const MIN_LENGTH := 8
 const MAX_LENGTH := 90
 ## Distância mínima (em cantos) da nascente até a costa. As nascentes mais
@@ -35,6 +44,19 @@ const SEED := 20261024
 ## Peso de cada passo pela mudança na distância até a costa: descer é o normal,
 ## andar de lado faz as curvas, subir é raro.
 const STEP_WEIGHTS := {-1: 3.0, 0: 1.4, 1: 0.2}
+## Afluentes: quantos por rio principal, o tamanho mínimo do principal e do
+## afluente (trechos), a distância (em cantos) da nascente até o principal,
+## o espaço mínimo até outro rio na nascente e quantas nascentes tentar.
+const TRIBUTARIES_PER_RIVER := 2
+const TRIBUTARY_MIN_MAIN := 12
+const TRIBUTARY_MIN_LENGTH := 4
+const TRIBUTARY_SOURCE_DISTANCE := Vector2i(4, 9)
+const TRIBUTARY_SPACING := 4
+const TRIBUTARY_TRIES := 40
+## Desenho: quanto o rio alarga a cada afluente que recebe (fração da
+## largura) e a largura do afluente no encontro (fração de HALF_WIDTH_MOUTH).
+const TRIBUTARY_WIDEN := 0.35
+const TRIBUTARY_END_WIDTH := 0.6
 
 ## Desenho, em frações do tamanho da casa. Meia largura da água na nascente e
 ## na foz (antes do leque).
@@ -88,10 +110,16 @@ static func generate(map: GameMap) -> Array:
 	sources.sort_custom(func(a: Vector2i, b: Vector2i) -> bool:
 		return distance[a] > distance[b] or (distance[a] == distance[b] and order[a] < order[b]))
 
+	var land := 0
+	for y in map.height:
+		for x in map.width:
+			if not Terrain.is_navigable(map.get_terrain(Vector2i(x, y))):
+				land += 1
+	var count := maxi(RIVER_COUNT, land / LAND_PER_RIVER)
 	var rivers: Array = []
 	var used := {} # cantos que já são de algum rio
 	for source in sources:
-		if rivers.size() >= RIVER_COUNT:
+		if rivers.size() >= count:
 			break
 		if _near_used(source, used, SOURCE_SPACING):
 			continue
@@ -100,7 +128,64 @@ static func generate(map: GameMap) -> Array:
 			rivers.append(river)
 			for corner in river:
 				used[corner] = true
+	for main: Array in rivers.duplicate():
+		_add_tributaries(map, main, distance, used, rivers, rng)
 	return rivers
+
+
+## Afluentes de [param main] (ver o topo): nascentes a TRIBUTARY_SOURCE_DISTANCE
+## cantos dele, longe da costa e de outros rios; cada uma desce pela distância
+## até o rio (sem a nascente e a foz dele, para não virar a continuação) e
+## vale se chegar nele (ou em outro rio) com TRIBUTARY_MIN_LENGTH trechos.
+static func _add_tributaries(map: GameMap, main: Array, coast: Dictionary, used: Dictionary,
+		rivers: Array, rng: RandomNumberGenerator) -> void:
+	if main.size() < TRIBUTARY_MIN_MAIN:
+		return
+	var to_river := _distance_from(map, main.slice(2, main.size() - 3))
+	var candidates: Array[Vector2i] = []
+	for corner: Vector2i in to_river:
+		var d: int = to_river[corner]
+		if d >= TRIBUTARY_SOURCE_DISTANCE.x and d <= TRIBUTARY_SOURCE_DISTANCE.y and coast.get(corner, 0) >= 2:
+			candidates.append(corner)
+	candidates.sort()
+	var order := {}
+	for corner in candidates:
+		order[corner] = rng.randf()
+	candidates.sort_custom(func(a: Vector2i, b: Vector2i) -> bool: return order[a] < order[b])
+	var made := 0
+	for source in candidates.slice(0, TRIBUTARY_TRIES):
+		if made >= TRIBUTARIES_PER_RIVER:
+			return
+		if _near_used(source, used, TRIBUTARY_SPACING):
+			continue
+		var tributary := _walk(map, source, to_river, used, rng)
+		if tributary.size() > TRIBUTARY_MIN_LENGTH and used.has(tributary[-1]):
+			rivers.append(tributary)
+			for corner in tributary:
+				used[corner] = true
+			made += 1
+
+
+## Distância (em passos pelos cantos) de cada canto de terra (só cantos com
+## terra nas 4 casas em volta) até os cantos de [param seeds].
+static func _distance_from(map: GameMap, seeds: Array) -> Dictionary:
+	var distance := {}
+	var queue: Array[Vector2i] = []
+	for corner: Vector2i in seeds:
+		distance[corner] = 0
+		queue.append(corner)
+	var head := 0
+	while head < queue.size():
+		var corner := queue[head]
+		head += 1
+		for step in STEPS:
+			var next := corner + step
+			if distance.has(next) or next.x < 1 or next.y < 1 or next.x >= map.width or next.y >= map.height \
+					or not _all_land_around(map, next):
+				continue
+			distance[next] = distance[corner] + 1
+			queue.append(next)
+	return distance
 
 
 ## Um rio a partir da nascente: a cada passo escolhe (com sorteio pelos
@@ -223,17 +308,29 @@ static func _weighted(options: Array[Vector2i], weights: Array[float], rng: Rand
 ## [param origin] + (x, y) * [param cell_size]. Usado pelo mapa (RiverLayer no
 ## GameMap) e pela janela da cidade.
 static func draw(canvas: CanvasItem, map: GameMap, rivers: Array, cell_size: float, origin := Vector2.ZERO) -> void:
+	# Onde cada afluente deságua: {canto: quantos afluentes chegam nele}
+	var joins := {}
+	for river: Array in rivers:
+		if river.size() > 1 and _all_land_around(map, river[-1]):
+			joins[river[-1]] = joins.get(river[-1], 0) + 1
 	for index in rivers.size():
 		var river: Array = rivers[index]
 		var points := _curve(map, river, cell_size, origin, index)
 		if points.size() < 2:
 			continue
 		var is_mouth := not _all_land_around(map, river[-1]) # termina no mar (não noutro rio)
+		# Afluentes que este rio recebe: posição (em trechos desde a nascente) e quantos
+		var received := {}
+		for k in river.size() - 1:
+			if joins.has(river[k]):
+				received[k] = joins[river[k]]
 		# Comprimento acumulado (em casas) e a direção para os lados em cada ponto
 		var along := PackedFloat32Array([0.0])
 		for i in range(1, points.size()):
 			along.append(along[i - 1] + points[i].distance_to(points[i - 1]) / cell_size)
 		var total := along[along.size() - 1]
+		var corner_length := total / maxf(1.0, river.size() - 1 + (MOUTH_REACH if is_mouth else 0.0))
+		var end_width := HALF_WIDTH_MOUTH if is_mouth else HALF_WIDTH_MOUTH * TRIBUTARY_END_WIDTH
 		var normals := PackedVector2Array()
 		var water := PackedFloat32Array() # meia largura da água em cada ponto
 		var water_alpha := PackedFloat32Array()
@@ -243,7 +340,11 @@ static func draw(canvas: CanvasItem, map: GameMap, rivers: Array, cell_size: flo
 			var before := points[maxi(i - 1, 0)]
 			var after := points[mini(i + 1, points.size() - 1)]
 			normals.append((after - before).orthogonal().normalized())
-			var half := lerpf(HALF_WIDTH_SOURCE, HALF_WIDTH_MOUTH, along[i] / total)
+			var half := lerpf(HALF_WIDTH_SOURCE, end_width, along[i] / total)
+			# Alarga depois de cada afluente recebido (aos poucos, em uma casa)
+			for k: int in received:
+				var at := k * corner_length
+				half *= 1.0 + TRIBUTARY_WIDEN * received[k] * smoothstep(at - 0.5, at + 0.5, along[i])
 			var taper := smoothstep(0.0, SOURCE_TAPER, along[i]) # nascente: afina até uma ponta
 			half *= lerpf(0.15, 1.0, taper)
 			var appear := clampf(along[i] / SOURCE_FADE, 0.0, 1.0)

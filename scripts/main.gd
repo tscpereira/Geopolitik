@@ -5,9 +5,17 @@ extends Node2D
 ## fundar cidade, madeireira remota, encerrar turno). O jogador humano age por
 ## cliques; o jogador máquina, pelo AIController, usando exatamente as mesmas ações.
 
-const MAP_TEXTURE: Texture2D = preload("res://data/maps/mapa_teste.png")
-## Recursos estratégicos do mapa (ferro): casas listadas num JSON ao lado do PNG.
-const MAP_RESOURCES_PATH := "res://data/maps/mapa_teste_recursos.json"
+## Mapas: data/maps/<nome>.png (um pixel por casa, cores de Terrain.COLORS) e
+## <nome>_recursos.json ao lado, com o ferro ("ferro"), os jogadores
+## ("jogadores": nome, cor, se é máquina e a casa inicial) e a casa onde a
+## câmera começa ("camera"). Ver _load_map.
+const MAPS_DIR := "res://data/maps/"
+## Mapa da próxima partida (fica entre partidas: "Enter" na vitória começa outra
+## no mesmo mapa). Os testes antigos usam "mapa_teste" (a ilha de 2 jogadores).
+static var map_name := "tres_continentes"
+## Save de outro mapa à espera: o jogo recarrega a cena com o mapa dele e então
+## o carrega (ver restore_state).
+static var _pending_load := {}
 const WARRIOR: UnitType = preload("res://data/units/guerreiro.tres")
 const ARCHER: UnitType = preload("res://data/units/arqueiro.tres")
 const LIGHT_CAVALRY: UnitType = preload("res://data/units/cavalaria_leve.tres")
@@ -21,8 +29,6 @@ const WORKER: UnitType = preload("res://data/units/trabalhador.tres")
 ## Cursor do modo "Mover" (tecla G). Ponta da seta no canto superior esquerdo.
 const GO_CURSOR: Texture2D = preload("res://assets/sprites/ui/cursor_go.png")
 
-## Casa onde a câmera começa (centro da ilha do mapa de teste).
-const START_CAMERA_CELL := Vector2i(60, 41)
 ## Partida de teste com as tropas (Guerreiro, Arqueiro e Cavalaria Leve) de cada lado.
 ## Desligado para observar só o gerenciamento das cidades, sem guerra.
 const WITH_TROOPS := false
@@ -85,21 +91,22 @@ var fog: FogOfWar
 
 func _ready() -> void:
 	_rng.randomize()
-	game_map.load_from_image(MAP_TEXTURE.get_image())
-	game_map.load_resources(MAP_RESOURCES_PATH)
+	var map_info := _load_map(map_name)
 	camera.set_bounds(game_map.get_pixel_size())
-	camera.position = game_map.cell_to_world(START_CAMERA_CELL)
+	var camera_cell: Array = map_info.get("camera", [game_map.width / 2, game_map.height / 2])
+	camera.position = game_map.cell_to_world(Vector2i(int(camera_cell[0]), int(camera_cell[1])))
 	fog = FogOfWar.new()
 	fog.name = "Fog"
 	fog.setup(game_map)
 	add_child(fog)
 	move_child(fog, cities_root.get_index() + 1)
 
-	players = [
-		Player.new(1, "Jogador 1", Color8(220, 40, 40)),
-		Player.new(2, "Jogador 2", Color8(250, 220, 40), true),
-	]
-	_spawn_example_units()
+	players = []
+	var starts: Array[Vector2i] = []
+	for entry: Dictionary in map_info["jogadores"]:
+		players.append(Player.new(players.size() + 1, entry["nome"], Color.html(entry["cor"]), entry.get("maquina", true)))
+		starts.append(Vector2i(int(entry["inicio"][0]), int(entry["inicio"][1])))
+	_spawn_starting_units(starts)
 
 	hud.action_pressed.connect(_on_unit_action)
 	hud.research_pressed.connect(_on_research_pressed)
@@ -110,7 +117,27 @@ func _ready() -> void:
 	_update_vision()
 	TurnManager.turn_started.connect(_on_turn_started)
 	TurnManager.start_game(players)
+	if not _pending_load.is_empty():
+		var data := _pending_load
+		_pending_load = {}
+		restore_state(data)
 
+
+## Monta o mapa [param name] (PNG + JSON de recursos, ver MAPS_DIR) e retorna o
+## JSON (jogadores e câmera). Mapa sem a lista de jogadores: dois, um em cada
+## terço do mapa (só para não quebrar).
+func _load_map(name: String) -> Dictionary:
+	var texture: Texture2D = load(MAPS_DIR + name + ".png")
+	game_map.load_from_image(texture.get_image())
+	var json_path := MAPS_DIR + name + "_recursos.json"
+	game_map.load_resources(json_path)
+	var info: Variant = JSON.parse_string(FileAccess.get_file_as_string(json_path)) if FileAccess.file_exists(json_path) else null
+	if not info is Dictionary or not info.has("jogadores"):
+		push_warning("O mapa %s não lista os jogadores: dois, no meio do mapa." % name)
+		info = {"jogadores": [
+			{"nome": "Jogador 1", "cor": "dc2828", "maquina": false, "inicio": [game_map.width / 3, game_map.height / 2]},
+			{"nome": "Jogador 2", "cor": "fadc28", "maquina": true, "inicio": [game_map.width * 2 / 3, game_map.height / 2]}]}
+	return info
 
 func _process(_delta: float) -> void:
 	_update_vision()
@@ -2096,14 +2123,22 @@ func capture_state() -> Dictionary:
 		if player.is_ai:
 			data["ai_turns_waiting"] = _ais[player].turns_waiting if _ais.has(player) else 0
 		players_data.append(data)
-	return {"turn_manager": TurnManager.to_dict(), "map": game_map.to_dict(), "players": players_data,
+	return {"turn_manager": TurnManager.to_dict(), "map_name": map_name, "map": game_map.to_dict(), "players": players_data,
 			"ruins": ruins_layer.to_dict()}
 
 
 ## Troca a partida atual pela de [param data] (de capture_state, já lida do
 ## arquivo) e continua a vez de quem estava jogando, sem processar o início do
 ## turno de novo (as cidades já tinham produzido quando o jogo foi salvo).
+## Save de outro mapa (save antigo, sem "map_name": o mapa_teste): a cena é
+## recarregada com o mapa dele e o save é carregado no _ready.
 func restore_state(data: Dictionary) -> void:
+	var saved_map: String = data.get("map_name", "mapa_teste")
+	if saved_map != map_name:
+		map_name = saved_map
+		_pending_load = data
+		get_tree().reload_current_scene.call_deferred()
+		return
 	select_unit(null)
 	_set_goto_mode(false)
 	_completion_notices.clear()
@@ -2184,22 +2219,18 @@ func restore_state(data: Dictionary) -> void:
 
 # --- Montagem da partida e HUD ----------------------------------------------
 
-func _spawn_example_units() -> void:
-	# Com tropas: os dois jogadores frente a frente no centro da ilha, a 3 casas
-	# de distância, para entrarem em combate logo nos primeiros turnos.
-	if WITH_TROOPS:
-		_spawn_unit(WARRIOR, players[0], Vector2i(58, 40))
-		_spawn_unit(ARCHER, players[0], Vector2i(58, 42))
-		_spawn_unit(LIGHT_CAVALRY, players[0], Vector2i(57, 41))
-		_spawn_unit(WARRIOR, players[1], Vector2i(61, 40))
-		_spawn_unit(ARCHER, players[1], Vector2i(61, 42))
-		_spawn_unit(LIGHT_CAVALRY, players[1], Vector2i(62, 41))
-	# Todo jogador começa com um Colono e um Trabalhador (só o Trabalhador faz
-	# fazendas, e a cidade de 1 habitante sem fazenda não cresce)
-	_spawn_unit(SETTLER, players[0], Vector2i(55, 41))
-	_spawn_unit(SETTLER, players[1], Vector2i(66, 41))
-	_spawn_unit(WORKER, players[0], Vector2i(55, 42))
-	_spawn_unit(WORKER, players[1], Vector2i(66, 42))
+## Unidades do início: todo jogador começa com um Colono na casa inicial do
+## mapa ([param starts], na ordem dos jogadores) e um Trabalhador logo abaixo
+## (só o Trabalhador faz fazendas, e a cidade de 1 habitante sem fazenda não
+## cresce). Com WITH_TROOPS, também um Guerreiro, um Arqueiro e uma Cavalaria
+## Leve em volta.
+func _spawn_starting_units(starts: Array[Vector2i]) -> void:
+	for i in players.size():
+		_spawn_unit(SETTLER, players[i], starts[i])
+		_spawn_unit(WORKER, players[i], free_cell_near(starts[i] + Vector2i(0, 1), 2))
+		if WITH_TROOPS:
+			for type in [WARRIOR, ARCHER, LIGHT_CAVALRY]:
+				_spawn_unit(type, players[i], free_cell_near(starts[i], 3))
 
 
 func _next_city_name() -> String:
