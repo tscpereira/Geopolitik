@@ -666,9 +666,15 @@ RIOS (scripts/map/rivers.gd; desde 25/10/2026, pedido do usuário)
 - AFLUENTES (desde 29/10/2026): depois dos rios principais, cada um
   com 12 trechos ou mais recebe até 2 afluentes, rios menores que
   nascem a 4-9 cantos dele e descem até ele (Rivers._add_tributaries,
-  pela distância até o rio). No desenho, o afluente chega mais fino
-  (TRIBUTARY_END_WIDTH) e o rio que o recebe alarga dali para baixo
-  (TRIBUTARY_WIDEN). O número de rios principais cresce com o mapa:
+  pela distância até o rio). No desenho, o último trecho do afluente
+  vira uma curva que entra no rio um pouco abaixo, a favor da
+  correnteza, terminando sobre a linha dele (Rivers._merge_into), e as
+  camadas são pintadas uma de cada vez para todos os rios (toda a
+  areia, depois toda a água escura, depois a clara): a margem de um
+  rio nunca cobre a água de outro. TODOS OS RIOS TÊM A MESMA LARGURA
+  (Rivers.HALF_WIDTH, pedido do usuário; o rio não engrossa com os
+  afluentes); só a nascente afina e a foz abre em leque (no lago, bem
+  menos: LAKE_ESTUARY_WIDEN). O número de rios principais cresce com o mapa:
   1 a cada 300 casas de terra (no mínimo 8). Afluente é um rio comum
   da lista (has_river, travessia e save não mudaram).
 - Os rios correm pelas BORDAS das casas, no limiar entre uma casa e
@@ -4585,6 +4591,15 @@ PRÓXIMO PASSO GRANDE 2: CONJUNTOS CULTURAIS DE UNIDADES E CIDADES
   nome), teste do save de outro mapa (recarrega com o mapa certo),
   screenshots (visão geral e afluente) e todos os testes antigos no
   mapa_teste (o da pradaria ajustado: sem rios).
+
+- ENCONTRO DOS RIOS (relato do usuário: conexões pouco orgânicas):
+  a areia do afluente passava por cima da água do rio (agora as
+  camadas são pintadas por vez para todos os rios), o afluente chegava
+  em ângulo reto (agora entra curvado a favor da correnteza) e a foz
+  no lago abria como no mar (agora bem menos). A pedido do usuário,
+  todos os rios passaram a ter a mesma largura. Validação: screenshots
+  de três encontros e uma foz em lago; testes do mapa novo, do save de
+  outro mapa, pradaria, terrenos, névoa, cidade inimiga e painel.
 
 --------------------------------------------------------------
 7. BACKLOG (ideias para depois)

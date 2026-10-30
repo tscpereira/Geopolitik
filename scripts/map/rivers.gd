@@ -17,8 +17,9 @@ extends RefCounted
 ## menos TRIBUTARY_MIN_MAIN trechos recebe até TRIBUTARIES_PER_RIVER rios menores,
 ## que nascem perto dele e descem até ele (pela distância até o rio, não até o
 ## mar). Um afluente é um rio comum da lista que termina num canto de outro rio
-## (não no mar). No desenho, o afluente chega mais fino e o rio que o recebe
-## alarga dali para baixo (TRIBUTARY_WIDEN).
+## (não no mar). No desenho, o fim do afluente vira uma curva que entra no rio
+## a favor da correnteza (_merge_into). Todos os rios têm a mesma largura
+## (HALF_WIDTH, pedido do usuário): o rio não engrossa com os afluentes.
 ##
 ## DESENHO (draw), no estilo do rio do Civilization do SNES: três camadas ao
 ## longo de uma curva suavizada que ondula em volta das bordas: a margem de
@@ -53,15 +54,16 @@ const TRIBUTARY_MIN_LENGTH := 4
 const TRIBUTARY_SOURCE_DISTANCE := Vector2i(4, 9)
 const TRIBUTARY_SPACING := 4
 const TRIBUTARY_TRIES := 40
-## Desenho: quanto o rio alarga a cada afluente que recebe (fração da
-## largura) e a largura do afluente no encontro (fração de HALF_WIDTH_MOUTH).
-const TRIBUTARY_WIDEN := 0.35
-const TRIBUTARY_END_WIDTH := 0.6
+## Trecho final do afluente (em casas) refeito em curva para entrar no rio
+## a favor da correnteza (ver _merge_into).
+const TRIBUTARY_MERGE := 0.75
+## Quanto a foz se abre num lago (no mar: ESTUARY_WIDEN).
+const LAKE_ESTUARY_WIDEN := 0.7
 
-## Desenho, em frações do tamanho da casa. Meia largura da água na nascente e
-## na foz (antes do leque).
-const HALF_WIDTH_SOURCE := 0.055
-const HALF_WIDTH_MOUTH := 0.12
+## Desenho, em frações do tamanho da casa. Meia largura da água, a mesma em
+## todo rio, da nascente à foz (antes do leque; desde 29/10/2026, antes ia de
+## 0,055 na nascente a 0,12 na foz).
+const HALF_WIDTH := 0.08
 ## Margem de areia além da água, e a borda suave (esmaecida) de cada camada.
 const SAND_EXTRA := 0.05
 const FEATHER := 0.03
@@ -308,29 +310,41 @@ static func _weighted(options: Array[Vector2i], weights: Array[float], rng: Rand
 ## [param origin] + (x, y) * [param cell_size]. Usado pelo mapa (RiverLayer no
 ## GameMap) e pela janela da cidade.
 static func draw(canvas: CanvasItem, map: GameMap, rivers: Array, cell_size: float, origin := Vector2.ZERO) -> void:
-	# Onde cada afluente deságua: {canto: quantos afluentes chegam nele}
-	var joins := {}
-	for river: Array in rivers:
-		if river.size() > 1 and _all_land_around(map, river[-1]):
-			joins[river[-1]] = joins.get(river[-1], 0) + 1
+	# Dono de cada canto (o primeiro rio que passa nele): [rio, posição]. O
+	# afluente vem depois na lista do rio em que deságua (ver generate).
+	var owners := {}
+	var curves: Array[PackedVector2Array] = []
+	# Faixas de cada rio, desenhadas por camada (ver o fim): [pontos, normais, larguras, cores]
+	var sand_layer: Array = []
+	var dark_layer: Array = []
+	var light_layer: Array = []
 	for index in rivers.size():
 		var river: Array = rivers[index]
 		var points := _curve(map, river, cell_size, origin, index)
+		var is_mouth := not _all_land_around(map, river[-1]) # termina no mar (não noutro rio)
+		if not is_mouth and owners.has(river[-1]) and points.size() >= 2:
+			var owner: Array = owners[river[-1]]
+			points = _merge_into(points, curves[owner[0]], origin + Vector2(river[-1]) * cell_size, cell_size)
+		curves.append(points)
+		for k in river.size() - 1:
+			if not owners.has(river[k]):
+				owners[river[k]] = [index, k]
 		if points.size() < 2:
 			continue
-		var is_mouth := not _all_land_around(map, river[-1]) # termina no mar (não noutro rio)
-		# Afluentes que este rio recebe: posição (em trechos desde a nascente) e quantos
-		var received := {}
-		for k in river.size() - 1:
-			if joins.has(river[k]):
-				received[k] = joins[river[k]]
+		# Foz num lago (água que não é oceano): o leque abre bem menos
+		var widen := ESTUARY_WIDEN
+		if is_mouth:
+			var lake := true
+			for cell in cells_around(river[-1]):
+				if map.is_in_bounds(cell) and map.is_ocean(cell):
+					lake = false
+			if lake:
+				widen = LAKE_ESTUARY_WIDEN
 		# Comprimento acumulado (em casas) e a direção para os lados em cada ponto
 		var along := PackedFloat32Array([0.0])
 		for i in range(1, points.size()):
 			along.append(along[i - 1] + points[i].distance_to(points[i - 1]) / cell_size)
 		var total := along[along.size() - 1]
-		var corner_length := total / maxf(1.0, river.size() - 1 + (MOUTH_REACH if is_mouth else 0.0))
-		var end_width := HALF_WIDTH_MOUTH if is_mouth else HALF_WIDTH_MOUTH * TRIBUTARY_END_WIDTH
 		var normals := PackedVector2Array()
 		var water := PackedFloat32Array() # meia largura da água em cada ponto
 		var water_alpha := PackedFloat32Array()
@@ -340,17 +354,13 @@ static func draw(canvas: CanvasItem, map: GameMap, rivers: Array, cell_size: flo
 			var before := points[maxi(i - 1, 0)]
 			var after := points[mini(i + 1, points.size() - 1)]
 			normals.append((after - before).orthogonal().normalized())
-			var half := lerpf(HALF_WIDTH_SOURCE, end_width, along[i] / total)
-			# Alarga depois de cada afluente recebido (aos poucos, em uma casa)
-			for k: int in received:
-				var at := k * corner_length
-				half *= 1.0 + TRIBUTARY_WIDEN * received[k] * smoothstep(at - 0.5, at + 0.5, along[i])
+			var half := HALF_WIDTH
 			var taper := smoothstep(0.0, SOURCE_TAPER, along[i]) # nascente: afina até uma ponta
 			half *= lerpf(0.15, 1.0, taper)
 			var appear := clampf(along[i] / SOURCE_FADE, 0.0, 1.0)
 			var tail := total - along[i] # quanto falta até o fim (em casas)
 			var estuary := clampf(1.0 - tail / ESTUARY_LENGTH, 0.0, 1.0) if is_mouth else 0.0
-			water.append(half * (1.0 + ESTUARY_WIDEN * estuary * estuary) * cell_size)
+			water.append(half * (1.0 + widen * estuary * estuary) * cell_size)
 			water_alpha.append(appear * (clampf(tail / WATER_FADE, 0.0, 1.0) if is_mouth else 1.0))
 			sand_alpha.append(appear * (clampf((tail - SAND_FADE_START) / SAND_FADE, 0.0, 1.0) if is_mouth else 1.0))
 			sea_mix.append(estuary)
@@ -367,9 +377,46 @@ static func draw(canvas: CanvasItem, map: GameMap, rivers: Array, cell_size: flo
 			sand_colors.append(Color(SAND_COLOR, sand_alpha[i]))
 			dark_colors.append(Color(DARK_WATER_COLOR.lerp(SEA_COLOR, sea_mix[i]), water_alpha[i]))
 			light_colors.append(Color(LIGHT_WATER_COLOR.lerp(SEA_COLOR, sea_mix[i]), water_alpha[i]))
-		_strip(canvas, points, normals, sand_sizes, sand_colors, SAND_FEATHER * cell_size)
-		_strip(canvas, points, normals, water, dark_colors, FEATHER * cell_size)
-		_strip(canvas, points, normals, light_sizes, light_colors, FEATHER * cell_size * 1.5)
+		sand_layer.append([points, normals, sand_sizes, sand_colors])
+		dark_layer.append([points, normals, water, dark_colors])
+		light_layer.append([points, normals, light_sizes, light_colors])
+	# Uma camada de cada vez, para todos os rios: a areia de um afluente nunca
+	# fica por cima da água do rio em que ele deságua
+	for strip: Array in sand_layer:
+		_strip(canvas, strip[0], strip[1], strip[2], strip[3], SAND_FEATHER * cell_size)
+	for strip: Array in dark_layer:
+		_strip(canvas, strip[0], strip[1], strip[2], strip[3], FEATHER * cell_size)
+	for strip: Array in light_layer:
+		_strip(canvas, strip[0], strip[1], strip[2], strip[3], FEATHER * cell_size * 1.5)
+
+
+## Fim do afluente: tira o trecho que chega no rio [param main] em ângulo reto
+## (a última TRIBUTARY_MERGE casa antes do encontro em [param join]) e entra
+## nele por uma curva que termina sobre a linha do rio, um pouco abaixo, já
+## na direção da correnteza (como os afluentes de verdade).
+static func _merge_into(points: PackedVector2Array, main: PackedVector2Array, join: Vector2,
+		cell_size: float) -> PackedVector2Array:
+	if main.size() < 3:
+		return points
+	var nearest := 0
+	for i in main.size():
+		if main[i].distance_squared_to(join) < main[nearest].distance_squared_to(join):
+			nearest = i
+	# Alvo: TRIBUTARY_MERGE casa abaixo na linha do rio principal
+	var target := nearest
+	var walked := 0.0
+	while target < main.size() - 1 and walked < TRIBUTARY_MERGE * cell_size:
+		walked += main[target].distance_to(main[target + 1])
+		target += 1
+	var result := points
+	while result.size() > 2 and result[result.size() - 1].distance_to(join) < TRIBUTARY_MERGE * cell_size:
+		result.remove_at(result.size() - 1)
+	var start := result[result.size() - 1]
+	var control := main[nearest]
+	for step in range(1, 13):
+		var t := step / 12.0
+		result.append(start.lerp(control, t).lerp(control.lerp(main[target], t), t))
+	return result
 
 
 ## Uma faixa ao longo da curva: meia largura [param sizes] e cor [param colors]
