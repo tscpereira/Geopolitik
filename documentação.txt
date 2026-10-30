@@ -2639,7 +2639,9 @@ SALVAR E CARREGAR (scripts/save/save_game.gd)
   teclas (Hud._build_game_menu; Game._on_game_menu). No visual de mármore
   das janelas: o botão é uma placa de pedra em relevo (StoneStyle.
   style_button) e a lista, uma placa de mármore com chanfro
-  (StonePanelBox), texto escuro e o item sob o mouse em bronze. Salvar
+  (StonePanelBox), texto escuro e o item sob o mouse em bronze (a placa
+  do botão é redesenhada quando a lista fecha: StoneStyle.style_button
+  liga o popup_hide do MenuButton; antes ela ficava afundada). Salvar
   fica desabilitado fora da vez do humano ou com algo acontecendo
   (Game._can_save, a mesma regra do F5). O painel do turno fica ao lado
   do botão; o minimapa continua na margem esquerda, abaixo dos dois.

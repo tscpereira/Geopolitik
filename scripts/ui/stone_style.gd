@@ -135,8 +135,14 @@ static func style_button(button: Button) -> void:
 	plate.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	plate.draw.connect(func() -> void: _draw_raised(button, plate))
 	button.add_child(plate)
-	for signal_name in ["mouse_entered", "mouse_exited", "button_down", "button_up"]:
-		button.connect(signal_name, plate.queue_redraw)
+	for signal_name in ["mouse_entered", "mouse_exited", "button_down", "button_up", "toggled"]:
+		button.connect(signal_name, plate.queue_redraw.unbind(1) if signal_name == "toggled" else plate.queue_redraw)
+	# Botão de menu: ele fica "apertado" enquanto a lista está aberta e solta
+	# quando ela fecha, sem button_up (a placa ficava desenhada afundada)
+	if button is MenuButton:
+		var popup := (button as MenuButton).get_popup()
+		popup.popup_hide.connect(plate.queue_redraw.call_deferred)
+		popup.about_to_popup.connect(plate.queue_redraw)
 
 
 static func _draw_raised(button: Button, canvas: Control) -> void:
