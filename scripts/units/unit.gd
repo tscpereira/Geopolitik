@@ -35,6 +35,14 @@ static var _team_textures := {}
 var type: UnitType
 var owner_player: Player
 var cell: Vector2i
+## Casa de onde a unidade enxerga (névoa de guerra: FogOfWar.update). Durante
+## a animação de move_along, ela avança casa a casa (a cell já é o destino):
+## assim a névoa se abre por todo o caminho, e não só no fim (desde 30/10/2026).
+var sight_cell: Vector2i:
+	get:
+		return _walking_cell if _walking else cell
+var _walking := false
+var _walking_cell: Vector2i
 var moves_left := 0
 var energy := 0:
 	set(value):
@@ -269,10 +277,14 @@ func move_along(path: Array[Vector2i], map: GameMap) -> void:
 	moves_left -= Movement.path_cost(map, self, path)
 	leave_transport()
 	var tween := create_tween()
+	_walking = true
+	_walking_cell = cell
 	for step in path:
 		tween.tween_property(self, "position", map.cell_to_world(step), MOVE_STEP_TIME)
+		tween.tween_callback(func() -> void: _walking_cell = step)
 	cell = path[-1]
 	await tween.finished
+	_walking = false
 	_carry_cargo()
 	_update_exhausted_look()
 

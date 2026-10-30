@@ -68,7 +68,7 @@ func update(viewer: Player) -> bool:
 		return changed
 	var sources: Array[Vector3i] = []
 	for unit in viewer.units:
-		sources.append(Vector3i(unit.cell.x, unit.cell.y, unit.type.vision))
+		sources.append(Vector3i(unit.sight_cell.x, unit.sight_cell.y, unit.type.vision))
 	for city in viewer.cities:
 		sources.append(Vector3i(city.cell.x, city.cell.y, CITY_VISION))
 	if viewer == _viewer and sources == _sources:

@@ -2198,6 +2198,12 @@ scripts/map/fog_of_war.gd, fog.gdshader, scripts/ui/minimap.gd)
     Arqueiro, Catapulta enxergam 2 casas em volta, um quadrado 5x5
                         (vision = 2)
     cidades             2 casas em volta (FogOfWar.CITY_VISION)
+- A unidade enxerga de Unit.sight_cell: parada, a casa dela; andando
+  (Unit.move_along), a casa por onde o desenho está passando, casa a
+  casa. Assim a névoa se abre por todo o caminho, também no "Mover"
+  (G). Até 30/10/2026 a névoa usava o destino desde o começo do
+  movimento: as casas do meio ficavam escuras e a visão "pulava" para
+  o fim (relato do usuário com a Cavalaria Leve).
 - Casa nunca vista: preta. Casa já explorada, mas fora da visão agora: o
   terreno aparece escurecido (50%) e as unidades de outros jogadores nela
   NÃO aparecem (Unit.fog_hidden). As cidades dos outros só aparecem
@@ -4629,6 +4635,15 @@ PRÓXIMO PASSO GRANDE 2: CONJUNTOS CULTURAIS DE UNIDADES E CIDADES
   desabilitado com o jogo ocupado), screenshots (fechado, aberto, janela
   de salvar) e testes do painel, névoa, save de outro mapa, árvore,
   cidade inimiga e mapa de três continentes.
+
+- NÉVOA NO CAMINHO (bug relatado pelo usuário): a unidade andando
+  (inclusive no "Mover") não revelava as casas do caminho, só o
+  destino. Agora a visão acompanha o desenho casa a casa
+  (Unit.sight_cell). Validação: teste novo (Cavalaria Leve no "Mover":
+  as casas dos lados do caminho ficam exploradas; com o código antigo
+  ele falha) e testes da névoa, Galé, ataque à distância, painel, nome
+  da cidade, mapa de três continentes e IA (inclusive a partida
+  inteira).
 
 --------------------------------------------------------------
 7. BACKLOG (ideias para depois)
