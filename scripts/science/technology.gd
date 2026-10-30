@@ -18,7 +18,7 @@ extends RefCounted
 ##   Trabalho em Ferro -> Feudalismo (26/10/2026)
 ##   Montaria + Trabalho em Bronze -> Guerra de movimento
 ##   Escrita -> Guerra a distância (25/10/2026; antes era raiz)
-##   Escrita -> Navegação (25/10/2026)
+##   Escrita -> Navegação (25/10/2026) -> Cartografia (29/10/2026)
 ##   Misticismo (sem sucessora por enquanto)
 ## O que cada uma libera fica onde é usado: o campo "tech" de City.BUILDS
 ## (prédios, unidades), has_tech nas regras (Direito, Trabalho em Ferro,
@@ -29,7 +29,7 @@ extends RefCounted
 enum Tech {
 	CONSTRUCTION, MYSTICISM, WRITING, BRONZE_WORKING, HORSEBACK_RIDING, LITERATURE, MATHEMATICS,
 	IRON_WORKING, CURRENCY, MOBILE_WARFARE, LAW, CIVIL_ENGINEERING, REPUBLIC, BREAD_AND_CIRCUSES,
-	RANGED_WARFARE, NAVIGATION, FEUDALISM,
+	RANGED_WARFARE, NAVIGATION, FEUDALISM, CARTOGRAPHY,
 }
 
 ##   name      nome mostrado
@@ -75,6 +75,11 @@ const DATA := {
 		"name": "Navegação", "cost": 60, "requires": [Tech.WRITING],
 		"description": "Barcos a remo e a vela. Libera a Galé (Movimento 3, Ataque 1, Defesa 1; leva até 2 unidades), feita só em cidade à beira do oceano.",
 		"image": "res://assets/tech/navegacao.png",
+	},
+	Tech.CARTOGRAPHY: {
+		"name": "Cartografia", "cost": 90, "requires": [Tech.NAVIGATION],
+		"description": "Mapas das costas e das rotas do mar. Libera o Quadrirreme (barco de ataque à distância: Movimento 3, Ataque 1, alcance 1, Defesa 1) e as Docas (cidadãos pescam no mar: +1 de alimento por casa de água), só em cidade à beira do oceano.",
+		"image": "res://assets/tech/cartografia.png",
 	},
 	Tech.LITERATURE: {
 		"name": "Literatura", "cost": 70, "requires": [Tech.WRITING],

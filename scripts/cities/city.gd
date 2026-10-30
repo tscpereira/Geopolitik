@@ -79,7 +79,7 @@ signal changed
 enum Build {
 	FARM, LUMBER_MILL, WARRIOR, WORKER, SETTLER, CITY_HALL, HEADQUARTERS, CARPENTRY, SPEAR, TEMPLE, WALLS, SPEARMAN, MINE,
 	SCHOOL, LIBRARY, MARKET, FORGE, ARENA, SHORT_SWORD, CATAPULT, LIGHT_CAVALRY, CHARIOT, SWORDSMAN,
-	ARCHER, BOW, CATAPULT_FRAME, GALLEY_HULL, GALLEY,
+	ARCHER, BOW, CATAPULT_FRAME, GALLEY_HULL, GALLEY, QUADRIREME_HULL, QUADRIREME, DOCKS,
 }
 
 ## Humor de um cidadão (bem-estar social).
@@ -145,7 +145,9 @@ const CATEGORY_NAMES := {
 ##               (Muralha; ver Unit.walls_defense_bonus)
 ##   tech        tecnologia (Technology.Tech) que o jogador precisa ter pesquisado
 ##   requires    prédio que produz a unidade ou a arma (a cidade precisa tê-lo)
-##   coastal     só em cidade à beira do oceano (Galé; ver is_coastal)
+##   coastal     só em cidade à beira do oceano (Galé, Quadrirreme, Docas; ver is_coastal)
+##   fishing     cidadãos podem trabalhar as casas de água do território
+##               (Docas: +FISHING_FOOD de alimento cada; ver can_work_tile)
 ##   native      prédio que toda cidade já tem ao nascer (não aparece na lista)
 ##   description texto explicativo (tooltip da lista de construções)
 ## Em que terreno cada melhoria pode ser feita: ver allows_terrain.
@@ -159,7 +161,7 @@ const BUILDS := {
 	Build.LUMBER_MILL: {
 		"name": "Madeireira", "article": "a", "category": Category.TERRAIN_IMPROVEMENT,
 		"cost": 4, "gold": 50, "on_tile": true,
-		"description": "Melhoria em floresta, feita por um Trabalhador. Até 2 cidadãos, cada um tira 1 de madeira por turno. Cada floresta tem 100 de madeira e depois vira cerrado.",
+		"description": "Melhoria em floresta ou selva, feita por um Trabalhador. Até 2 cidadãos, cada um tira 1 de madeira por turno. Cada floresta tem 100 de madeira (a selva, 150) e depois vira cerrado.",
 	},
 	Build.MINE: {
 		"name": "Mina", "article": "a", "category": Category.TERRAIN_IMPROVEMENT,
@@ -312,6 +314,27 @@ const BUILDS := {
 		"requires": Build.HEADQUARTERS, "tech": Technology.Tech.NAVIGATION,
 		"description": "Barco a remo (Movimento 3, Ataque 1, Defesa 1) que leva até 2 unidades: elas embarcam andando para a casa dele e desembarcam andando para a terra. Luta só contra barcos. Só em cidade à beira do oceano; leva 1 Galé do arsenal (o casco, feito na Marcenaria). Exige Navegação.",
 	},
+	# Quadrirreme (29/10/2026): custa 50% a mais que a Galé (casco e tripulação)
+	Build.QUADRIREME_HULL: {
+		"name": "Quadrirreme (casco)", "article": "o", "category": Category.WEAPON,
+		"cost": 15, "gold": 50, "wood": 12, "on_tile": false, "coastal": true,
+		"weapon": Arsenal.Weapon.QUADRIREME, "requires": Build.CARPENTRY, "tech": Technology.Tech.CARTOGRAPHY,
+		"description": "O barco vai para o arsenal; a tripulação é treinada no Quartel General (unidade Quadrirreme). Feito na Marcenaria, só em cidade à beira do oceano; gasta 12 de madeira. Exige Cartografia.",
+	},
+	Build.QUADRIREME: {
+		"name": "Quadrirreme", "article": "o", "category": Category.UNIT,
+		"cost": 15, "gold": 50, "weapons": {Arsenal.Weapon.QUADRIREME: 1}, "on_tile": false, "coastal": true,
+		"unit": preload("res://data/units/quadrirreme.tres"), "population": 1,
+		"requires": Build.HEADQUARTERS, "tech": Technology.Tech.CARTOGRAPHY,
+		"description": "Barco de guerra com arqueiros (Movimento 3, Defesa 1): ataque à distância 1, alcance 1, sem levar dano; atira em barcos e em tropas na costa. Não leva unidades. Afunda se ficar 2 turnos seguidos em águas profundas. Só em cidade à beira do oceano; leva 1 Quadrirreme do arsenal (o casco, feito na Marcenaria). Exige Cartografia.",
+	},
+	# Docas (29/10/2026): os mesmos requisitos da Forja (25 de produção, 15 de madeira)
+	Build.DOCKS: {
+		"name": "Docas", "article": "as", "category": Category.BUILDING,
+		"cost": 25, "gold": 50, "wood": 15, "on_tile": false, "coastal": true, "fishing": true,
+		"tech": Technology.Tech.CARTOGRAPHY,
+		"description": "Os cidadãos podem pescar nas casas de água do território: 1 cidadão por casa, +1 de alimento por turno cada. Só em cidade à beira do oceano. Exige Cartografia; gasta 15 de madeira.",
+	},
 	Build.LIGHT_CAVALRY: {
 		"name": "Cavalaria Leve", "article": "a", "category": Category.UNIT,
 		"cost": 15, "gold": 50, "weapons": {Arsenal.Weapon.SPEAR: 1}, "on_tile": false,
@@ -336,6 +359,8 @@ const FEUDALISM_FARM_BONUS := 1
 ## Alimento que a casa da cidade produz sozinha (sem isso, uma cidade nova
 ## passaria fome antes de terminar a primeira fazenda).
 const CENTER_FOOD := 2
+## Alimento de um cidadão pescando numa casa de água (com as Docas).
+const FISHING_FOOD := 1
 ## Alimento que cada habitante come por turno (era 2 até 24/10/2026, como no
 ## Civilization II).
 const FOOD_PER_CITIZEN := 1
@@ -1129,17 +1154,28 @@ func free_citizens() -> int:
 
 
 ## Se um cidadão pode trabalhar a casa sem melhoria: do território, fora da casa
-## da cidade, terreno que dá alimento (Terrain.TILE_FOOD) e sem fazenda,
+## da cidade, terreno que dá alimento (Terrain.TILE_FOOD; com as Docas, também
+## a água: _can_fish) e sem fazenda,
 ## madeireira, mina ou ruína (a obra de um Trabalhador não atrapalha: quando ela
 ## fica pronta, o cidadão passa para a melhoria).
 func can_work_tile(target: Vector2i) -> bool:
-	return (territory.has(target) and target != cell and Terrain.TILE_FOOD.has(_map.get_terrain(target))
+	var terrain := _map.get_terrain(target)
+	return (territory.has(target) and target != cell and (Terrain.TILE_FOOD.has(terrain) or _can_fish(terrain))
 			and not farms.has(target) and not lumber_mills.has(target) and not mines.has(target) and not ruins.has(target))
 
 
+## Pesca: com as Docas (BUILDS "fishing"), as casas de água do território
+## podem ser trabalhadas (FISHING_FOOD cada, 1 cidadão por casa).
+func _can_fish(terrain: Terrain.Type) -> bool:
+	return Terrain.is_navigable(terrain) and buildings.any(func(building: int) -> bool: return BUILDS[building].get("fishing", false))
+
+
 ## Alimento de um cidadão trabalhando a casa sem melhoria (Terrain.TILE_FOOD),
-## mais Terrain.RIVER_FOOD se ela encosta num rio.
+## mais Terrain.RIVER_FOOD se ela encosta num rio. Casa de água com as Docas:
+## FISHING_FOOD.
 func tile_food(target: Vector2i) -> int:
+	if _can_fish(_map.get_terrain(target)):
+		return FISHING_FOOD
 	if not Terrain.TILE_FOOD.has(_map.get_terrain(target)):
 		return 0
 	return Terrain.TILE_FOOD[_map.get_terrain(target)] + (Terrain.RIVER_FOOD if _map.has_river(target) else 0)

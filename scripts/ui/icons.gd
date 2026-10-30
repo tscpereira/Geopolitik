@@ -129,10 +129,17 @@ static func draw_weapon(canvas: CanvasItem, weapon: Arsenal.Weapon, rect: Rect2)
 			draw_catapult(canvas, rect)
 		Arsenal.Weapon.GALLEY:
 			draw_galley(canvas, rect)
+		Arsenal.Weapon.QUADRIREME:
+			draw_galley(canvas, rect, QUADRIREME_SAIL_COLOR)
 
 
-## Galé de lado: casco de madeira com a proa curva, mastro e vela clara.
-static func draw_galley(canvas: CanvasItem, rect: Rect2) -> void:
+## Vela do Quadrirreme no ícone do arsenal (a Galé tem a vela clara).
+const QUADRIREME_SAIL_COLOR := Color(0.72, 0.28, 0.2)
+
+
+## Galé de lado: casco de madeira com a proa curva, mastro e vela clara (ou
+## [param sail_color]: o Quadrirreme usa a vela vermelha).
+static func draw_galley(canvas: CanvasItem, rect: Rect2, sail_color := STONE_COLOR) -> void:
 	var w := rect.size.x
 	var line := maxf(1.0, w / 24.0)
 	var o := rect.position
@@ -141,7 +148,7 @@ static func draw_galley(canvas: CanvasItem, rect: Rect2) -> void:
 	canvas.draw_line(p.call(0.5, 0.12), p.call(0.5, 0.62), Color.BLACK, w * 0.08)
 	canvas.draw_line(p.call(0.5, 0.12), p.call(0.5, 0.62), WOOD_SHAFT_COLOR, w * 0.04)
 	var sail := PackedVector2Array([p.call(0.3, 0.16), p.call(0.7, 0.16), p.call(0.73, 0.5), p.call(0.27, 0.5)])
-	canvas.draw_colored_polygon(sail, STONE_COLOR)
+	canvas.draw_colored_polygon(sail, sail_color)
 	canvas.draw_polyline(sail + PackedVector2Array([sail[0]]), Color.BLACK, line)
 	# Casco
 	var hull := PackedVector2Array([p.call(0.06, 0.58), p.call(0.82, 0.58), p.call(0.92, 0.42), p.call(0.96, 0.46),

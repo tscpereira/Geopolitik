@@ -535,6 +535,8 @@ UNIDADES (scripts/units/)
                                                          cavalaria)
     Galé        N        1       1       3          100  (Navegação; naval,
                                                          leva 2 unidades)
+    Quadrirreme Q        1       1       3          100  (Cartografia; naval,
+                                                         à distância, alcance 1)
 - UNIDADES DA ERA ANTIGA (desde 25/10/2026, árvore do usuário; feitas
   no Quartel General): Arqueiro (12 de produção + 1 de população + 1
   Arco; exige Guerra a distância), Catapulta (10 de produção + 1 de
@@ -733,6 +735,30 @@ FLORESTA (scripts/map/terrain.gd)
   mesmo nos dois; antes o cerrado rendia menos).
 - Passar o mouse sobre uma floresta mostra a madeira que resta
   (ex.: "Floresta (madeira 85/100, defesa +1...)").
+
+CARTOGRAFIA, QUADRIRREME E DOCAS (desde 29/10/2026, árvore do usuário)
+- Tecnologia Cartografia (90 pontos; exige Navegação). Ilustração em
+  assets/tech/cartografia.png (carta náutica antiga de Gerard van
+  Keulen, trazida pelo usuário, reduzida para 800 px).
+- QUADRIRREME (data/units/quadrirreme.tres): barco de guerra com
+  ataque à distância. Movimento 3, ataque à distância 1, alcance 1,
+  Defesa 1, visão 2; não leva unidades; afunda se ficar 2 turnos
+  seguidos em águas profundas (como a Galé). Atira em barcos e em
+  tropas na costa, sem levar dano (as regras do ataque à distância).
+  Custa 50% a mais que a Galé: o casco (Quadrirreme (casco), arma do
+  arsenal Arsenal.Weapon.QUADRIREME) sai da Marcenaria com 15 de
+  produção e 12 de madeira; a tripulação, do Quartel General, com 15
+  de produção e 1 de população. Só em cidade à beira do oceano. No
+  arsenal, o ícone é a Galé com a vela vermelha.
+  Desenho PROVISÓRIO: a Galé espelhada e com a madeira mais escura
+  (tools/art/gen_quadrirreme.gd; sprite, máscara do time e retrato).
+- DOCAS (City.Build.DOCKS): prédio com os mesmos requisitos da Forja
+  (25 de produção, 15 de madeira), exige Cartografia, só em cidade à
+  beira do oceano. Com as Docas, os cidadãos podem trabalhar as casas
+  de água do território, pescando: +1 de alimento cada
+  (City.FISHING_FOOD), 1 cidadão por casa (City._can_fish,
+  can_work_tile e tile_food; campo "fishing" de BUILDS).
+- A máquina ainda não faz Quadrirremes nem Docas (como a Galé).
 
 TERRENOS NOVOS (desde 29/10/2026, pedido do usuário; scripts/map/terrain.gd)
 - Águas Rasas: a água de antes, renomeada (Terrain.Type.WATER). Fica só
@@ -2974,6 +3000,9 @@ PRÓXIMO PASSO GRANDE 2: CONJUNTOS CULTURAIS DE UNIDADES E CIDADES
     (a regra já existe, falta o terreno)
 [ ] Estaleiro (para tecnologias navais mais avançadas)
 [ ] IA: fazer e usar Galés (transporte de tropas)
+[x] Cartografia, Quadrirreme e Docas (29/10/2026)
+[ ] IA: fazer e usar Quadrirremes e construir Docas (pescar)
+[ ] Desenho definitivo do Quadrirreme (pedido para o Gemini)
 [x] Desenho da Galé a partir do modelo do usuário (25/10/2026)
 [x] Primeira fonte de ouro: impostos da Marcenaria parada
 [x] Lanceiro (1/2/1, +1 de ataque e defesa contra cavalaria) com a
@@ -4477,6 +4506,18 @@ PRÓXIMO PASSO GRANDE 2: CONJUNTOS CULTURAIS DE UNIDADES E CIDADES
   capital, continua Cidade com 3 de população, save) e testes de
   desordem, Feudalismo, pradaria, derrota, cidade inimiga, névoa, Galé,
   ataque à distância e IA (inclusive a partida inteira).
+
+- CARTOGRAFIA (árvore atualizada pelo usuário): ver a seção
+  CARTOGRAFIA, QUADRIRREME E DOCAS. Tecnologia nova depois de
+  Navegação; Quadrirreme (barco de ataque à distância, 50% mais caro
+  que a Galé, a pedido do usuário) e Docas (requisitos da Forja; pesca
+  +1 de alimento por casa de água). Descrição da Madeireira também
+  passou a citar a selva. Validação: teste novo (tecnologia, custos,
+  casco e tripulação, disparo do barco na costa, Docas e pesca, 1
+  cidadão por casa), screenshots (arsenal, painel, árvore) e testes
+  da Galé, árvore e Feudalismo e ataque à distância (ajustados: 18
+  tecnologias), terrenos, derrota, classe, desordem, painel, névoa e
+  IA (inclusive a partida inteira).
 
 --------------------------------------------------------------
 7. BACKLOG (ideias para depois)

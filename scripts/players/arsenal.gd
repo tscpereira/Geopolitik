@@ -2,14 +2,14 @@ class_name Arsenal
 extends RefCounted
 
 ## Armas que o império estoca no arsenal (Player.arsenal: {Weapon: quantidade}).
-## Armas são produzidas em prédios (Lança, Arco, a máquina da Catapulta e o casco da Galé na
+## Armas são produzidas em prédios (Lança, Arco, a máquina da Catapulta e os cascos da Galé e do Quadrirreme na
 ## Marcenaria; Espada Curta na Forja) e gastas para treinar tropas no Quartel
 ## General (ex.: o Lanceiro leva 1 Lança; a Catapulta, 1 máquina). Para uma arma nova: entre no
 ## enum, nos nomes abaixo, em City.BUILDS (com "weapon") e no ícone
 ## (Icons.draw_weapon).
 
 ## Novas armas entram no fim: o save guarda o número de cada uma.
-enum Weapon { SPEAR, SHORT_SWORD, BOW, CATAPULT, GALLEY }
+enum Weapon { SPEAR, SHORT_SWORD, BOW, CATAPULT, GALLEY, QUADRIREME }
 
 const NAMES := {
 	Weapon.SPEAR: "Lança",
@@ -17,6 +17,7 @@ const NAMES := {
 	Weapon.BOW: "Arco",
 	Weapon.CATAPULT: "Catapulta",
 	Weapon.GALLEY: "Galé",
+	Weapon.QUADRIREME: "Quadrirreme",
 }
 
 const PLURAL_NAMES := {
@@ -25,6 +26,7 @@ const PLURAL_NAMES := {
 	Weapon.BOW: "Arcos",
 	Weapon.CATAPULT: "Catapultas",
 	Weapon.GALLEY: "Galés",
+	Weapon.QUADRIREME: "Quadrirremes",
 }
 
 
