@@ -24,6 +24,10 @@ Cada pasta é um pedido, com uma folha do tema:
   11_terrenos_novos     águas profundas, selva (com palmeiras), deserto,
                         tundra e neve (5x1; no jogo, provisórias geradas
                         por tools/art/gen_terrenos_novos.gd)
+  12_quadrirreme        o Quadrirreme, barco de guerra mais imponente que
+                        a Galé (importar como avulsa: ...
+                        import_folha_unidades.gd -- resultado.png
+                        quadrirreme)
   (As 14 cidades numa folha só o Gemini não conseguiu: copiou a
   referência. Por isso uma classe por pedido.)
 

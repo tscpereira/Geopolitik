@@ -235,6 +235,20 @@ func _themes() -> Array:
 			["tundra", t + "tundra", "Tundra from above: cold brown-olive ground with low moss and lichen patches, small grey stones and thin patches of old snow."],
 			["neve", t + "neve", "Snow field from above: clean white snow with soft blue-grey shadows of small drifts, a little sparkle."],
 		]},
+		# Quadrirreme (29/10/2026): barco de guerra da Cartografia, mais imponente
+		# que a Galé (pedido do usuário). No jogo, o desenho provisório de
+		# tools/art/gen_quadrirreme.gd. Importar como avulsa:
+		#   ... import_folha_unidades.gd -- resultado.png quadrirreme
+		{"name": "quadrirreme", "what": "1 game unit: a big Greek warship", "columns": 1, "cell": 300, "team_tint": true,
+		"camera": """CAMERA AND SIZE:
+- Three-quarter view facing RIGHT, seen from slightly above (about 20-30 degrees), exactly like the galley on the left.
+- It must look clearly MORE IMPOSING than that galley: a heavier, longer and TALLER warship, the flagship of the fleet. Next to the galley it would look about one and a half times bigger, so fill the cell with it.
+- The hull floats on nothing: no water, no waves, no reflection, no splash; the bottom of the hull on the bottom of the cell.""",
+		"extra": "NOTE: the right side of the attached image is only a placeholder (the old galley, mirrored and darkened, so it faces LEFT). Ignore its look and its direction: paint a NEW, much grander ship facing RIGHT, like the galley on the left.",
+		"team": "the stripes of the big sail, the round shields hung along the deck rail and the long pennant at the top of the mast",
+		"items": [
+			["quadrirreme", u + "quadrirreme", "Quadrireme, a Hellenistic war galley: a long, high, dark-oak hull with TWO stacked rows of many oars on its side; a heavy bronze ram at the waterline of the bow and a painted eye above it; a raised fighting deck with a low wooden parapet lined with round bronze-rimmed shields, and two or three archers with bows standing on it behind the shields; one tall mast with a large square sail with vertical stripes; a high curved stern ornament (aphlaston) curling over the deck like a scorpion tail; bronze fittings and painted trim along the hull."],
+		]},
 	]
 	# As cidades, uma classe por pedido (as 14 juntas o Gemini não conseguiu)
 	return list.slice(0, 1) + _city_themes(c) + list.slice(1)
@@ -402,6 +416,10 @@ Cada pasta é um pedido, com uma folha do tema:
   11_terrenos_novos     águas profundas, selva (com palmeiras), deserto,
                         tundra e neve (5x1; no jogo, provisórias geradas
                         por tools/art/gen_terrenos_novos.gd)
+  12_quadrirreme        o Quadrirreme, barco de guerra mais imponente que
+                        a Galé (importar como avulsa: ...
+                        import_folha_unidades.gd -- resultado.png
+                        quadrirreme)
   (As 14 cidades numa folha só o Gemini não conseguiu: copiou a
   referência. Por isso uma classe por pedido.)
 

@@ -36,7 +36,7 @@ const AVULSA := "res://tools/art/chatgpt/%s_avulsa.png"
 const GEMINI_SHEET := "res://tools/art/gemini/folha_unidades.png"
 ## Unidade avulsa -> altura do desenho no jogo, em pixels (a da folha, na
 ## mesma pose: o guerreiro em investida tinha 55).
-const AVULSAS := {"guerreiro_espada": 55, "gale": 66}
+const AVULSAS := {"guerreiro_espada": 55, "gale": 66, "quadrirreme": 72}
 const SIZE := 80
 const MAX_SIZE := Vector2(76, 70)
 const FEET := 73

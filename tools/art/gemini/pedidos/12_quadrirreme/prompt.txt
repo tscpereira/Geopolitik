@@ -1,0 +1,31 @@
+I am remaking the art of a 2D turn-based strategy game set in ancient Greece. The attached image has two parts:
+- LEFT, "ESTILO": a galley. It is the STYLE REFERENCE: paint everything in exactly this style.
+- RIGHT, "ATUAL": the current, low-quality versions of the items I need, numbered, in the same grid I want back. Use them only to know WHAT to draw (content and composition), not how they look.
+- Paint everything NEW. Do not copy or paste any part of the attached image into the result: no galley, no old drawings, no labels, no numbers.
+
+Create ONE image: a sprite sheet with 1 game unit: a big Greek warship.
+
+STYLE (copy it from the galley):
+- Detailed painted digital illustration with realistic proportions: soft painted shading, visible wood grain and texture, warm earthy palette (warm brown wood, off-white linen and plaster, terracotta roof tiles, bronze, olive greens). Not cartoon, not chibi, not pixel art, no thick black outlines, no flat colors, not a photo.
+- Strong, clean silhouettes that stay readable when shrunk to small game sprites: few big shapes, no thin clutter.
+- Soft daylight from the TOP-LEFT. All items in the sheet share the same light, scale and camera.
+
+CAMERA AND SIZE:
+- Three-quarter view facing RIGHT, seen from slightly above (about 20-30 degrees), exactly like the galley on the left.
+- It must look clearly MORE IMPOSING than that galley: a heavier, longer and TALLER warship, the flagship of the fleet. Next to the galley it would look about one and a half times bigger, so fill the cell with it.
+- The hull floats on nothing: no water, no waves, no reflection, no splash; the bottom of the hull on the bottom of the cell.
+
+SHEET LAYOUT:
+- A grid of 1 columns x 1 rows, evenly spaced, each item centered in its own cell, never touching or overlapping its neighbours, never cropped.
+- Order, left to right, top to bottom (the numbers match the right side of the attached image):
+  Row 1:
+    1. Quadrireme, a Hellenistic war galley: a long, high, dark-oak hull with TWO stacked rows of many oars on its side; a heavy bronze ram at the waterline of the bow and a painted eye above it; a raised fighting deck with a low wooden parapet lined with round bronze-rimmed shields, and two or three archers with bows standing on it behind the shields; one tall mast with a large square sail with vertical stripes; a high curved stern ornament (aphlaston) curling over the deck like a scorpion tail; bronze fittings and painted trim along the hull.
+- No numbers, labels or text in the image.
+
+NOTE: the right side of the attached image is only a placeholder (the old galley, mirrored and darkened, so it faces LEFT). Ignore its look and its direction: paint a NEW, much grander ship facing RIGHT, like the galley on the left.
+
+TEAM COLOR:
+- The player's color is ONE vivid royal blue (#1E50FF), used ONLY on: the stripes of the big sail, the round shields hung along the deck rail and the long pennant at the top of the mast. Use lighter and darker shades of that blue there, nowhere else. No other blue, cyan, teal or purple anywhere: no blue sky, no water, no blue shadows.
+
+BACKGROUND:
+- One flat, solid chroma-key green (#00B140) filling the whole background and the space between the cells: no gradient, no texture, no vignette, no cast shadow on the background, no ground, no frame, no text, no signature.
