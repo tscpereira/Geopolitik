@@ -93,8 +93,9 @@ func _prompt(theme: Dictionary) -> String:
 		else:
 			number += 1
 			lines.append("    %d. %s" % [number, item[2]])
-	var parts: Array[String] = [INTRO % theme["what"], STYLE, theme["camera"],
-			GRID % [theme["columns"], ceili(items.size() / float(theme["columns"])), "\n".join(lines)]]
+	var parts: Array[String] = [theme.get("intro", INTRO) % theme["what"], theme.get("style", STYLE), theme["camera"],
+			GRID % [theme["columns"], ceili(items.size() / float(theme["columns"])), "\n".join(lines)]
+			if not theme.get("no_current", false) else "THE UNIT:\n" + "\n".join(theme["items"].map(func(item: Array) -> String: return "- " + item[2]))]
 	if theme.has("extra"):
 		parts.append(theme["extra"])
 	parts.append(TEAM % theme["team"] if theme.has("team") else NO_TEAM)
@@ -236,19 +237,35 @@ func _themes() -> Array:
 			["neve", t + "neve", "Snow field from above: clean white snow with soft blue-grey shadows of small drifts, a little sparkle."],
 		]},
 		# Quadrirreme (29/10/2026): barco de guerra da Cartografia, mais imponente
-		# que a Galé (pedido do usuário). No jogo, o desenho provisório de
-		# tools/art/gen_quadrirreme.gd. Importar como avulsa:
+		# que a Galé (pedido do usuário). A 1ª tentativa, com a Galé como
+		# referência de estilo, voltou uma cópia da Galé: aqui a referência são
+		# unidades que não são barcos (style_images) e o desenho provisório não
+		# aparece (no_current). No jogo, o provisório de tools/art/gen_quadrirreme.gd.
+		# Importar como avulsa:
 		#   ... import_folha_unidades.gd -- resultado.png quadrirreme
 		{"name": "quadrirreme", "what": "1 game unit: a big Greek warship", "columns": 1, "cell": 300, "team_tint": true,
-		"camera": """CAMERA AND SIZE:
-- Three-quarter view facing RIGHT, seen from slightly above (about 20-30 degrees), exactly like the galley on the left.
-- It must look clearly MORE IMPOSING than that galley: a heavier, longer and TALLER warship, the flagship of the fleet. Next to the galley it would look about one and a half times bigger, so fill the cell with it.
-- The hull floats on nothing: no water, no waves, no reflection, no splash; the bottom of the hull on the bottom of the cell.""",
-		"extra": "NOTE: the right side of the attached image is only a placeholder (the old galley, mirrored and darkened, so it faces LEFT). Ignore its look and its direction: paint a NEW, much grander ship facing RIGHT, like the galley on the left.",
-		"team": "the stripes of the big sail, the round shields hung along the deck rail and the long pennant at the top of the mast",
+		"style_images": [u + "retratos/lanceiro", u + "retratos/arqueiro", u + "retratos/catapulta"],
+		"no_current": true,
+		"intro": """I am making the art of a 2D turn-based strategy game set in ancient Greece. The attached image shows three units already made for the game (a hoplite, an archer and a wooden catapult). It is ONLY the STYLE REFERENCE: paint the new unit in exactly this painted style, with the same detail, palette and light. Do not copy or include any of those three units.
+
+Create ONE image: %s.""",
+		"style": """STYLE (copy it from the attached units):
+- Detailed painted digital illustration with realistic proportions: soft painted shading, visible wood grain and texture, warm earthy palette (dark oak and warm brown wood, off-white linen, bronze, a little dark red paint). Not cartoon, not chibi, not pixel art, no thick black outlines, no flat colors, not a photo.
+- Strong, clean silhouette that stays readable when shrunk to a small game sprite: few big shapes, no thin clutter.
+- Soft daylight from the TOP-LEFT.""",
+		"camera": """CAMERA:
+- Three-quarter view of the side of the ship, the BOW (front, with the ram) pointing to the RIGHT and the stern on the LEFT, seen from slightly above (about 20-30 degrees).
+- The hull floats on nothing: no water, no waves, no reflection, no splash; the bottom of the hull near the bottom of the image.
+
+WHAT MAKES IT DIFFERENT (very important):
+- This is NOT a small viking-like galley with one sail and a tall curled prow. Avoid that look completely: no dragon-like or spiral prow, no single big striped square sail dominating the picture.
+- It is a HEAVY, IMPOSING Hellenistic battleship: a long, broad and LOW hull, much longer than it is tall, built like a floating fortress.""",
 		"items": [
-			["quadrirreme", u + "quadrirreme", "Quadrireme, a Hellenistic war galley: a long, high, dark-oak hull with TWO stacked rows of many oars on its side; a heavy bronze ram at the waterline of the bow and a painted eye above it; a raised fighting deck with a low wooden parapet lined with round bronze-rimmed shields, and two or three archers with bows standing on it behind the shields; one tall mast with a large square sail with vertical stripes; a high curved stern ornament (aphlaston) curling over the deck like a scorpion tail; bronze fittings and painted trim along the hull."],
-		]},
+			["quadrirreme", u + "quadrirreme", "Quadrireme warship: a long, heavy, dark-oak hull painted with a dark red band, with an outrigger box along the side and TWO stacked rows of many short oars; a massive three-bladed bronze RAM sticking out at the waterline of the bow; a big painted eye on the bow; a flat fighting deck covered from end to end, with a solid wooden parapet lined with round shields; a square WOODEN COMBAT TOWER on the deck near the bow with three archers drawing their bows on top of it; TWO masts: a main mast amidships and a smaller one leaning forward over the bow, each with a modest furled or half-reefed sail (the sails are NOT the main feature); a stern that curves up into a fan-shaped ornament (aphlaston) and two big steering oars at the back; bronze fittings along the hull."],
+		],
+		"team": "the round shields along the parapet, the long pennant on the main mast and a painted stripe along the top of the combat tower",
+		"extra": "The ship must fill most of the image width. Draw it big, alone and complete (bow, stern and all the oars inside the image).",
+		},
 	]
 	# As cidades, uma classe por pedido (as 14 juntas o Gemini não conseguiu)
 	return list.slice(0, 1) + _city_themes(c) + list.slice(1)
@@ -312,7 +329,7 @@ func _reference(theme: Dictionary, path: String) -> void:
 	# Esquerda: o estilo
 	var left := VBoxContainer.new()
 	left.add_child(_label("ESTILO (referência)", 22))
-	left.add_child(_picture(_style, Vector2(420, 420)))
+	left.add_child(_picture(_style_sheet(theme["style_images"]) if theme.has("style_images") else _style, Vector2(420, 420)))
 	row.add_child(left)
 	# Direita: os desenhos atuais na grade pedida
 	var right := VBoxContainer.new()
@@ -357,7 +374,10 @@ func _reference(theme: Dictionary, path: String) -> void:
 			name_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 			inner.add_child(name_label)
 		grid.add_child(card)
-	row.add_child(right)
+	if theme.get("no_current", false):
+		right.free() # só a referência de estilo (o desenho atual atrapalhava: ver Quadrirreme)
+	else:
+		row.add_child(right)
 	for i in 3:
 		await process_frame
 	var total := margin.get_combined_minimum_size()
@@ -370,6 +390,26 @@ func _reference(theme: Dictionary, path: String) -> void:
 	viewport.get_texture().get_image().save_png(ProjectSettings.globalize_path(path))
 	print("  %s (%dx%d)" % [path.get_file(), viewport.size.x, viewport.size.y])
 	viewport.queue_free()
+
+
+## Referência de estilo de um pedido (theme "style_images"): as imagens lado a
+## lado, na mesma altura, com a cor do time em azul, sobre o verde do fundo.
+func _style_sheet(paths: Array) -> Image:
+	var height := 400
+	var images: Array[Image] = []
+	var width := 0
+	for path: String in paths:
+		var image := _tinted(path)
+		image.resize(maxi(1, roundi(image.get_width() * float(height) / image.get_height())), height, Image.INTERPOLATE_LANCZOS)
+		images.append(image)
+		width += image.get_width() + 20
+	var sheet := Image.create(width + 20, height + 40, false, Image.FORMAT_RGBA8)
+	sheet.fill(Color8(0, 177, 64))
+	var x := 20
+	for image in images:
+		sheet.blend_rect(image, Rect2i(Vector2i.ZERO, image.get_size()), Vector2i(x, 20))
+		x += image.get_width() + 20
+	return sheet
 
 
 func _picture(image: Image, size: Vector2) -> TextureRect:

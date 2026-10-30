@@ -3003,7 +3003,9 @@ PRÓXIMO PASSO GRANDE 2: CONJUNTOS CULTURAIS DE UNIDADES E CIDADES
 [x] Cartografia, Quadrirreme e Docas (29/10/2026)
 [ ] IA: fazer e usar Quadrirremes e construir Docas (pescar)
 [ ] Desenho definitivo do Quadrirreme (pedido pronto em
-    tools/art/gemini/pedidos/12_quadrirreme: mais imponente que a Galé)
+    tools/art/gemini/pedidos/12_quadrirreme: mais imponente que a Galé;
+    a 1ª tentativa, com a Galé de referência, voltou uma cópia dela: o
+    pedido refeito usa Lanceiro, Arqueiro e Catapulta como estilo)
 [x] Desenho da Galé a partir do modelo do usuário (25/10/2026)
 [x] Primeira fonte de ouro: impostos da Marcenaria parada
 [x] Lanceiro (1/2/1, +1 de ataque e defesa contra cavalaria) com a
