@@ -31,6 +31,14 @@ const ROAD_IN_PROGRESS_ALPHA := 0.4
 const ROAD_JITTER := 0.14
 ## Segmentos de cada curva da estrada.
 const ROAD_CURVE_STEPS := 12
+## Ponte onde a estrada atravessa um rio (desde 30/10/2026): comprimento e
+## largura (em casas), madeira do tabuleiro, das tábuas e das vigas laterais.
+const BRIDGE_LENGTH := 0.66
+const BRIDGE_WIDTH := 0.26
+const BRIDGE_DECK_COLOR := Color8(158, 112, 64)
+const BRIDGE_PLANK_COLOR := Color8(112, 76, 40)
+const BRIDGE_BEAM_COLOR := Color8(86, 56, 30)
+const BRIDGE_SHADOW_COLOR := Color(0, 0, 0, 0.28)
 ## Sulcos das rodas: duas trilhas finas e escuras, a ROAD_RUT_OFFSET do meio
 ## da estrada (em casas).
 const ROAD_RUT_COLOR := Color(0.3, 0.22, 0.14, 0.26)
@@ -86,6 +94,8 @@ var _resource_layer: Node2D
 var roads := {}
 var road_progress := {}
 var _road_layer: Node2D
+## Pontes, por cima dos rios (_draw_bridges).
+var _bridge_layer: Node2D
 
 var _terrain := PackedByteArray()
 ## Casas de oceano (is_ocean): {casa: true}; vazio = calcular de novo.
@@ -152,6 +162,12 @@ func _ready() -> void:
 	_road_layer.material = _path_texture_material()
 	add_child(_road_layer)
 	move_child(_road_layer, 1)
+	# Pontes por cima dos rios (a estrada passa por baixo deles)
+	_bridge_layer = Node2D.new()
+	_bridge_layer.name = "BridgeLayer"
+	_bridge_layer.draw.connect(_draw_bridges)
+	add_child(_bridge_layer)
+	move_child(_bridge_layer, _river_layer.get_index() + 1)
 	# Bigornas das casas com ferro, por cima dos rios
 	_resource_layer = Node2D.new()
 	_resource_layer.name = "ResourceLayer"
@@ -244,6 +260,64 @@ func add_road_progress(cell: Vector2i, points: int) -> bool:
 ## estradas vizinhas).
 func redraw_roads() -> void:
 	_road_layer.queue_redraw()
+	_bridge_layer.queue_redraw()
+
+
+## Pontes: em cada trecho de estrada entre duas casas ligadas (_road_links)
+## que atravessa um rio (crosses_river), um tabuleiro de madeira visto de cima
+## no meio do trecho, na direção da estrada: sombra na água, tábuas
+## atravessadas e uma viga (com o corrimão) de cada lado. Estrada em obra: a
+## ponte fica transparente, como a estrada.
+func _draw_bridges() -> void:
+	for cell: Vector2i in roads.keys() + road_progress.keys():
+		for other in _road_links(cell):
+			if not crosses_river(cell, other):
+				continue
+			if (roads.has(other) or road_progress.has(other)) and other < cell:
+				continue # cada trecho entre duas estradas, uma vez só
+			var done := roads.has(cell) and (roads.has(other) or cities.has(other))
+			_draw_bridge(_road_point(cell), _road_point(other), _crossing_point(cell, other),
+					1.0 if done else ROAD_IN_PROGRESS_ALPHA)
+
+
+## Onde o rio passa entre as casas vizinhas: no meio da borda entre elas (reta)
+## ou no canto que elas dividem (diagonal), em coordenadas do mapa.
+static func _crossing_point(a: Vector2i, b: Vector2i) -> Vector2:
+	var corner := Vector2(maxi(a.x, b.x), maxi(a.y, b.y))
+	if a.x == b.x:
+		corner.x += 0.5 # borda horizontal (uma casa em cima da outra)
+	elif a.y == b.y:
+		corner.y += 0.5 # borda vertical (lado a lado)
+	return corner * TILE_SIZE
+
+
+## Ponte da estrada de [param from] a [param to], centrada no ponto do trecho
+## mais perto de [param crossing] (onde o rio passa).
+func _draw_bridge(from: Vector2, to: Vector2, crossing: Vector2, alpha: float) -> void:
+	var center := Geometry2D.get_closest_point_to_segment(crossing, from, to)
+	var along := (to - from).normalized()
+	var across := along.orthogonal()
+	var half_length := BRIDGE_LENGTH * TILE_SIZE * 0.5
+	var half_width := BRIDGE_WIDTH * TILE_SIZE * 0.5
+	var corners := func(offset: Vector2, length: float, width: float) -> PackedVector2Array:
+		var c := center + offset
+		return PackedVector2Array([c - along * length - across * width, c + along * length - across * width,
+				c + along * length + across * width, c - along * length + across * width])
+	var shadow := Color(BRIDGE_SHADOW_COLOR, BRIDGE_SHADOW_COLOR.a * alpha)
+	_bridge_layer.draw_colored_polygon(corners.call(Vector2(3, 4), half_length * 0.86, half_width), shadow)
+	var deck: PackedVector2Array = corners.call(Vector2.ZERO, half_length, half_width)
+	_bridge_layer.draw_colored_polygon(deck, Color(BRIDGE_DECK_COLOR, alpha))
+	# Tábuas atravessadas
+	var planks := 7
+	for k in range(1, planks):
+		var p := center + along * (-half_length + 2.0 * half_length * k / planks)
+		_bridge_layer.draw_line(p - across * half_width, p + across * half_width, Color(BRIDGE_PLANK_COLOR, alpha), 1.5)
+	# Vigas laterais (o corrimão), passando um pouco das pontas
+	for side: float in [-1.0, 1.0]:
+		var edge := center + across * half_width * side
+		_bridge_layer.draw_line(edge - along * half_length * 1.08, edge + along * half_length * 1.08,
+				Color(BRIDGE_BEAM_COLOR, alpha), TILE_SIZE * 0.045)
+	_bridge_layer.draw_polyline(deck + PackedVector2Array([deck[0]]), Color(0, 0, 0, 0.5 * alpha), 1.0)
 
 
 ## Estradas em curvas. Cada casa com estrada tem um ponto um pouco fora do
@@ -305,7 +379,7 @@ func _draw_road_path(points: PackedVector2Array, color: Color, width: float, rut
 	if not ruts:
 		_road_layer.draw_polyline(points, color, width, true)
 		return
-	for side in [-1.0, 1.0]:
+	for side: float in [-1.0, 1.0]:
 		var rut := PackedVector2Array()
 		for i in points.size():
 			var tangent := points[mini(i + 1, points.size() - 1)] - points[maxi(i - 1, 0)]
@@ -378,6 +452,8 @@ func set_rivers(new_rivers: Array) -> void:
 				if is_in_bounds(cell):
 					_river_cells[cell] = true
 	_river_layer.queue_redraw()
+	if _bridge_layer:
+		_bridge_layer.queue_redraw()
 
 
 ## Se andar da casa [param from] para a vizinha [param to] atravessa um rio.

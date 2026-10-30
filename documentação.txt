@@ -2096,6 +2096,14 @@ MOVIMENTO (scripts/map/movement.gd)
   triângulo); encruzilhada com uma curva para cada par; até a
   cidade, reta para o centro. Em obra, transparente (camada
   RoadLayer, por baixo dos rios; GameMap.ROAD_JITTER).
+  PONTES (desde 30/10/2026, pedido do usuário): onde um trecho de
+  estrada atravessa um rio (GameMap.crosses_river, inclusive o trecho
+  até a cidade e na diagonal), uma ponte de madeira vista de cima, na
+  camada BridgeLayer (por cima dos rios): sombra na água, tábuas
+  atravessadas e uma viga de cada lado, na direção da estrada,
+  centrada onde o rio passa (a borda entre as casas, ou o canto que
+  elas dividem na diagonal; GameMap._draw_bridges, BRIDGE_*). Em
+  obra, transparente como a estrada.
   TEXTURA (desde 25/10/2026, pedido do usuário): sulcos discretos das
   rodas (duas trilhas finas que acompanham as curvas; ROAD_RUT_*) e o
   shader scripts/map/path_texture.gdshader nas camadas da estrada e
@@ -4702,6 +4710,12 @@ PRÓXIMO PASSO GRANDE 2: CONJUNTOS CULTURAIS DE UNIDADES E CIDADES
   virou livros de pé numa prateleira (era uma estante com rolos vistos
   de frente, irreconhecível). Validação: screenshot do ícone em 96, 48
   e 24 px e da dica; testes da árvore, desordem, menu e Cartografia.
+
+- PONTES (pedido do usuário): a estrada que atravessa um rio ganha
+  uma ponte de madeira por cima da água. Validação: screenshots de uma
+  ponte reta e de duas em diagonal (uma em obra); testes de terrenos,
+  névoa, Galé, três continentes, save de outro mapa, pradaria e a
+  partida inteira da IA.
 
 --------------------------------------------------------------
 7. BACKLOG (ideias para depois)
