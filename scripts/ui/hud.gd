@@ -12,6 +12,10 @@ extends CanvasLayer
 signal action_pressed(action_id: String)
 ## Clique no painel de Ciência: abrir a escolha da pesquisa.
 signal research_pressed
+## Menu do jogo (canto de cima à esquerda): prestes a abrir (o Game atualiza
+## set_save_enabled) e item escolhido (MENU_SAVE ou MENU_LOAD).
+signal menu_opening
+signal menu_chosen(id: int)
 ## Botão "Árvore [T]" do painel de Ciência: abrir a árvore de tecnologias.
 signal tech_tree_pressed
 
@@ -52,6 +56,11 @@ const MESSAGE_TIME := 3.0
 var tech_tree_dialog: TechTreeDialog
 ## Ações da unidade selecionada (as mesmas dos botões), para o painel da unidade.
 var last_actions: Array[Dictionary] = []
+## Itens do menu do jogo.
+const MENU_SAVE := 0
+const MENU_LOAD := 1
+## Botão "Menu" do canto de cima à esquerda (ver _build_game_menu).
+var game_menu: MenuButton
 ## Minimapa (canto esquerdo, abaixo do painel do turno; o Game chama setup).
 var minimap: Minimap
 var _minimap_panel: PanelContainer
@@ -81,6 +90,7 @@ var _shown_science := []
 
 
 func _ready() -> void:
+	_build_game_menu()
 	_build_minimap()
 	_build_unit_panel()
 	tech_tree_dialog = TechTreeDialog.new()
@@ -131,6 +141,64 @@ func hide_unit_panel() -> void:
 	unit_panel.hide()
 
 
+## Menu do jogo no canto de cima à esquerda (desde 30/10/2026): o botão "Menu"
+## abre a lista com Salvar e Carregar (as mesmas janelas do F5 e do L). O
+## painel do turno fica ao lado dele. Antes de abrir, o Game diz se dá para
+## salvar agora (menu_opening -> set_save_enabled).
+func _build_game_menu() -> void:
+	game_menu = MenuButton.new()
+	game_menu.name = "GameMenu"
+	game_menu.text = "Menu"
+	game_menu.flat = false
+	game_menu.focus_mode = Control.FOCUS_NONE
+	game_menu.tooltip_text = "Salvar e carregar a partida"
+	game_menu.add_theme_font_size_override("font_size", 20)
+	# Pedra em relevo, como os botões das janelas (StoneStyle)
+	StoneStyle.style_button(game_menu)
+	game_menu.add_theme_constant_override("h_separation", 8)
+	# Ícone: três barras (o "hambúrguer"), na cor do texto dos botões de pedra
+	var image := Image.create(20, 16, false, Image.FORMAT_RGBA8)
+	for bar in 3:
+		image.fill_rect(Rect2i(0, bar * 6 + 1, 20, 3), Color8(70, 44, 18))
+	game_menu.icon = ImageTexture.create_from_image(image)
+	game_menu.position = $TurnPanel.position
+	add_child(game_menu)
+	move_child(game_menu, $TurnPanel.get_index())
+	# A lista: placa de mármore com o chanfro das janelas, texto escuro e o item
+	# sob o mouse realçado em bronze
+	var popup := game_menu.get_popup()
+	var panel := StonePanelBox.new()
+	panel.bevel = 8.0
+	panel.set_content_margin_all(14)
+	popup.add_theme_stylebox_override("panel", panel)
+	var hover_item := StyleBoxFlat.new()
+	hover_item.bg_color = Color(1, 1, 1, 0.55)
+	hover_item.border_color = Color(StoneStyle.BRONZE, 0.6)
+	hover_item.set_border_width_all(1)
+	hover_item.set_corner_radius_all(3)
+	popup.add_theme_stylebox_override("hover", hover_item)
+	popup.add_theme_color_override("font_color", StoneStyle.INK)
+	popup.add_theme_color_override("font_hover_color", StoneStyle.BRONZE)
+	popup.add_theme_color_override("font_disabled_color", Color8(150, 142, 134))
+	popup.add_theme_constant_override("v_separation", 10)
+	popup.add_theme_font_size_override("font_size", 18)
+	popup.add_item("Salvar partida   [F5]", MENU_SAVE)
+	popup.add_item("Carregar partida   [L]", MENU_LOAD)
+	popup.about_to_popup.connect(func() -> void: menu_opening.emit())
+	popup.id_pressed.connect(func(id: int) -> void: menu_chosen.emit(id))
+	# O painel do turno vai para o lado do botão (e o minimapa o acompanha)
+	var place := func() -> void:
+		$TurnPanel.position.x = game_menu.position.x + game_menu.size.x + 8.0
+	game_menu.resized.connect(place)
+	place.call()
+
+
+## Salvar só vale na vez do humano, sem nada acontecendo (como o F5).
+func set_save_enabled(enabled: bool) -> void:
+	var popup := game_menu.get_popup()
+	popup.set_item_disabled(popup.get_item_index(MENU_SAVE), not enabled)
+
+
 ## Painel do minimapa, logo abaixo do painel do turno (acompanha a altura dele).
 func _build_minimap() -> void:
 	_minimap_panel = PanelContainer.new()
@@ -144,7 +212,7 @@ func _build_minimap() -> void:
 	minimap.name = "Minimap"
 	_minimap_panel.add_child(minimap)
 	var place := func() -> void:
-		_minimap_panel.position = Vector2($TurnPanel.position.x, $TurnPanel.position.y + $TurnPanel.size.y + 8.0)
+		_minimap_panel.position = Vector2(game_menu.position.x, $TurnPanel.position.y + $TurnPanel.size.y + 8.0)
 	$TurnPanel.resized.connect(place)
 	place.call()
 

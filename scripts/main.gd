@@ -111,6 +111,8 @@ func _ready() -> void:
 	hud.action_pressed.connect(_on_unit_action)
 	hud.research_pressed.connect(_on_research_pressed)
 	hud.tech_tree_pressed.connect(_open_tech_tree)
+	hud.menu_opening.connect(func() -> void: hud.set_save_enabled(_can_save()))
+	hud.menu_chosen.connect(_on_game_menu)
 	hud.tech_tree_dialog.research_chosen.connect(_on_tree_research_chosen)
 	hud.city_window.closed.connect(_on_city_window_closed)
 	hud.minimap.setup(self)
@@ -168,7 +170,7 @@ func _unhandled_input(event: InputEvent) -> void:
 		return
 	if _is_busy or TurnManager.current_player().is_ai:
 		return
-	if key == KEY_F5:
+	if key == KEY_F5 and _can_save():
 		_open_save_dialog(true)
 		return
 	if key == KEY_T:
@@ -2078,6 +2080,19 @@ func _eliminate(player: Player) -> void:
 
 ## F5 / L (ou F9): janela dos espaços de save. Salvar só na vez do humano, sem nada
 ## acontecendo; carregar também na tela de vitória.
+## Salvar só na vez do humano, sem nada acontecendo e fora da tela de vitória.
+func _can_save() -> bool:
+	return not _is_busy and not game_over and not TurnManager.current_player().is_ai and not hud.save_dialog.visible
+
+
+## Menu do jogo (canto de cima à esquerda): Salvar ou Carregar, como F5 e L.
+func _on_game_menu(id: int) -> void:
+	if id == Hud.MENU_SAVE and _can_save():
+		_open_save_dialog(true)
+	elif id == Hud.MENU_LOAD and not _is_busy and not hud.save_dialog.visible:
+		_open_save_dialog(false)
+
+
 func _open_save_dialog(saving: bool) -> void:
 	_set_goto_mode(false)
 	camera.locked = true

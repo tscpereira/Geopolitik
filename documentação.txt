@@ -2633,6 +2633,16 @@ CIÊNCIA E PESQUISA (scripts/science/technology.gd, Player.research)
   pesquisando na Prefeitura.
 
 SALVAR E CARREGAR (scripts/save/save_game.gd)
+- MENU DO JOGO (desde 30/10/2026, pedido do usuário): botão "Menu" (ícone
+  de três barras) no canto de cima à esquerda, com a lista "Salvar
+  partida [F5]" e "Carregar partida [L]", que abrem as mesmas janelas das
+  teclas (Hud._build_game_menu; Game._on_game_menu). No visual de mármore
+  das janelas: o botão é uma placa de pedra em relevo (StoneStyle.
+  style_button) e a lista, uma placa de mármore com chanfro
+  (StonePanelBox), texto escuro e o item sob o mouse em bronze. Salvar
+  fica desabilitado fora da vez do humano ou com algo acontecendo
+  (Game._can_save, a mesma regra do F5). O painel do turno fica ao lado
+  do botão; o minimapa continua na margem esquerda, abaixo dos dois.
 - F5: janela "Salvar partida", com 5 espaços. Cada linha mostra o
   que está guardado ("Turno 12, vez do Jogador 1 - 22/10/2026
   14:30") e o botão "Salvar" (substitui o que estiver lá). Só na
@@ -4610,6 +4620,13 @@ PRÓXIMO PASSO GRANDE 2: CONJUNTOS CULTURAIS DE UNIDADES E CIDADES
   território grande) e testes de desordem, Feudalismo, derrota,
   cidade inimiga, mapa de três continentes e IA (inclusive a partida
   inteira).
+
+- MENU DO JOGO (pedido do usuário): botão "Menu" no canto de cima à
+  esquerda com Salvar e Carregar, no mármore das janelas. Validação:
+  teste (posição, itens, Salvar e Carregar abrem as janelas, Salvar
+  desabilitado com o jogo ocupado), screenshots (fechado, aberto, janela
+  de salvar) e testes do painel, névoa, save de outro mapa, árvore,
+  cidade inimiga e mapa de três continentes.
 
 --------------------------------------------------------------
 7. BACKLOG (ideias para depois)
