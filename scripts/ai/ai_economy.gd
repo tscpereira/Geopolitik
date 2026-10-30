@@ -204,6 +204,11 @@ func _try_order(city: City, build: int) -> void:
 		city.order_build(build)
 
 
+## População mínima para reservar cidadãos para as obras antes da comida (ver
+## _distribute_workers, passo 4).
+const RESERVE_MIN_POPULATION := 4
+
+
 ## Redistribui todos os cidadãos (ver o topo do arquivo). A cidade primeiro
 ## não passa fome, sai da desordem e põe gente na madeira (se falta); depois
 ## reserva 1/4 dos cidadãos para as obras ANTES de buscar mais comida (sem essa
@@ -229,8 +234,10 @@ func _distribute_workers(city: City) -> void:
 	if _wood_short():
 		for mill_cell: Vector2i in city.lumber_mills:
 			city.set_mill_workers(mill_cell, 1)
-	# 4. Reserva para as obras: 1/4 da cidade (pelo menos 1)
-	if not jobs.is_empty():
+	# 4. Reserva para as obras: 1/4 da cidade (pelo menos 1). Só a partir de
+	# RESERVE_MIN_POPULATION: com cada habitante comendo 2 (desde 30/10/2026),
+	# a cidade pequena que tira gente do campo quase não cresce
+	if not jobs.is_empty() and city.population >= RESERVE_MIN_POPULATION:
 		_staff_jobs(city, jobs, maxi(1, city.population / 4))
 	# 5. Comida até a meta da personalidade, com no máximo 2/3 da cidade no campo
 	_feed(city, farm_cells, _p.food_surplus, true)

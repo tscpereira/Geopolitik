@@ -1451,7 +1451,12 @@ MARCENARIA E IMPOSTOS (campo "idle_gold" em City.BUILDS)
     + 2 por fazenda com trabalhador (1 da casa + 1 da fazenda,
       City.FARM_BONUS; City.farm_food) - desde 24/10/2026; antes
       a fazenda dava 3 na pradaria e 2 no cerrado
-    - 1 por habitante (FOOD_PER_CITIZEN; era 2 até 24/10/2026)
+    - 2 por habitante (FOOD_PER_CITIZEN; desde 30/10/2026, a pedido do
+      usuário, como no Civilization II; foi 1 de 24/10 a 30/10/2026)
+  Com 2 por habitante, um cidadão numa fazenda de pradaria (3) sobra
+  +1; numa casa de pradaria sem melhoria (2), 0; numa obra ou prédio,
+  -2. A casa da cidade (2) alimenta 1 habitante. Cidade nova com 1
+  cidadão na pradaria: 2 + 2 - 2 = +2 (20 de estoque: 10 turnos).
   A casa da cidade produz alimento sozinha. Sem isso, uma cidade
   nova passaria fome antes de terminar a primeira fazenda. Essa
   regra é uma suposição nossa e pode ser ajustada.
@@ -4716,6 +4721,16 @@ PRÓXIMO PASSO GRANDE 2: CONJUNTOS CULTURAIS DE UNIDADES E CIDADES
   ponte reta e de duas em diagonal (uma em obra); testes de terrenos,
   névoa, Galé, três continentes, save de outro mapa, pradaria e a
   partida inteira da IA.
+
+- CONSUMO 2 (pedido do usuário): cada habitante come 2 de alimento por
+  turno (era 1). A máquina passou a reservar cidadãos para as obras só
+  em cidade de 4 habitantes ou mais (AIEconomy.RESERVE_MIN_POPULATION):
+  sem isso, a personalidade Equilibrada ficava 100 rodadas com 1 cidade
+  de 2-3 habitantes (+1 de comida por turno). Partida da máquina contra
+  ela mesma, 100 rodadas: Equilibrada 4 cidades e 16 habitantes (com o
+  consumo 1 eram 3 e 9); Expansionista 7 cidades e 26 habitantes, mas
+  sem chegar ao Quartel General (6 de 9 marcos). Testes de comida,
+  classe, desordem, Marcenaria, derrota, Cartografia e IA passam.
 
 --------------------------------------------------------------
 7. BACKLOG (ideias para depois)
