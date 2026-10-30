@@ -355,6 +355,7 @@ func _claim_territory(city: City) -> void:
 			if ruins_layer.improvements.has(cell):
 				city.ruins[cell] = ruins_layer.improvements[cell]
 				ruins_layer.improvements.erase(cell)
+	city.territory_expanded = city.has_large_territory() # a capital já nasce com a área grande
 	ruins_layer.cities.erase(city.cell) # fundar em cima das ruínas de uma cidade as apaga
 	ruins_layer.queue_redraw()
 
@@ -364,6 +365,7 @@ func _claim_territory(city: City) -> void:
 ## com a madeireira remota de outro jogador ficam de fora, como ao fundar).
 ## Retorna quantas casas ganhou.
 func expand_territory(city: City) -> int:
+	city.territory_expanded = true
 	var gained := 0
 	for offset in City.territory_offsets(true):
 		var cell := city.cell + offset
@@ -1790,10 +1792,9 @@ func _check_deep_water(player: Player) -> void:
 func _process_cities(player: Player) -> void:
 	var messages: Array[String] = []
 	for city in player.cities:
-		var was_large := city.has_large_territory()
 		for event in city.process_turn(_spawn_city_unit):
 			messages.append("%s: %s" % [city.city_name, event])
-		if city.has_large_territory() and not was_large:
+		if city.has_large_territory() and not city.territory_expanded:
 			var gained := expand_territory(city)
 			if gained > 0:
 				messages.append("%s: o território cresceu (+%d casas)" % [city.city_name, gained])
@@ -2241,6 +2242,10 @@ func restore_state(data: Dictionary) -> void:
 			city.is_capital = city == city.owner_player.cities[0]
 			_claim_territory(city)
 			refresh_territories()
+	# Vila (ou maior) de um save que ainda não ganhou o território grande
+	for city in cities():
+		if city.has_large_territory() and not city.territory_expanded:
+			expand_territory(city)
 	TurnManager.restore(players, data["turn_manager"])
 	var current := TurnManager.current_player()
 	print("Partida carregada: turno %d, vez do %s" % [TurnManager.turn_number, current.display_name])

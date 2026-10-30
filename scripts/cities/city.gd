@@ -135,7 +135,8 @@ const CATEGORY_NAMES := {
 ##   idle_science ciência por turno de cada trabalhador do prédio quando não há
 ##               nada em produção nele (ver science_per_turn)
 ##   idle_max_workers  máximo de trabalhadores no prédio parado (Prefeitura,
-##               Biblioteca, Mercado, Forja); sem o campo, não há limite
+##               Biblioteca, Mercado, Forja, Marcenaria desde 30/10/2026);
+##               sem o campo, não há limite. Produzindo, não há limite
 ##   idle_label  nome da linha do prédio parado na janela da cidade
 ##   idle_goods  bens duráveis do prédio parado: +1 ponto de alegria a cada
 ##               "idle_goods" trabalhadores (ver joy_points)
@@ -209,9 +210,9 @@ const BUILDS := {
 	},
 	Build.CARPENTRY: {
 		"name": "Marcenaria", "article": "a", "category": Category.BUILDING,
-		"cost": 10, "gold": 50, "wood": 10, "on_tile": false, "idle_gold": 1, "idle_goods": 2,
+		"cost": 10, "gold": 50, "wood": 10, "on_tile": false, "idle_gold": 1, "idle_goods": 2, "idle_max_workers": 2,
 		"idle_label": "Impostos e bens (sem armas na fila)",
-		"description": "Produz armas (Lanças, Arcos e a máquina da Catapulta). Parada, cada trabalhador rende +1 de ouro e cada 2 dão +1 de alegria. Gasta 10 de madeira.",
+		"description": "Produz armas (Lanças, Arcos, a máquina da Catapulta e os cascos dos barcos). Parada, até 2 trabalhadores: cada um rende +1 de ouro e os 2 juntos dão +1 de alegria. Gasta 10 de madeira.",
 	},
 	Build.TEMPLE: {
 		"name": "Templo", "article": "o", "category": Category.BUILDING,
@@ -579,6 +580,11 @@ var population := 1:
 ## Maior classe que a cidade já atingiu: ela nunca volta para uma classe
 ## menor, mesmo perdendo população (desde 29/10/2026; ver rank).
 var highest_rank := Rank.SETTLEMENT
+## Se o território já cresceu para a área da capital (Game.expand_territory;
+## a capital já nasce com ela). Toda cidade com direito a ele
+## (has_large_territory) que ainda não cresceu cresce no início do turno ou ao
+## carregar o save: vale também para as Vilas de antes da regra de 30/10/2026.
+var territory_expanded := false
 var food_stock := 0
 ## Fazendas prontas: {casa: cidadãos trabalhando (0 ou 1)}.
 var farms := {}
@@ -650,7 +656,7 @@ func to_dict() -> Dictionary:
 	return {
 		"name": city_name, "cell": SaveGame.cell_to_json(cell), "is_capital": is_capital,
 		"territory": SaveGame.cells_to_json(territory), "population": population,
-		"highest_rank": highest_rank, "food_stock": food_stock, "farms": SaveGame.cell_map_to_json(farms),
+		"highest_rank": highest_rank, "territory_expanded": territory_expanded, "food_stock": food_stock, "farms": SaveGame.cell_map_to_json(farms),
 		"lumber_mills": SaveGame.cell_map_to_json(lumber_mills), "mines": SaveGame.cell_map_to_json(mines),
 		"worked_tiles": SaveGame.cell_map_to_json(worked_tiles),
 		"constructions": constructions.map(func(construction: Construction) -> Dictionary: return construction.to_dict()),
@@ -671,6 +677,7 @@ func apply_dict(data: Dictionary) -> void:
 		territory = SaveGame.json_to_cells(data["territory"])
 	population = int(data["population"])
 	highest_rank = maxi(highest_rank, int(data.get("highest_rank", 0))) as Rank
+	territory_expanded = data.get("territory_expanded", false)
 	food_stock = int(data["food_stock"])
 	farms = SaveGame.json_to_cell_map(data["farms"])
 	lumber_mills = SaveGame.json_to_cell_map(data["lumber_mills"])

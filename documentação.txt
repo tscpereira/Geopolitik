@@ -1363,8 +1363,10 @@ PRÉDIOS (City.buildings)
                      em vez de +2; campo "festival_multiplier"). Exige
                      Pão e Circo.
   Os prédios parados com vagas (Prefeitura, Biblioteca, Mercado,
-  Forja) usam "idle_max_workers": a realocação automática e a fila
-  que acaba respeitam o limite (quem sobra fica livre).
+  Forja e, desde 30/10/2026, a Marcenaria: todos com 2) usam
+  "idle_max_workers": a realocação automática e a fila que acaba
+  respeitam o limite (quem sobra fica livre). PRODUZINDO, nenhum prédio
+  tem limite (só os cidadãos livres).
 - UNIDADES E ARMAS SÃO PRODUZIDAS NOS PRÉDIOS: cada uma só pode
   ser feita se a cidade tiver o prédio dela (campo "requires" em
   City.BUILDS). Sem ele, a linha fica desabilitada com "Precisa de
@@ -1433,6 +1435,9 @@ MARCENARIA E IMPOSTOS (campo "idle_gold" em City.BUILDS)
   O resumo mostra "Ouro: +N por turno (impostos da Marcenaria)".
 - Com uma Lança na fila, os mesmos trabalhadores voltam a
   produzir armas e o ouro para.
+- Parada, a Marcenaria aceita no máximo 2 trabalhadores (desde
+  30/10/2026; antes não tinha limite e uma cidade grande podia pôr
+  todos nos impostos).
 - BENS DURÁVEIS (campo "idle_goods"): a cada 2 trabalhadores nos
   impostos, a Marcenaria parada também dá +1 de alegria à cidade
   (ver BEM-ESTAR SOCIAL). A linha virou "Impostos e bens (sem
@@ -1845,6 +1850,10 @@ scripts/map/territory_overlay.gd)
   madeireira remota de outro jogador ficam de fora). Como a classe
   não regride, o território grande fica para sempre, e o raio de
   ação para trocar casas entre cidades passa a ser o de 21 casas.
+  A cidade guarda se o território já cresceu (City.territory_expanded,
+  no save; a capital já nasce com ele): toda cidade com direito ao
+  território grande que ainda não cresceu cresce no início do turno ou
+  ao carregar o save (assim as Vilas de antes da regra também crescem).
 - Quem chegou primeiro fica com a casa: o território novo não
   pega casas que já são de outra cidade (de qualquer jogador) nem
   a casa de uma madeireira remota de outro jogador. Ex.: uma
@@ -4662,6 +4671,19 @@ PRÓXIMO PASSO GRANDE 2: CONJUNTOS CULTURAIS DE UNIDADES E CIDADES
   tempo das rodadas das máquinas) e testes da névoa no caminho,
   ataque à distância (com e sem IA), batalha, Galé, névoa, derrota,
   Cartografia, painel, três continentes e a partida inteira da IA.
+
+- MARCENARIA COM LIMITE (pedido do usuário): parada, no máximo 2
+  trabalhadores, como a Forja (produzindo, sem limite). A máquina põe
+  quem sobra nas minas, fazendas e casas. Validação: teste novo (parada
+  2; produzindo 4; a fila acaba e ficam 2, os outros realocados).
+- VILA SEM TERRITÓRIO (bug relatado pelo usuário: Serra Azul, Vila de
+  9, com 9 casas): a expansão só acontecia no turno da mudança de
+  classe, e a cidade já era Vila antes da regra nova. Agora a cidade
+  guarda se já expandiu e expande no próximo turno ou ao carregar.
+  Validação: cópia do salvamento automático do usuário (a Serra Azul
+  passa de 9 para 21 casas; os saves originais não foram tocados) e
+  testes da classe, desordem, Feudalismo, derrota, IA, três
+  continentes, save de outro mapa e a partida inteira da IA.
 
 --------------------------------------------------------------
 7. BACKLOG (ideias para depois)
