@@ -144,7 +144,7 @@ func _on_cell_claimed(cell: Vector2i) -> void:
 func _has_transferable() -> bool:
 	if _read_only:
 		return false
-	for offset in City.territory_offsets(_city.is_capital):
+	for offset in City.territory_offsets(_city.has_large_territory()):
 		if _game.transfer_error(_city, _city.cell + offset).is_empty():
 			return true
 	return false

@@ -544,9 +544,16 @@ var is_capital := false:
 		is_capital = value
 		queue_redraw()
 ## Casas do território (inclui a casa da cidade). É também a área de trabalho.
-## Definido ao fundar (Game.found_city); por enquanto não cresce.
+## Definido ao fundar (Game.found_city); cresce para a área da capital quando
+## a cidade vira Cidade (Game.expand_territory).
 var territory: Array[Vector2i] = []
-var population := 1
+var population := 1:
+	set(value):
+		population = value
+		highest_rank = maxi(highest_rank, population_rank()) as Rank
+## Maior classe que a cidade já atingiu: ela nunca volta para uma classe
+## menor, mesmo perdendo população (desde 29/10/2026; ver rank).
+var highest_rank := Rank.SETTLEMENT
 var food_stock := 0
 ## Fazendas prontas: {casa: cidadãos trabalhando (0 ou 1)}.
 var farms := {}
@@ -618,7 +625,7 @@ func to_dict() -> Dictionary:
 	return {
 		"name": city_name, "cell": SaveGame.cell_to_json(cell), "is_capital": is_capital,
 		"territory": SaveGame.cells_to_json(territory), "population": population,
-		"food_stock": food_stock, "farms": SaveGame.cell_map_to_json(farms),
+		"highest_rank": highest_rank, "food_stock": food_stock, "farms": SaveGame.cell_map_to_json(farms),
 		"lumber_mills": SaveGame.cell_map_to_json(lumber_mills), "mines": SaveGame.cell_map_to_json(mines),
 		"worked_tiles": SaveGame.cell_map_to_json(worked_tiles),
 		"constructions": constructions.map(func(construction: Construction) -> Dictionary: return construction.to_dict()),
@@ -638,6 +645,7 @@ func apply_dict(data: Dictionary) -> void:
 	if data.has("territory"):
 		territory = SaveGame.json_to_cells(data["territory"])
 	population = int(data["population"])
+	highest_rank = maxi(highest_rank, int(data.get("highest_rank", 0))) as Rank
 	food_stock = int(data["food_stock"])
 	farms = SaveGame.json_to_cell_map(data["farms"])
 	lumber_mills = SaveGame.json_to_cell_map(data["lumber_mills"])
@@ -772,8 +780,14 @@ func add_building(build: int) -> void:
 
 # --- Classe e território -------------------------------------------------------
 
-## Classe pelo tamanho: Povoado, Vila, Cidade ou Metrópole (RANK_MIN_POPULATION).
+## Classe da cidade: Povoado, Vila, Cidade ou Metrópole. Sobe com a população
+## (population_rank) e nunca desce: é a maior que ela já atingiu (highest_rank).
 func rank() -> Rank:
+	return highest_rank
+
+
+## Classe pela população de agora (RANK_MIN_POPULATION).
+func population_rank() -> Rank:
 	var result := Rank.SETTLEMENT
 	for candidate: Rank in RANK_MIN_POPULATION:
 		if population >= RANK_MIN_POPULATION[candidate]:
@@ -808,10 +822,16 @@ static func rank_range_text(value: Rank) -> String:
 	return "%d-%d" % [maxi(RANK_MIN_POPULATION[value], 1), next - 1]
 
 
-## Território inicial: a capital fica com a área de 21 casas (area_offsets); as
-## outras cidades, com a casa delas e as 8 vizinhas.
-static func territory_offsets(capital: bool) -> Array[Vector2i]:
-	if capital:
+## Se o território é o grande, de 21 casas: na capital e, desde 29/10/2026, em
+## toda cidade que já chegou à classe Cidade.
+func has_large_territory() -> bool:
+	return is_capital or rank() >= Rank.CITY
+
+
+## Território: a área de 21 casas (area_offsets) com [param large] (capital ou
+## classe Cidade, has_large_territory); senão, a casa da cidade e as 8 vizinhas.
+static func territory_offsets(large: bool) -> Array[Vector2i]:
+	if large:
 		return area_offsets()
 	var offsets: Array[Vector2i] = []
 	for y in range(-1, 2):

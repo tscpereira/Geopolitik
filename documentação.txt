@@ -1052,7 +1052,10 @@ CIDADES (scripts/cities/city.gd)
   cada um com a máscara da cor do dono <nome>_time.png. O nome é
   <classe>[_capital][_muralha].png e depende de três coisas:
     classe   pela população: povoado (1-5), vila (6-15), cidade
-             (16-30), metropole (31+);
+             (16-30), metropole (31+); desde 29/10/2026 a classe
+             NUNCA REGRIDE: é a maior que a cidade já atingiu
+             (City.highest_rank, no save), mesmo que a população
+             caia;
     capital  só a capital (City.is_capital) tem o templo/acrópole,
              que representa o Palácio; as outras cidades têm casas
              no lugar dele;
@@ -1760,13 +1763,21 @@ scripts/map/territory_overlay.gd)
   dourada ao lado do nome.
 - As outras cidades começam com a casa delas e as 8 vizinhas
   (City.territory_offsets).
+- Desde 29/10/2026: ao chegar à classe CIDADE (16 de população), o
+  território cresce para a área da capital, 21 casas
+  (Game.expand_territory, chamado no início do turno ao mudar de
+  classe; City.has_large_territory = capital ou classe Cidade ou
+  maior). Ganha só as casas livres (as de outra cidade e as de
+  madeireira remota de outro jogador ficam de fora). Como a classe
+  não regride, o território grande fica para sempre, e o raio de
+  ação para trocar casas entre cidades passa a ser o de 21 casas.
 - Quem chegou primeiro fica com a casa: o território novo não
   pega casas que já são de outra cidade (de qualquer jogador) nem
   a casa de uma madeireira remota de outro jogador. Ex.: uma
   cidade a 3 casas da capital fica com 6 casas em vez de 9.
 - CASAS ENTRE CIDADES DO MESMO JOGADOR (Game.transfer_cell): na
-  janela de uma cidade, as casas do raio de ação dela (9 no
-  povoado, 21 na capital) que são território de OUTRA cidade sua
+  janela de uma cidade, as casas do raio de ação dela (9; 21 na
+  capital e nas cidades de classe Cidade ou maior) que são território de OUTRA cidade sua
   aparecem em vermelho translúcido, com a melhoria e os cidadãos
   da outra cidade por baixo. O tooltip explica. Clicar numa delas
   passa a casa para esta cidade:
@@ -4457,6 +4468,15 @@ PRÓXIMO PASSO GRANDE 2: CONJUNTOS CULTURAIS DE UNIDADES E CIDADES
   2 temporário) e da IA à distância (ajustado: a Catapulta dispara na
   casa vizinha), batalha e partida da IA, Galé, névoa, painel, derrota,
   terrenos, cidade inimiga, desordem, árvore e Feudalismo.
+
+- CLASSE E TERRITÓRIO (pedido do usuário): a cidade nunca regride de
+  classe (City.highest_rank), mesmo perdendo população; ao chegar à
+  classe Cidade, o território cresce para a área da capital (21 casas,
+  Game.expand_territory). Validação: teste (Vila não volta a Povoado,
+  crescimento para Cidade pelo turno com +12 casas, sem tomar casas da
+  capital, continua Cidade com 3 de população, save) e testes de
+  desordem, Feudalismo, pradaria, derrota, cidade inimiga, névoa, Galé,
+  ataque à distância e IA (inclusive a partida inteira).
 
 --------------------------------------------------------------
 7. BACKLOG (ideias para depois)

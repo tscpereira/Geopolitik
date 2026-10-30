@@ -314,7 +314,7 @@ func refresh_territories() -> void:
 ## madeireira remota de outro jogador: quem chegou primeiro fica com a casa.
 func _claim_territory(city: City) -> void:
 	city.territory.clear()
-	for offset in City.territory_offsets(city.is_capital):
+	for offset in City.territory_offsets(city.has_large_territory()):
 		var cell := city.cell + offset
 		var mill := lumber_mill_at(cell)
 		var owner_city := territory_owner(cell)
@@ -327,6 +327,30 @@ func _claim_territory(city: City) -> void:
 				ruins_layer.improvements.erase(cell)
 	ruins_layer.cities.erase(city.cell) # fundar em cima das ruínas de uma cidade as apaga
 	ruins_layer.queue_redraw()
+
+
+## A cidade chegou à classe Cidade: o território cresce para a área da capital
+## (City.territory_offsets(true)), com as casas livres (as de outra cidade e as
+## com a madeireira remota de outro jogador ficam de fora, como ao fundar).
+## Retorna quantas casas ganhou.
+func expand_territory(city: City) -> int:
+	var gained := 0
+	for offset in City.territory_offsets(true):
+		var cell := city.cell + offset
+		if city.territory.has(cell) or not game_map.is_in_bounds(cell) or territory_owner(cell) != null:
+			continue
+		var mill := lumber_mill_at(cell)
+		if mill and mill.owner_player != city.owner_player:
+			continue
+		city.territory.append(cell)
+		gained += 1
+		if ruins_layer.improvements.has(cell):
+			city.ruins[cell] = ruins_layer.improvements[cell]
+			ruins_layer.improvements.erase(cell)
+	if gained > 0:
+		ruins_layer.queue_redraw()
+		refresh_territories()
+	return gained
 
 
 ## Motivo pelo qual a casa não pode passar para [param city] ("" = pode): ela
@@ -343,7 +367,7 @@ func transfer_error(city: City, cell: Vector2i) -> String:
 		return "A casa é território de outro jogador."
 	if current.cell == cell:
 		return "É a casa de %s." % current.city_name
-	if not City.territory_offsets(city.is_capital).has(cell - city.cell):
+	if not City.territory_offsets(city.has_large_territory()).has(cell - city.cell):
 		return "Fora do raio de ação de %s." % city.city_name
 	return ""
 
@@ -1721,8 +1745,13 @@ func _check_deep_water(player: Player) -> void:
 func _process_cities(player: Player) -> void:
 	var messages: Array[String] = []
 	for city in player.cities:
+		var was_large := city.has_large_territory()
 		for event in city.process_turn(_spawn_city_unit):
 			messages.append("%s: %s" % [city.city_name, event])
+		if city.has_large_territory() and not was_large:
+			var gained := expand_territory(city)
+			if gained > 0:
+				messages.append("%s: o território cresceu (+%d casas)" % [city.city_name, gained])
 		for cell: Vector2i in city.extracted:
 			_show_extraction(player, cell, city.extracted[cell][0], city.extracted[cell][1])
 		if not player.is_ai:
