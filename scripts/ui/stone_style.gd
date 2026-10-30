@@ -58,6 +58,18 @@ static func theme() -> Theme:
 	_theme.set_color("font_hover_color", "Button", Color8(95, 58, 22))
 	_theme.set_color("font_pressed_color", "Button", Color8(70, 44, 18))
 	_theme.set_color("font_disabled_color", "Button", Color8(140, 132, 124))
+	# Dica (tooltip) das janelas de pedra: placa clara com texto escuro (com o
+	# texto escuro do tema, a dica escura padrão ficava ilegível)
+	var tooltip := StyleBoxFlat.new()
+	tooltip.bg_color = Color8(246, 243, 236)
+	tooltip.border_color = Color(BRONZE, 0.7)
+	tooltip.set_border_width_all(1)
+	tooltip.set_corner_radius_all(3)
+	tooltip.set_content_margin_all(8)
+	tooltip.shadow_color = Color(0, 0, 0, 0.25)
+	tooltip.shadow_size = 4
+	_theme.set_stylebox("panel", "TooltipPanel", tooltip)
+	_theme.set_color("font_color", "TooltipLabel", INK)
 	return _theme
 
 

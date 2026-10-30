@@ -344,21 +344,31 @@ static func draw_school(canvas: CanvasItem, rect: Rect2) -> void:
 	canvas.draw_line(o + Vector2(w * 0.5, h * 0.94), o + Vector2(w * 0.9, h * 0.6), WOOD_SHAFT_COLOR, line * 1.6)
 
 
-## Biblioteca: estante de madeira com rolos de pergaminho deitados.
+## Biblioteca: livros de pé numa prateleira de madeira (lombadas coloridas com
+## faixas douradas), o último inclinado. Até 30/10/2026 era uma estante com rolos
+## vistos de frente, que não se reconhecia (relato do usuário).
 static func draw_library(canvas: CanvasItem, rect: Rect2) -> void:
 	var o := rect.position
 	var w := rect.size.x
 	var h := rect.size.y
 	var line := maxf(1.0, w / 24.0)
-	_draw_block(canvas, Rect2(o + Vector2(w * 0.08, h * 0.08), Vector2(w * 0.84, h * 0.86)), LEATHER_COLOR, line)
-	for row in 3:
-		var y := h * (0.12 + row * 0.27)
-		_draw_block(canvas, Rect2(o + Vector2(w * 0.14, y), Vector2(w * 0.72, h * 0.22)), Color8(60, 36, 20), line)
-		for k in 3:
-			var center := o + Vector2(w * (0.27 + k * 0.23), y + h * 0.11)
-			canvas.draw_circle(center, w * 0.095 + line, Color.BLACK)
-			canvas.draw_circle(center, w * 0.095, Color8(236, 220, 176))
-			canvas.draw_circle(center, w * 0.03, Color8(160, 130, 90))
+	# Prateleira
+	_draw_block(canvas, Rect2(o + Vector2(w * 0.04, h * 0.8), Vector2(w * 0.92, h * 0.13)), WOOD_SHAFT_COLOR, line)
+	# Livros de pé: [x, largura, altura, cor]
+	var books := [[0.1, 0.17, 0.62, Color8(150, 40, 35)], [0.27, 0.15, 0.52, Color8(40, 80, 140)],
+			[0.42, 0.18, 0.68, Color8(45, 110, 60)], [0.6, 0.14, 0.56, Color8(120, 80, 40)]]
+	for book: Array in books:
+		var spine := Rect2(o + Vector2(w * book[0], h * (0.8 - book[2])), Vector2(w * book[1], h * book[2]))
+		_draw_block(canvas, spine, book[3], line)
+		for band in [0.18, 0.78]: # faixas douradas na lombada
+			var y: float = spine.position.y + spine.size.y * band
+			canvas.draw_line(Vector2(spine.position.x + line, y), Vector2(spine.end.x - line, y), GOLD_COLOR, line * 1.4)
+	# O último, inclinado, apoiado nos outros
+	var leaning := PackedVector2Array([o + Vector2(w * 0.76, h * 0.8), o + Vector2(w * 0.93, h * 0.8),
+			o + Vector2(w * 0.97, h * 0.25), o + Vector2(w * 0.82, h * 0.2)])
+	canvas.draw_colored_polygon(leaning, Color8(170, 120, 40))
+	canvas.draw_polyline(leaning + PackedVector2Array([leaning[0]]), Color.BLACK, line)
+	canvas.draw_line(o + Vector2(w * 0.79, h * 0.66), o + Vector2(w * 0.94, h * 0.68), GOLD_LIGHT, line * 1.4)
 
 
 ## Mercado: barraca com toldo listrado e frutas no balcão.

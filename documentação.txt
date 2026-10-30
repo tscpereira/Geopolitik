@@ -2166,6 +2166,10 @@ tools/art/gen_marmore.gd)
   translúcido com a borda da cor do estado.
 - Resumo da cidade sem a linha da Classe/Território (a classe e a capital
   estão no título) e sem a linha do detalhe da produção de alimento.
+- DICAS (tooltips) das janelas de pedra: placa clara, texto escuro e
+  borda bronze (StoneStyle.theme, "TooltipPanel"/"TooltipLabel"; desde
+  30/10/2026: antes a dica ficava escura com o texto escuro do tema,
+  ilegível). As dicas do HUD do mapa continuam escuras.
 
 PAINEL DA UNIDADE (scripts/ui/unit_panel.gd; desde 28/10/2026, a partir do
 mockup do usuário, no lugar das barras de informação e de ações de baixo)
@@ -4692,6 +4696,12 @@ PRÓXIMO PASSO GRANDE 2: CONJUNTOS CULTURAIS DE UNIDADES E CIDADES
   população; quando falta espaço, eles se sobrepõem (cada vez mais).
   Validação: screenshot com 8, 16, 24 e 40 de população; testes da
   desordem e da classe.
+
+- DICAS E ÍCONE DA BIBLIOTECA (relato do usuário): as dicas das janelas
+  de mármore ficaram claras com texto escuro; o ícone da Biblioteca
+  virou livros de pé numa prateleira (era uma estante com rolos vistos
+  de frente, irreconhecível). Validação: screenshot do ícone em 96, 48
+  e 24 px e da dica; testes da árvore, desordem, menu e Cartografia.
 
 --------------------------------------------------------------
 7. BACKLOG (ideias para depois)
