@@ -2204,6 +2204,16 @@ scripts/map/fog_of_war.gd, fog.gdshader, scripts/ui/minimap.gd)
   (G). Até 30/10/2026 a névoa usava o destino desde o começo do
   movimento: as casas do meio ficavam escuras e a visão "pulava" para
   o fim (relato do usuário com a Cavalaria Leve).
+- O QUE O HUMANO NÃO VÊ É INSTANTÂNEO (desde 30/10/2026, pedido do
+  usuário): movimento (Unit.move_along), avanço depois de vencer
+  (advance_to), animação do ataque e do disparo (Game.attack) e a morte
+  (Game._destroy_unit) só animam se o humano vê alguma das casas
+  envolvidas (Game.is_watched, ligado em Unit.watch) ou se a unidade
+  é dele; senão a unidade aparece no destino e o combate se resolve na
+  hora. A câmera e a pausa da máquina já pulavam as jogadas na névoa
+  (AIController._focus). Medido no mapa de três continentes, no
+  começo da partida: a rodada das duas máquinas caiu de 224 ms para
+  cerca de 99 ms (a diferença cresce com o número de unidades).
 - Casa nunca vista: preta. Casa já explorada, mas fora da visão agora: o
   terreno aparece escurecido (50%) e as unidades de outros jogadores nela
   NÃO aparecem (Unit.fog_hidden). As cidades dos outros só aparecem
@@ -4644,6 +4654,14 @@ PRÓXIMO PASSO GRANDE 2: CONJUNTOS CULTURAIS DE UNIDADES E CIDADES
   ele falha) e testes da névoa, Galé, ataque à distância, painel, nome
   da cidade, mapa de três continentes e IA (inclusive a partida
   inteira).
+
+- MÁQUINA INSTANTÂNEA NA NÉVOA (pedido do usuário): o movimento e o
+  combate que o humano não vê não animam mais (ver NÉVOA DE GUERRA).
+  As unidades do humano sempre animam. Validação: teste novo
+  (Trabalhador da máquina na névoa anda em 1 ms, o do humano anima;
+  tempo das rodadas das máquinas) e testes da névoa no caminho,
+  ataque à distância (com e sem IA), batalha, Galé, névoa, derrota,
+  Cartografia, painel, três continentes e a partida inteira da IA.
 
 --------------------------------------------------------------
 7. BACKLOG (ideias para depois)

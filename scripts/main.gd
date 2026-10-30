@@ -113,6 +113,7 @@ func _ready() -> void:
 	hud.tech_tree_pressed.connect(_open_tech_tree)
 	hud.menu_opening.connect(func() -> void: hud.set_save_enabled(_can_save()))
 	hud.menu_chosen.connect(_on_game_menu)
+	Unit.watch = is_watched
 	hud.tech_tree_dialog.research_chosen.connect(_on_tree_research_chosen)
 	hud.city_window.closed.connect(_on_city_window_closed)
 	hud.minimap.setup(self)
@@ -1040,6 +1041,19 @@ func move_unit(unit: Unit, target: Vector2i) -> void:
 	await check_invasion(unit)
 
 
+## Se o jogador humano vê alguma das casas [param cells] agora (sem névoa,
+## sempre), ou se [param unit] é dele (as unidades do humano sempre animam). O
+## que ninguém vê acontece sem animação (Unit.watch, attack, _destroy_unit): a
+## vez da máquina na névoa é instantânea.
+func is_watched(cells: Array, unit: Unit = null) -> bool:
+	if unit and unit.owner_player == viewer():
+		return true
+	for cell: Vector2i in cells:
+		if fog.is_visible_cell(cell):
+			return true
+	return false
+
+
 ## Anda até a casa de ataque (se precisar) e ataca o inimigo em [param target_cell].
 ## O ataque encerra os movimentos do atacante; se o defensor for destruído,
 ## o atacante ocupa a casa dele. Quem ataca à distância (Arqueiro, Catapulta)
@@ -1054,7 +1068,9 @@ func attack(attacker: Unit, target_cell: Vector2i) -> void:
 	if from_cell != attacker.cell:
 		await attacker.move_along(Movement.build_path(reachable, from_cell), game_map)
 
-	if attacker.is_ranged():
+	if not is_watched([attacker.cell, target_cell], attacker) and defender.owner_player != viewer():
+		pass # combate na névoa do humano: sem animação
+	elif attacker.is_ranged():
 		await attacker.play_shot(defender.position)
 	else:
 		await attacker.play_attack(defender.position)
@@ -2029,7 +2045,10 @@ func _destroy_unit(unit: Unit) -> void:
 	unit.leave_transport()
 	unit.owner_player.units.erase(unit)
 	_check_victory()
-	await unit.play_death()
+	if is_watched([unit.cell], unit):
+		await unit.play_death()
+	else:
+		unit.queue_free() # na névoa do humano: some sem animação
 
 
 ## Objetivo da partida: eliminar o adversário. Quem já fundou uma cidade é

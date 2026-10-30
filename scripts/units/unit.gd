@@ -43,6 +43,16 @@ var sight_cell: Vector2i:
 		return _walking_cell if _walking else cell
 var _walking := false
 var _walking_cell: Vector2i
+## Se o jogador humano vê a unidade ou alguma das casas: (cells: Array, unit:
+## Unit) -> bool; as unidades do próprio humano sempre contam. O Game
+## põe Game.is_watched aqui. Movimento e avanço que ninguém vê (na névoa do
+## humano) são instantâneos, sem animação (desde 30/10/2026: a vez da máquina
+## não gasta tempo com o que o humano não enxerga). Sem Game: sempre anima.
+static var watch := Callable()
+
+
+func _watched(cells: Array) -> bool:
+	return not watch.is_valid() or watch.call(cells, self)
 var moves_left := 0
 var energy := 0:
 	set(value):
@@ -276,6 +286,12 @@ func move_along(path: Array[Vector2i], map: GameMap) -> void:
 	rebuilding = false
 	moves_left -= Movement.path_cost(map, self, path)
 	leave_transport()
+	if not _watched([cell] + path):
+		cell = path[-1]
+		position = map.cell_to_world(cell)
+		_carry_cargo()
+		_update_exhausted_look()
+		return
 	var tween := create_tween()
 	_walking = true
 	_walking_cell = cell
@@ -291,6 +307,11 @@ func move_along(path: Array[Vector2i], map: GameMap) -> void:
 
 ## Avança para a casa do inimigo derrotado (não gasta movimento).
 func advance_to(target: Vector2i, map: GameMap) -> void:
+	if not _watched([cell, target]):
+		cell = target
+		position = map.cell_to_world(target)
+		_carry_cargo()
+		return
 	cell = target
 	var tween := create_tween()
 	tween.tween_property(self, "position", map.cell_to_world(target), MOVE_STEP_TIME)
