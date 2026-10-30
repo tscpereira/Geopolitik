@@ -9,6 +9,6 @@ display_name = "Lanceiro"
 symbol = "L"
 attack = 1
 defense = 2
-movement = 1
+movement = 2
 anti_cavalry_bonus = 1
 sprite = ExtResource("2")

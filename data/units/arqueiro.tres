@@ -7,9 +7,9 @@
 script = ExtResource("1")
 display_name = "Arqueiro"
 symbol = "A"
-attack = 2
+attack = 1
 defense = 1
-movement = 1
+movement = 2
 attack_range = 1
 vision = 2
 sprite = ExtResource("2")

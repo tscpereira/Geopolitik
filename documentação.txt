@@ -516,16 +516,20 @@ UNIDADES (scripts/units/)
 - Os tipos de unidade são arquivos de dados (.tres) em
   data/units/ e podem ser editados no Inspector do Godot:
     Tipo        Símbolo  Ataque  Defesa  Movimento  Energia
-    Guerreiro   G        1       1       1          100
-    Lanceiro    L        1       2       1          100
-    Arqueiro    A        2       1       1          100  (Guerra a distância;
+    Guerreiro   G        1       1       2          100
+    Lanceiro    L        1       2       2          100
+    Arqueiro    A        1       1       2          100  (Guerra a distância;
                                                          à distância, alcance 1)
-    Colono     S        0       0       1          100
-    Trabalhador T        0       0       1          100
-    Gr. Espada  E        2       2       1          100  (Trabalho em Ferro;
+    Colono      S        0       0       2          100
+    Trabalhador T        0       0       2          100
+    Gr. Espada  E        2       2       2          100  (Trabalho em Ferro;
                                                          leva 1 Espada Curta)
-    Catapulta   K        4       1       1          100  (Matemática;
-                                                         à distância, alcance 2)
+    Catapulta   K        2       1       1          100  (Matemática;
+                                                         à distância, alcance 1)
+  (Desde 29/10/2026, pedido do usuário: todas as unidades que andavam 1
+  passaram a andar 2, menos a Catapulta; Arqueiro com ataque à
+  distância 1; Catapulta com ataque 2 e alcance 1. Antes: Arqueiro 2;
+  Catapulta 4, alcance 2.)
     Cav. Leve   V        1       1       4          100  (Montaria; cavalaria)
     Bigas       B        2       1       3          100  (Guerra de movimento;
                                                          cavalaria)
@@ -711,7 +715,9 @@ FLORESTA (scripts/map/terrain.gd)
     * Movimento: unidades com mais de 1 de movimento gastam 1 a
       mais para ENTRAR numa casa de floresta (Terrain.MOVE_PENALTY).
       A Cavalaria Leve (4) anda 4 casas na pradaria, mas só 2 por
-      turno na floresta. Unidades com movimento 1 não são afetadas.
+      turno na floresta. Unidades com movimento 1 (hoje só a
+      Catapulta) não são afetadas; as de 2 (a pé) andam 2 casas na
+      pradaria e 1 na floresta.
       Sair da floresta para a pradaria custa o normal (1).
     * Não aceita fazenda (Terrain.can_farm). Trabalhada sem
       melhoria, dá 1 de alimento, como a pradaria e o cerrado.
@@ -919,7 +925,7 @@ FERRO E MINA (desde 25/10/2026, pedido do usuário)
   impostos vão para as minas (o ferro ainda não tem uso).
 
 TRABALHADOR (data/units/trabalhador.tres)
-- Ataque 0, Defesa 0, Movimento 1. Sprite provisório: boneco com
+- Ataque 0, Defesa 0, Movimento 2 (desde 29/10/2026). Sprite provisório: boneco com
   um machado (assets/sprites/units/trabalhador.png).
 - Feito na cidade: 5 de produção + 1 de população (mesma regra do
   Guerreiro: só sai se a cidade continuar com pelo menos 1).
@@ -1001,7 +1007,7 @@ TRABALHADOR (data/units/trabalhador.tres)
       que anda até lá e migra.
 
 COLONO
-- Ataque 0, Defesa 0, Movimento 1 (data/units/colono.tres).
+- Ataque 0, Defesa 0, Movimento 2 (desde 29/10/2026; data/units/colono.tres).
   Sprite: assets/sprites/units/colono.png (boneco com uma pá).
 - Todo jogador começa com um Colono
   (J1 em (55, 41), J2 em (66, 41), desde 25/10/2026; antes (64, 41),
@@ -2211,12 +2217,14 @@ ATAQUE À DISTÂNCIA (desde 25/10/2026, pedido do usuário)
   corpo a corpo), "Indirect Fire" (tiro por cima do terreno) e
   "Projectile" (desenho do projétil: flecha ou pedra). Unit.is_ranged
   diz se a unidade ataca à distância.
-    Arqueiro   ataque à distância 2, alcance 1 (só a casa vizinha),
+    Arqueiro   ataque à distância 1, alcance 1 (só a casa vizinha),
                flecha
-    Catapulta  ataque à distância 4, alcance 2 (a casa vizinha e a
-               seguinte), pedra
-  A distância conta a diagonal como 1 casa (Movement.grid_distance):
-  a Catapulta alcança as 24 casas em volta dela, menos as bloqueadas.
+    Catapulta  ataque à distância 2, alcance 1 (só a casa vizinha;
+               desde 29/10/2026, antes 4 e alcance 2), pedra
+  A distância conta a diagonal como 1 casa (Movement.grid_distance).
+  A linha de tiro (terreno no meio bloqueia) continua no código, mas
+  só vale para alcance 2 ou mais: hoje nenhuma unidade tem (fica para
+  os canhões do futuro).
 - O disparo usa o Ataque como força e a mesma fórmula do corpo a
   corpo, mas com RANGED_DAMAGE (20) no lugar de BASE_DAMAGE (30), e
   QUEM DISPARA NÃO LEVA DANO. O rio não dá defesa contra o disparo
@@ -4437,6 +4445,18 @@ PRÓXIMO PASSO GRANDE 2: CONJUNTOS CULTURAIS DE UNIDADES E CIDADES
   jogador não abre mais a janela dela (antes abria "observando");
   mostra só o nome e o dono. Validação: teste (inimiga não abre,
   própria abre) e testes da derrota, nome da cidade, painel e névoa.
+
+- ATRIBUTOS DAS UNIDADES (pedido do usuário): quem andava 1 passa a
+  andar 2 (Guerreiro, Lanceiro, Guerreiro de Espada Curta, Arqueiro,
+  Colono e Trabalhador); a Catapulta continua com 1. Arqueiro: ataque
+  à distância 1. Catapulta: ataque 2 e alcance 1. Como a floresta, a
+  selva, as colinas e o rio custam 1 a mais só para quem anda mais de
+  1, as unidades a pé andam 2 casas na pradaria e 1 na floresta.
+  Descrições da cidade e das tecnologias atualizadas. Validação: testes
+  do ataque à distância (ajustado: a linha de tiro testada com alcance
+  2 temporário) e da IA à distância (ajustado: a Catapulta dispara na
+  casa vizinha), batalha e partida da IA, Galé, névoa, painel, derrota,
+  terrenos, cidade inimiga, desordem, árvore e Feudalismo.
 
 --------------------------------------------------------------
 7. BACKLOG (ideias para depois)

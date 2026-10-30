@@ -68,7 +68,7 @@ const DATA := {
 	},
 	Tech.RANGED_WARFARE: {
 		"name": "Guerra a distância", "cost": 35, "requires": [Tech.WRITING],
-		"description": "Arcos e flechas: atacar sem chegar perto. Libera o Arqueiro (ataque à distância 2, alcance 1; leva 1 Arco).",
+		"description": "Arcos e flechas: atacar sem chegar perto. Libera o Arqueiro (ataque à distância 1, alcance 1; leva 1 Arco).",
 		"image": "res://assets/tech/guerra_a_distancia.png",
 	},
 	Tech.NAVIGATION: {
@@ -83,7 +83,7 @@ const DATA := {
 	},
 	Tech.MATHEMATICS: {
 		"name": "Matemática", "cost": 60, "requires": [Tech.CONSTRUCTION],
-		"description": "Números e geometria aplicados às máquinas. Libera a Catapulta (ataque à distância 4, alcance 2).",
+		"description": "Números e geometria aplicados às máquinas. Libera a Catapulta (ataque à distância 2, alcance 1).",
 		"image": "res://assets/tech/matematica.png",
 	},
 	Tech.IRON_WORKING: {

@@ -9,5 +9,5 @@ display_name = "Guerreiro"
 symbol = "G"
 attack = 1
 defense = 1
-movement = 1
+movement = 2
 sprite = ExtResource("2")

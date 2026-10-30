@@ -9,5 +9,5 @@ display_name = "Guerreiro de Espada Curta"
 symbol = "E"
 attack = 2
 defense = 2
-movement = 1
+movement = 2
 sprite = ExtResource("2")

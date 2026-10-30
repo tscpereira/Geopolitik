@@ -9,6 +9,6 @@ display_name = "Colono"
 symbol = "S"
 attack = 0
 defense = 0
-movement = 1
+movement = 2
 can_found_city = true
 sprite = ExtResource("2")

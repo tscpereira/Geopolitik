@@ -7,10 +7,10 @@
 script = ExtResource("1")
 display_name = "Catapulta"
 symbol = "K"
-attack = 4
+attack = 2
 defense = 1
 movement = 1
-attack_range = 2
+attack_range = 1
 vision = 2
 projectile = 1
 sprite = ExtResource("2")
