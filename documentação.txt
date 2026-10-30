@@ -1615,7 +1615,10 @@ BEM-ESTAR SOCIAL (felicidade; City.mood, constantes no topo de city.gd)
   automática não põe ninguém nelas: é escolha do jogador.
 - Na JANELA DA CIDADE, seção "Bem-estar social" (logo abaixo do
   estoque): um rosto por cidadão (dourado sorrindo, bege, vermelho
-  de boca para baixo), a contagem, a situação (em vermelho
+  de boca para baixo; sempre do mesmo tamanho, 22 px: quando não
+  cabem na fileira de 340 px, cada rosto fica sobre o anterior, cada
+  vez mais sobrepostos conforme a cidade cresce; até 30/10/2026 eles
+  encolhiam), a contagem, a situação (em vermelho
   "DESORDEM CIVIL", em dourado "CELEBRAÇÃO" ou "Em ordem"), uma
   linha por fator (base, agitação, Templo, guarnição,
   festividades, bens) e a linha das festividades. O resumo mostra
@@ -4684,6 +4687,11 @@ PRÓXIMO PASSO GRANDE 2: CONJUNTOS CULTURAIS DE UNIDADES E CIDADES
   passa de 9 para 21 casas; os saves originais não foram tocados) e
   testes da classe, desordem, Feudalismo, derrota, IA, três
   continentes, save de outro mapa e a partida inteira da IA.
+
+- ROSTOS DO BEM-ESTAR (pedido do usuário): não encolhem mais com a
+  população; quando falta espaço, eles se sobrepõem (cada vez mais).
+  Validação: screenshot com 8, 16, 24 e 40 de população; testes da
+  desordem e da classe.
 
 --------------------------------------------------------------
 7. BACKLOG (ideias para depois)

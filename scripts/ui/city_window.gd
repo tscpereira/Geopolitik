@@ -28,6 +28,10 @@ const MUTED_COLOR := StoneStyle.INK_MUTED
 const WARNING_COLOR := StoneStyle.WARNING
 const POSITIVE_COLOR := StoneStyle.POSITIVE
 const NEGATIVE_COLOR := StoneStyle.NEGATIVE
+## Rostos do bem-estar: tamanho fixo e a largura que a fileira pode ocupar
+## (passando disso, eles se sobrepõem; ver _rebuild_mood).
+const MOOD_FACE_SIZE := 22.0
+const MOOD_FACES_WIDTH := 340.0
 ## Obra parada por falta de mão de obra: explicação (a vala da barra fica avermelhada).
 const NEEDS_WORKERS_TIP := "Ninguém está trabalhando nesta obra, então ela não avança. Use + para alocar cidadãos livres; se não houver, tire alguns das fazendas e madeireiras (clique no mapa da cidade) ou dos impostos (botão -)."
 const RIGHT_COLUMN_WIDTH := 620
@@ -397,9 +401,12 @@ func _rebuild_mood() -> void:
 	faces_row.add_theme_constant_override("separation", 10)
 	_mood_box.add_child(faces_row)
 	var faces := Control.new()
-	# Rostos menores numa cidade grande, para caberem na coluna
-	var face_size := clampf(340.0 / _city.population - 4.0, 8.0, 22.0)
-	faces.custom_minimum_size = Vector2(face_size * _city.population + 4 * (_city.population - 1), face_size)
+	# Rostos sempre do mesmo tamanho (desde 30/10/2026); quando não cabem lado a
+	# lado na coluna, o passo entre eles diminui e cada um fica sobre o anterior
+	# (cada vez mais sobrepostos, conforme a cidade cresce)
+	var face_size := MOOD_FACE_SIZE
+	var step := minf(face_size + 4.0, (MOOD_FACES_WIDTH - face_size) / maxf(1.0, _city.population - 1))
+	faces.custom_minimum_size = Vector2(face_size + step * (_city.population - 1), face_size)
 	faces.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	faces.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	var order: Array = []
@@ -411,7 +418,7 @@ func _rebuild_mood() -> void:
 		order.append(City.Mood.UNHAPPY)
 	faces.draw.connect(func() -> void:
 		for i in order.size():
-			Icons.draw_face(faces, Vector2(face_size / 2.0 + i * (face_size + 4), face_size / 2.0), face_size / 2.0 - 2.0, order[i]))
+			Icons.draw_face(faces, Vector2(face_size / 2.0 + i * step, face_size / 2.0), face_size / 2.0 - 2.0, order[i]))
 	faces_row.add_child(faces)
 	var counts := RichTextLabel.new()
 	counts.bbcode_enabled = true
