@@ -1836,10 +1836,11 @@ scripts/map/territory_overlay.gd)
   dourada ao lado do nome.
 - As outras cidades começam com a casa delas e as 8 vizinhas
   (City.territory_offsets).
-- Desde 29/10/2026: ao chegar à classe CIDADE (16 de população), o
+- Ao chegar à classe VILA (6 de população; desde 30/10/2026, a
+  pedido do usuário; de 29/10 a 30/10/2026 era na classe Cidade), o
   território cresce para a área da capital, 21 casas
   (Game.expand_territory, chamado no início do turno ao mudar de
-  classe; City.has_large_territory = capital ou classe Cidade ou
+  classe; City.has_large_territory = capital ou classe Vila ou
   maior). Ganha só as casas livres (as de outra cidade e as de
   madeireira remota de outro jogador ficam de fora). Como a classe
   não regride, o território grande fica para sempre, e o raio de
@@ -1850,7 +1851,7 @@ scripts/map/territory_overlay.gd)
   cidade a 3 casas da capital fica com 6 casas em vez de 9.
 - CASAS ENTRE CIDADES DO MESMO JOGADOR (Game.transfer_cell): na
   janela de uma cidade, as casas do raio de ação dela (9; 21 na
-  capital e nas cidades de classe Cidade ou maior) que são território de OUTRA cidade sua
+  capital e nas cidades de classe Vila ou maior) que são território de OUTRA cidade sua
   aparecem em vermelho translúcido, com a melhoria e os cidadãos
   da outra cidade por baixo. O tooltip explica. Clicar numa delas
   passa a casa para esta cidade:
@@ -4600,6 +4601,15 @@ PRÓXIMO PASSO GRANDE 2: CONJUNTOS CULTURAIS DE UNIDADES E CIDADES
   todos os rios passaram a ter a mesma largura. Validação: screenshots
   de três encontros e uma foz em lago; testes do mapa novo, do save de
   outro mapa, pradaria, terrenos, névoa, cidade inimiga e painel.
+
+30/10/2026
+- TERRITÓRIO NA VILA (pedido do usuário): o território cresce para a
+  área da capital ao chegar à classe Vila (6 de população), não mais
+  à Cidade. Validação: teste da classe (ajustado: crescimento de 5
+  para 6 com +12 casas; a Vila que perde população continua com o
+  território grande) e testes de desordem, Feudalismo, derrota,
+  cidade inimiga, mapa de três continentes e IA (inclusive a partida
+  inteira).
 
 --------------------------------------------------------------
 7. BACKLOG (ideias para depois)

@@ -570,7 +570,7 @@ var is_capital := false:
 		queue_redraw()
 ## Casas do território (inclui a casa da cidade). É também a área de trabalho.
 ## Definido ao fundar (Game.found_city); cresce para a área da capital quando
-## a cidade vira Cidade (Game.expand_territory).
+## a cidade vira Vila (Game.expand_territory).
 var territory: Array[Vector2i] = []
 var population := 1:
 	set(value):
@@ -848,13 +848,13 @@ static func rank_range_text(value: Rank) -> String:
 
 
 ## Se o território é o grande, de 21 casas: na capital e, desde 29/10/2026, em
-## toda cidade que já chegou à classe Cidade.
+## toda cidade que já chegou à classe Vila (antes de 30/10/2026, à Cidade).
 func has_large_territory() -> bool:
-	return is_capital or rank() >= Rank.CITY
+	return is_capital or rank() >= Rank.TOWN
 
 
 ## Território: a área de 21 casas (area_offsets) com [param large] (capital ou
-## classe Cidade, has_large_territory); senão, a casa da cidade e as 8 vizinhas.
+## classe Vila ou maior, has_large_territory); senão, a casa da cidade e as 8 vizinhas.
 static func territory_offsets(large: bool) -> Array[Vector2i]:
 	if large:
 		return area_offsets()

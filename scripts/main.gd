@@ -356,7 +356,7 @@ func _claim_territory(city: City) -> void:
 	ruins_layer.queue_redraw()
 
 
-## A cidade chegou à classe Cidade: o território cresce para a área da capital
+## A cidade chegou à classe Vila: o território cresce para a área da capital
 ## (City.territory_offsets(true)), com as casas livres (as de outra cidade e as
 ## com a madeireira remota de outro jogador ficam de fora, como ao fundar).
 ## Retorna quantas casas ganhou.
