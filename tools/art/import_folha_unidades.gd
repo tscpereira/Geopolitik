@@ -37,6 +37,13 @@ const GEMINI_SHEET := "res://tools/art/gemini/folha_unidades.png"
 ## Unidade avulsa -> altura do desenho no jogo, em pixels (a da folha, na
 ## mesma pose: o guerreiro em investida tinha 55).
 const AVULSAS := {"guerreiro_espada": 55, "gale": 66, "quadrirreme": 72}
+## Avulsas cujo vermelho forte é do desenho (não vira cor do time): o
+## Quadrirreme tem uma faixa vermelha no casco.
+const KEEP_RED := ["quadrirreme"]
+## Avulsas mais largas que a casa: largura máxima do desenho, em pixels (o
+## sprite fica mais largo que SIZE e o jogo o desenha passando da casa para os
+## lados; Unit._draw). O Quadrirreme é o barco grande: 1,4 casa de comprimento.
+const WIDE := {"quadrirreme": 112}
 const SIZE := 80
 const MAX_SIZE := Vector2(76, 70)
 const FEET := 73
@@ -180,11 +187,12 @@ func _avulsa(unit_name: String) -> void:
 			box = Rect2i(x, y, 1, 1) if first else box.expand(Vector2i(x, y))
 			first = false
 			# Vermelho forte -> azul do time (mesmo brilho e saturação)
-			if (p.h < 0.03 or p.h > 0.95) and p.s > 0.55 and p.v > 0.15:
+			if not KEEP_RED.has(unit_name) and (p.h < 0.03 or p.h > 0.95) and p.s > 0.55 and p.v > 0.15:
 				image.set_pixel(x, y, Color.from_hsv(0.64, p.s, p.v, p.a))
 	box.size += Vector2i.ONE
 	# Altura de AVULSAS, sem passar da largura máxima (a Galé é quase tão larga quanto alta)
-	_install(image.get_region(box), unit_name, minf(float(AVULSAS[unit_name]) / box.size.y, MAX_SIZE.x / box.size.x))
+	var max_width: float = WIDE.get(unit_name, MAX_SIZE.x)
+	_install(image.get_region(box), unit_name, minf(float(AVULSAS[unit_name]) / box.size.y, max_width / box.size.x))
 
 
 func _remove_backdrop(img: Image) -> void:
@@ -307,9 +315,11 @@ func _install(crop: Image, unit_name: String, scale: float) -> void:
 			current /= 2
 			img.resize(current.x, current.y, Image.INTERPOLATE_BILINEAR)
 		img.resize(target.x, target.y, Image.INTERPOLATE_BILINEAR)
-	var sprite := Image.create(SIZE, SIZE, false, Image.FORMAT_RGBA8)
-	var sprite_mask := Image.create(SIZE, SIZE, false, Image.FORMAT_L8)
-	var at := Vector2i((SIZE - target.x) / 2, FEET - target.y)
+	# Sprite de SIZE x SIZE; mais largo só se o desenho passar da casa (WIDE)
+	var width := maxi(SIZE, target.x + 4 + target.x % 2)
+	var sprite := Image.create(width, SIZE, false, Image.FORMAT_RGBA8)
+	var sprite_mask := Image.create(width, SIZE, false, Image.FORMAT_L8)
+	var at := Vector2i((width - target.x) / 2, FEET - target.y)
 	sprite.blit_rect(crop, Rect2i(Vector2i.ZERO, target), at)
 	mask.convert(Image.FORMAT_L8)
 	sprite_mask.blit_rect(mask, Rect2i(Vector2i.ZERO, target), at)

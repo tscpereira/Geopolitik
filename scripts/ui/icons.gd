@@ -66,7 +66,13 @@ static func draw_build(canvas: CanvasItem, build: int, rect: Rect2, player_color
 		canvas.draw_rect(rect, Color(0.16, 0.17, 0.2))
 		canvas.draw_rect(rect, player_color, false, maxf(1.0, rect.size.x / 14.0))
 		if type.sprite:
-			canvas.draw_texture_rect(Unit.team_texture(type.sprite, player_color), rect, false)
+			# Sprite mais largo que alto (Quadrirreme): cabe na largura, centrado
+			var texture := Unit.team_texture(type.sprite, player_color)
+			var fit := rect
+			if texture.get_width() > texture.get_height():
+				fit.size.y = rect.size.x * texture.get_height() / texture.get_width()
+				fit.position.y += (rect.size.y - fit.size.y) / 2.0
+			canvas.draw_texture_rect(texture, fit, false)
 		return
 	match build:
 		City.Build.FARM:

@@ -750,8 +750,16 @@ CARTOGRAFIA, QUADRIRREME E DOCAS (desde 29/10/2026, árvore do usuário)
   produção e 12 de madeira; a tripulação, do Quartel General, com 15
   de produção e 1 de população. Só em cidade à beira do oceano. No
   arsenal, o ícone é a Galé com a vela vermelha.
-  Desenho PROVISÓRIO: a Galé espelhada e com a madeira mais escura
-  (tools/art/gen_quadrirreme.gd; sprite, máscara do time e retrato).
+  Desenho do Gemini (pedido 12_quadrirreme, 29/10/2026): casco longo
+  e baixo com faixa vermelha, duas fileiras de remos, aríete de bronze,
+  torre de combate com arqueiros e dois mastros; cor do time nos escudos,
+  na flâmula e na faixa da torre. É o primeiro sprite MAIS LARGO QUE A
+  CASA: 116x80 (o desenho com 112 de largura, 1,4 casa); Unit._draw
+  desenha o sprite com a altura da casa e a largura proporcional,
+  passando para os lados, e o ícone da lista de construções
+  (Icons.draw_build) o encaixa na largura. No importador, WIDE dá a
+  largura máxima e KEEP_RED mantém o vermelho do casco (o vermelho forte
+  das outras avulsas vira cor do time).
 - DOCAS (City.Build.DOCKS): prédio com os mesmos requisitos da Forja
   (25 de produção, 15 de madeira), exige Cartografia, só em cidade à
   beira do oceano. Com as Docas, os cidadãos podem trabalhar as casas
@@ -3002,9 +3010,8 @@ PRÓXIMO PASSO GRANDE 2: CONJUNTOS CULTURAIS DE UNIDADES E CIDADES
 [ ] IA: fazer e usar Galés (transporte de tropas)
 [x] Cartografia, Quadrirreme e Docas (29/10/2026)
 [ ] IA: fazer e usar Quadrirremes e construir Docas (pescar)
-[ ] Desenho definitivo do Quadrirreme (pedido pronto em
-    tools/art/gemini/pedidos/12_quadrirreme: mais imponente que a Galé;
-    a 1ª tentativa, com a Galé de referência, voltou uma cópia dela: o
+[x] Desenho definitivo do Quadrirreme (Gemini, pedido 12_quadrirreme:
+    a 1ª tentativa, com a Galé de referência, voltou uma cópia dela; o
     pedido refeito usa Lanceiro, Arqueiro e Catapulta como estilo)
 [x] Desenho da Galé a partir do modelo do usuário (25/10/2026)
 [x] Primeira fonte de ouro: impostos da Marcenaria parada
@@ -4521,6 +4528,12 @@ PRÓXIMO PASSO GRANDE 2: CONJUNTOS CULTURAIS DE UNIDADES E CIDADES
   da Galé, árvore e Feudalismo e ataque à distância (ajustados: 18
   tecnologias), terrenos, derrota, classe, desordem, painel, névoa e
   IA (inclusive a partida inteira).
+
+- ARTE DO QUADRIRREME (Gemini): importada como avulsa; sprite mais largo
+  que a casa (1,4 casa), desenhado no tamanho real pelo jogo. O
+  gerador do provisório (tools/art/gen_quadrirreme.gd) foi apagado.
+  Validação: screenshot ao lado da Galé e testes da Cartografia, painel
+  da unidade, Galé, ataque à distância, névoa e IA.
 
 --------------------------------------------------------------
 7. BACKLOG (ideias para depois)

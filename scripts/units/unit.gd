@@ -350,8 +350,12 @@ func _draw() -> void:
 		_draw_fortification(rect)
 
 	if type.sprite:
+		# A altura do sprite é a da casa; um sprite mais largo que alto (o
+		# Quadrirreme, desde 29/10/2026) passa um pouco da casa para os lados
+		var texture := _team_texture()
 		var tile_half := GameMap.TILE_SIZE / 2.0
-		draw_texture_rect(_team_texture(), Rect2(-tile_half, -tile_half, GameMap.TILE_SIZE, GameMap.TILE_SIZE), false)
+		var width := GameMap.TILE_SIZE * float(texture.get_width()) / texture.get_height()
+		draw_texture_rect(texture, Rect2(-width / 2.0, -tile_half, width, GameMap.TILE_SIZE), false)
 	else:
 		var font := ThemeDB.fallback_font
 		var text_width := font.get_string_size(type.symbol, HORIZONTAL_ALIGNMENT_LEFT, -1, FONT_SIZE).x

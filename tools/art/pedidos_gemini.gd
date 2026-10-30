@@ -240,7 +240,7 @@ func _themes() -> Array:
 		# que a Galé (pedido do usuário). A 1ª tentativa, com a Galé como
 		# referência de estilo, voltou uma cópia da Galé: aqui a referência são
 		# unidades que não são barcos (style_images) e o desenho provisório não
-		# aparece (no_current). No jogo, o provisório de tools/art/gen_quadrirreme.gd.
+		# aparece (no_current). Importado em 29/10/2026 (o 2º resultado).
 		# Importar como avulsa:
 		#   ... import_folha_unidades.gd -- resultado.png quadrirreme
 		{"name": "quadrirreme", "what": "1 game unit: a big Greek warship", "columns": 1, "cell": 300, "team_tint": true,
