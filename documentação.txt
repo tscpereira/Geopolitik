@@ -4993,6 +4993,21 @@ PRÓXIMO PASSO GRANDE 2: CONJUNTOS CULTURAIS DE UNIDADES E CIDADES
   de verde de cada lado, "melhor menor do que cortado", nenhuma linha
   entre os painéis. O grego fica como está até a nova folha.
 
+- PROMPTS DOS 6 LÍDERES REFEITOS (pedido do usuário: cada conjunto de
+  líder numa ÚNICA chamada, uma por civilização): o prompt abre com "ONE
+  IMAGE WITH THREE PORTRAITS", diz em itens numerados o que entregar
+  (uma imagem só com os três; não um retrato, não três imagens, não um
+  agora e os outros depois; 16:9, 3072 px ou mais), cita o povo (GREEKS,
+  ROMANS...), as regras de margem (figura em no máximo 70% do painel,
+  15% de verde de cada lado, menor em vez de cortada, nenhuma linha) e
+  termina com uma lista de conferência ("BEFORE ANSWERING, CHECK").
+  referencia.png ganhou à direita o ESQUEMA da folha (gerado:
+  _leader_layout, três silhuetas cinza com verde dos lados, rótulos
+  BRAVO / NEUTRO / FELIZ). Fenício sem o elmo debaixo do braço e o
+  cajado do faraó junto ao peito (sairiam da margem). O LEIA-ME tem o
+  passo a passo dos líderes. Validação: os 6 pedidos regenerados e
+  conferidos (prompt e referência).
+
 --------------------------------------------------------------
 7. BACKLOG (ideias para depois)
 --------------------------------------------------------------

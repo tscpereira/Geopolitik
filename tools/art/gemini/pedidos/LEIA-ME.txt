@@ -9,11 +9,25 @@ Cada pasta é um pedido: referencia.png (anexar) + prompt.txt (colar).
   10_tecnologias        16 ilustrações (4x4; adiado, opcional)
   11_terrenos_novos     águas profundas, selva, deserto, tundra e neve
                         (5x1; no jogo, provisórias de código)
-  13 a 18 lider_*       os LÍDERES (gregos, romanos, egípcios, fenícios,
-                        americanos, ingleses): UMA folha larga com os 3
-                        retratos do mesmo líder (bravo, neutro, feliz).
-                        Peça a maior resolução (3K/4K). Importar:
-                        ... import_lideres_gemini.gd -- folha.png <líder>
+  13 a 18 lider_*       os LÍDERES: ver abaixo
+
+LÍDERES: UMA CHAMADA POR CIVILIZAÇÃO (as 3 expressões juntas)
+  13_lider_gregos  14_lider_romanos  15_lider_egipcios
+  16_lider_fenicios  17_lider_americanos  18_lider_ingleses
+  Para cada uma, numa CONVERSA NOVA do Gemini:
+    1. Anexe referencia.png (à esquerda o ESTILO; à direita o ESQUEMA da
+       folha: três silhuetas com verde dos dois lados).
+    2. Cole o prompt.txt inteiro e envie UMA vez.
+    3. Confira: UMA imagem com os TRÊS retratos (bravo, neutro, feliz),
+       o mesmo homem, braços e capa inteiros com verde dos lados, sem
+       linhas entre eles. Se faltar algo, na mesma conversa: "Redo it:
+       ONE image with the three portraits, both arms complete with green
+       on both sides, no lines between them."
+    4. Salve como folha.png na pasta e rode:
+       godot_console.cmd --headless --path . --script
+       tools/art/import_lideres_gemini.gd -- <pasta>/folha.png <líder>
+       (<líder>: gregos, romanos, egipcios, fenicios, americanos ou
+       ingleses). Ele avisa se algo encostou na borda.
 
 Já feitos (sem pasta aqui): unidades, vila, cidade, metrópole, terrenos,
 fazendas e quadrirreme. Os originais do Gemini que já entraram no jogo

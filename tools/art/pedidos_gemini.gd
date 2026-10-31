@@ -307,40 +307,56 @@ WHAT MAKES IT DIFFERENT (very important):
 ## Os líderes vão mudar com as eras (estes são os da era antiga).
 func _leader_themes(u: String) -> Array:
 	var leaders := [
-		["gregos", "a young Macedonian king in the image of Alexander the Great: about 25 years old, clean-shaven, thick wavy light-brown hair swept up and back from the forehead, intense eyes; an ornate bronze muscle cuirass with a lion head on the chest and leather straps (pteruges) at the shoulders, a deep red cloak pinned at one shoulder"],
-		["romanos", "a Roman consul: about 50 years old, short grey hair, strong jaw, clean-shaven; a white toga with a broad purple border draped over a white tunic, a green laurel wreath on the head, a gold ring"],
-		["egipcios", "an Egyptian pharaoh: a striped gold-and-blue nemes headdress with the golden cobra (uraeus) on the brow, a braided ceremonial false beard, eyes lined with kohl, a wide broad collar of gold and lapis beads on the bare chest, golden arm bands, holding a crook"],
-		["fenicios", "a Carthaginian general in the image of Hannibal Barca: about 35 years old, dark curly hair and a short dark beard, weathered tanned face; bronze scale armour over a red tunic, a Tyrian-purple cloak, a bronze crested helmet held under one arm"],
-		["americanos", "an American colonial leader of the 1700s: about 40 years old, hair tied back, a black tricorn hat, a dark blue colonial coat with brass buttons over a buff waistcoat and a white shirt with a simple cravat"],
-		["ingleses", "a Celtic chieftain of ancient Britain: about 40 years old, long red-brown hair and a long braided moustache, a heavy twisted gold torc around the neck, a checked wool cloak in green and brown pinned with a big bronze brooch, bronze arm rings"],
+		["gregos", "GREEKS", "a young Macedonian king in the image of Alexander the Great: about 25 years old, clean-shaven, thick wavy light-brown hair swept up and back from the forehead, intense eyes; an ornate bronze muscle cuirass with a lion head on the chest and leather straps (pteruges) at the shoulders, a deep red cloak pinned at one shoulder"],
+		["romanos", "ROMANS", "a Roman consul: about 50 years old, short grey hair, strong jaw, clean-shaven; a white toga with a broad purple border draped over a white tunic, a green laurel wreath on the head, a gold ring"],
+		["egipcios", "EGYPTIANS", "an Egyptian pharaoh: a striped gold-and-blue nemes headdress with the golden cobra (uraeus) on the brow, a braided ceremonial false beard, eyes lined with kohl, a wide broad collar of gold and lapis beads on the bare chest, golden arm bands, holding a short crook upright against his chest (inside the silhouette, not sticking out)"],
+		["fenicios", "PHOENICIANS (Carthage)", "a Carthaginian general in the image of Hannibal Barca: about 35 years old, dark curly hair and a short dark beard, weathered tanned face; bronze scale armour over a red tunic, a Tyrian-purple cloak; no helmet"],
+		["americanos", "AMERICANS", "an American colonial leader of the 1700s: about 40 years old, hair tied back, a black tricorn hat, a dark blue colonial coat with brass buttons over a buff waistcoat and a white shirt with a simple cravat"],
+		["ingleses", "ENGLISH (ancient Britons)", "a Celtic chieftain of ancient Britain: about 40 years old, long red-brown hair and a long braided moustache, a heavy twisted gold torc around the neck, a checked wool cloak in green and brown pinned with a big bronze brooch, bronze arm rings"],
 	]
 	var themes := []
 	for leader: Array in leaders:
-		themes.append({"name": "lider_" + leader[0], "what": "the SAME leader painted THREE times, side by side, with three facial expressions", "columns": 3, "cell": 200,
+		themes.append({"name": "lider_" + leader[0], "what": "the leader of the " + leader[1], "columns": 3, "cell": 200,
 		"style_images": [u + "retratos/lanceiro", u + "retratos/arqueiro", u + "retratos/colono"],
 		"no_current": true,
-		"intro": """I am making the art of a 2D turn-based strategy game about ancient civilizations. The attached image shows three units already made for the game. It is ONLY the STYLE REFERENCE: paint in exactly this painted style, with the same detail, palette and light. Do not copy or include those units.
+		"leader_layout": true,
+		"intro": """ONE IMAGE WITH THREE PORTRAITS OF THE SAME LEADER. Please read everything before drawing.
 
-Create ONE WIDE IMAGE with %s. Each portrait is cut out and shown BIG on the diplomacy screen, so the image must be as LARGE as you can make it: landscape 16:9, at least 3072 x 1728 pixels (4K if possible). Never a small image.""",
+I am making the art of a 2D turn-based strategy game about ancient civilizations. In THIS SINGLE REQUEST I need the three portraits (ANGRY, NEUTRAL and HAPPY) of %s.
+
+WHAT TO DELIVER (very important):
+1. ONE single image. Inside it, THREE portraits of the same man, side by side, from left to right: ANGRY, NEUTRAL, HAPPY.
+2. Not just one portrait, not three separate images, not one image now and the others later: ONE image that already contains all three portraits.
+3. Landscape 16:9, as large as you can make it: at least 3072 x 1728 pixels (4K if possible). Each portrait is cut out and shown big on the diplomacy screen, so never a small image.
+
+THE ATTACHED IMAGE has two parts:
+- LEFT, "ESTILO": three units already made for the game. Use it ONLY for the painting style (detail, palette, light). Do not draw these units.
+- RIGHT, "ESQUEMA": the LAYOUT I want: three grey silhouettes on green, each one with a wide band of plain green on both sides. Copy only the composition (where each portrait goes and how big it is). Do not draw grey silhouettes, labels, numbers or lines.""",
 		"style": """STYLE (copy it from the attached units):
 - Detailed painted digital illustration with realistic proportions and a dignified, heroic look: soft painted shading, visible texture of skin, cloth and metal, rich but natural colors. Not cartoon, not chibi, not anime, not pixel art, no thick black outlines, not a photo.
 - Soft daylight from the TOP-LEFT, the same in the three portraits.""",
-		"camera": """LAYOUT AND FRAMING (very important, follow every point):
-- The image is split into THREE EQUAL VERTICAL PANELS (left, middle, right), each one third of the width, on ONE flat solid green background (#00B140). Do NOT draw any line, border or separator between the panels: the panels are invisible, only green.
-- One portrait per panel, centered in its panel: the leader from the top of the head down to the WAIST, facing the viewer (turned very slightly, three-quarter).
-- THE WHOLE FIGURE STAYS INSIDE ITS PANEL, NEVER CUT ON THE SIDES (most important rule): the WIDEST part of the figure (both arms, both elbows, both hands, the shoulders and the cloak) takes at most 70% of the panel width, with a band of plain green of at least 15% of the panel width on the LEFT and on the RIGHT. Both arms are complete, from the shoulder down, with green all around them; the arms hang close to the body. The cloak hangs close to the body, it does not spread out to the sides. Green above the head too. Nothing touches the sides of the panel or of the image. Only the waist (the bottom of the figure) may touch the bottom edge.
-- If the figure does not fit with these margins, draw it SMALLER: a smaller figure is fine, a cut arm is not.
+		"camera": """LAYOUT AND FRAMING (follow every point):
+- Think of the image as THREE EQUAL invisible PANELS (left, middle, right), each one third of the width, all on ONE flat solid green background (#00B140). NEVER draw a line, border, frame or separator between the panels: between the portraits there is only green.
+- One portrait per panel, centered in it: the leader from the top of the head down to the WAIST, facing the viewer (turned very slightly, three-quarter).
+- NOTHING IS CUT ON THE SIDES (the most important rule): the WIDEST part of each figure (both arms, both elbows, both hands, the shoulders and the cloak) takes AT MOST 70% of its panel width, leaving a band of plain green of at least 15% of the panel width on the LEFT and on the RIGHT, exactly like the grey silhouettes of the ESQUEMA. Both arms are complete, from the shoulder down, with green all around them; the arms hang close to the body; the cloak hangs close to the body and does not spread out to the sides. Green above the head too. Only the waist (the bottom of the figure) touches the bottom edge of the image.
+- If the figure does not fit with these margins, draw it SMALLER: a smaller figure is fine, a cut arm is NOT.
 - The head near the top; the body fills about 80% of the height.
-- The three portraits are THE SAME PAINTING repeated: exactly the same man, face shape, hair, clothes, cloak, jewellery, colors, size, position, pose and hands, as if copied and pasted. ONLY THE FACE (brows, eyes, mouth, cheeks) changes between them. The hands do not change.
-- Exactly three people in the image, one per panel. No throne, no room, no landscape, no props apart from what the leader wears or holds. No text, no labels, no numbers, no frames.""",
-		"items_title": "THE LEADER, " + leader[1] + ".\n\nTHE THREE PANELS, from left to right:",
+- The three portraits are THE SAME PAINTING repeated: exactly the same man, face shape, hair, clothes, cloak, jewellery, colors, size, position, pose and hands, as if copied and pasted. ONLY THE FACE (brows, eyes, mouth, cheeks) changes between them.
+- Exactly three people in the image. No throne, no room, no landscape, no props apart from what the leader wears or holds. No text, no labels, no numbers.""",
+		"items_title": "THE LEADER OF THE " + leader[1] + ": " + leader[2] + ".\n\nTHE THREE PORTRAITS, from left to right:",
 		"items": [
-			["brava", "", "LEFT panel, ANGRY (used when at war): brows lowered and drawn together, a hard glare straight at the viewer, jaw clenched, mouth tight and turned down."],
-			["neutra", "", "MIDDLE panel, NEUTRAL (used in peace): calm, composed and dignified, a steady attentive look, mouth relaxed and closed."],
-			["feliz", "", "RIGHT panel, HAPPY (used when the relation is good): a warm, confident smile that reaches the eyes (a little of the teeth may show), relaxed brows, cheeks slightly raised."],
+			["brava", "", "LEFT, ANGRY (used when at war): brows lowered and drawn together, a hard glare straight at the viewer, jaw clenched, mouth tight and turned down."],
+			["neutra", "", "MIDDLE, NEUTRAL (used in peace): calm, composed and dignified, a steady attentive look, mouth relaxed and closed."],
+			["feliz", "", "RIGHT, HAPPY (used when the relation is good): a warm, confident smile that reaches the eyes (a little of the teeth may show), relaxed brows, cheeks slightly raised."],
 		],
 		"team_note": "COLORS: normal colors for skin, clothes and metal (no team color in these images).",
-		"extra": "No text, no labels, no frames, no borders.",
+		"extra": """BEFORE ANSWERING, CHECK:
+- Is it ONE image with all THREE portraits (angry, neutral, happy)?
+- Is it the same man in the same pose in the three, with only the face changing?
+- Does every arm, hand and cloak have plain green on both sides, with nothing cut by the edges?
+- Is there NO line or border between the portraits?
+- Is it as large as possible (at least 3072 pixels wide)?
+If any answer is no, fix it before sending.""",
 		})
 	return themes
 
@@ -450,7 +466,22 @@ func _reference(theme: Dictionary, path: String) -> void:
 			name_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 			inner.add_child(name_label)
 		grid.add_child(card)
-	if theme.get("no_current", false):
+	if theme.get("leader_layout", false):
+		# Líderes: à direita, o ESQUEMA da folha (três silhuetas com margem verde)
+		right.free()
+		var layout_box := VBoxContainer.new()
+		layout_box.add_child(_label("ESQUEMA (só a composição)", 22))
+		layout_box.add_child(_picture(_leader_layout(), Vector2(640, 360)))
+		var moods := HBoxContainer.new()
+		moods.add_theme_constant_override("separation", 0)
+		for mood in ["BRAVO", "NEUTRO", "FELIZ"]:
+			var mood_label := _label(mood, 18)
+			mood_label.custom_minimum_size.x = 640 / 3.0
+			mood_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+			moods.add_child(mood_label)
+		layout_box.add_child(moods)
+		row.add_child(layout_box)
+	elif theme.get("no_current", false):
 		right.free() # só a referência de estilo (o desenho atual atrapalhava: ver Quadrirreme)
 	else:
 		row.add_child(right)
@@ -488,6 +519,38 @@ func _style_sheet(paths: Array) -> Image:
 	return sheet
 
 
+## Esquema da folha dos líderes (30/10/2026): 16:9, verde, três silhuetas
+## cinza (cabeça, pescoço, ombros e braços até a cintura), cada uma com no
+## máximo 70% da largura do painel e verde dos lados (o braço do grego saiu
+## cortado na borda do painel).
+func _leader_layout() -> Image:
+	var width := 960
+	var height := 540
+	var image := Image.create(width, height, false, Image.FORMAT_RGBA8)
+	image.fill(Color8(0, 177, 64))
+	var panel := width / 3.0
+	var grey := Color8(150, 150, 150)
+	for i in 3:
+		var cx := panel * (i + 0.5)
+		for y in height:
+			var v := y / float(height)
+			for x in range(int(panel * i), int(panel * (i + 1))):
+				var dx := (x - cx) / panel # -0.5 .. 0.5
+				var inside := false
+				if Vector2(dx / 0.13, (v - 0.2) / 0.13).length() <= 1.0: # cabeça
+					inside = true
+				elif v >= 0.3 and v < 0.38 and absf(dx) < 0.07: # pescoço
+					inside = true
+				elif v >= 0.36: # ombros e braços: 70% do painel, afinando para a cintura
+					var half := lerpf(0.35, 0.3, (v - 0.36) / 0.64)
+					if v < 0.42:
+						half *= (v - 0.36) / 0.06 * 0.4 + 0.6
+					inside = absf(dx) <= half
+				if inside:
+					image.set_pixel(x, y, grey)
+	return image
+
+
 func _picture(image: Image, size: Vector2) -> TextureRect:
 	var picture := TextureRect.new()
 	picture.texture = ImageTexture.create_from_image(image)
@@ -517,11 +580,25 @@ Cada pasta é um pedido: referencia.png (anexar) + prompt.txt (colar).
   10_tecnologias        16 ilustrações (4x4; adiado, opcional)
   11_terrenos_novos     águas profundas, selva, deserto, tundra e neve
                         (5x1; no jogo, provisórias de código)
-  13 a 18 lider_*       os LÍDERES (gregos, romanos, egípcios, fenícios,
-                        americanos, ingleses): UMA folha larga com os 3
-                        retratos do mesmo líder (bravo, neutro, feliz).
-                        Peça a maior resolução (3K/4K). Importar:
-                        ... import_lideres_gemini.gd -- folha.png <líder>
+  13 a 18 lider_*       os LÍDERES: ver abaixo
+
+LÍDERES: UMA CHAMADA POR CIVILIZAÇÃO (as 3 expressões juntas)
+  13_lider_gregos  14_lider_romanos  15_lider_egipcios
+  16_lider_fenicios  17_lider_americanos  18_lider_ingleses
+  Para cada uma, numa CONVERSA NOVA do Gemini:
+    1. Anexe referencia.png (à esquerda o ESTILO; à direita o ESQUEMA da
+       folha: três silhuetas com verde dos dois lados).
+    2. Cole o prompt.txt inteiro e envie UMA vez.
+    3. Confira: UMA imagem com os TRÊS retratos (bravo, neutro, feliz),
+       o mesmo homem, braços e capa inteiros com verde dos lados, sem
+       linhas entre eles. Se faltar algo, na mesma conversa: "Redo it:
+       ONE image with the three portraits, both arms complete with green
+       on both sides, no lines between them."
+    4. Salve como folha.png na pasta e rode:
+       godot_console.cmd --headless --path . --script
+       tools/art/import_lideres_gemini.gd -- <pasta>/folha.png <líder>
+       (<líder>: gregos, romanos, egipcios, fenicios, americanos ou
+       ingleses). Ele avisa se algo encostou na borda.
 
 Já feitos (sem pasta aqui): unidades, vila, cidade, metrópole, terrenos,
 fazendas e quadrirreme. Os originais do Gemini que já entraram no jogo

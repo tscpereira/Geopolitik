@@ -1,28 +1,43 @@
-I am making the art of a 2D turn-based strategy game about ancient civilizations. The attached image shows three units already made for the game. It is ONLY the STYLE REFERENCE: paint in exactly this painted style, with the same detail, palette and light. Do not copy or include those units.
+ONE IMAGE WITH THREE PORTRAITS OF THE SAME LEADER. Please read everything before drawing.
 
-Create ONE WIDE IMAGE with the SAME leader painted THREE times, side by side, with three facial expressions. Each portrait is cut out and shown BIG on the diplomacy screen, so the image must be as LARGE as you can make it: landscape 16:9, at least 3072 x 1728 pixels (4K if possible). Never a small image.
+I am making the art of a 2D turn-based strategy game about ancient civilizations. In THIS SINGLE REQUEST I need the three portraits (ANGRY, NEUTRAL and HAPPY) of the leader of the ROMANS.
+
+WHAT TO DELIVER (very important):
+1. ONE single image. Inside it, THREE portraits of the same man, side by side, from left to right: ANGRY, NEUTRAL, HAPPY.
+2. Not just one portrait, not three separate images, not one image now and the others later: ONE image that already contains all three portraits.
+3. Landscape 16:9, as large as you can make it: at least 3072 x 1728 pixels (4K if possible). Each portrait is cut out and shown big on the diplomacy screen, so never a small image.
+
+THE ATTACHED IMAGE has two parts:
+- LEFT, "ESTILO": three units already made for the game. Use it ONLY for the painting style (detail, palette, light). Do not draw these units.
+- RIGHT, "ESQUEMA": the LAYOUT I want: three grey silhouettes on green, each one with a wide band of plain green on both sides. Copy only the composition (where each portrait goes and how big it is). Do not draw grey silhouettes, labels, numbers or lines.
 
 STYLE (copy it from the attached units):
 - Detailed painted digital illustration with realistic proportions and a dignified, heroic look: soft painted shading, visible texture of skin, cloth and metal, rich but natural colors. Not cartoon, not chibi, not anime, not pixel art, no thick black outlines, not a photo.
 - Soft daylight from the TOP-LEFT, the same in the three portraits.
 
-LAYOUT AND FRAMING (very important, follow every point):
-- The image is split into THREE EQUAL VERTICAL PANELS (left, middle, right), each one third of the width, on ONE flat solid green background (#00B140). Do NOT draw any line, border or separator between the panels: the panels are invisible, only green.
-- One portrait per panel, centered in its panel: the leader from the top of the head down to the WAIST, facing the viewer (turned very slightly, three-quarter).
-- THE WHOLE FIGURE STAYS INSIDE ITS PANEL, NEVER CUT ON THE SIDES (most important rule): the WIDEST part of the figure (both arms, both elbows, both hands, the shoulders and the cloak) takes at most 70% of the panel width, with a band of plain green of at least 15% of the panel width on the LEFT and on the RIGHT. Both arms are complete, from the shoulder down, with green all around them; the arms hang close to the body. The cloak hangs close to the body, it does not spread out to the sides. Green above the head too. Nothing touches the sides of the panel or of the image. Only the waist (the bottom of the figure) may touch the bottom edge.
-- If the figure does not fit with these margins, draw it SMALLER: a smaller figure is fine, a cut arm is not.
+LAYOUT AND FRAMING (follow every point):
+- Think of the image as THREE EQUAL invisible PANELS (left, middle, right), each one third of the width, all on ONE flat solid green background (#00B140). NEVER draw a line, border, frame or separator between the panels: between the portraits there is only green.
+- One portrait per panel, centered in it: the leader from the top of the head down to the WAIST, facing the viewer (turned very slightly, three-quarter).
+- NOTHING IS CUT ON THE SIDES (the most important rule): the WIDEST part of each figure (both arms, both elbows, both hands, the shoulders and the cloak) takes AT MOST 70% of its panel width, leaving a band of plain green of at least 15% of the panel width on the LEFT and on the RIGHT, exactly like the grey silhouettes of the ESQUEMA. Both arms are complete, from the shoulder down, with green all around them; the arms hang close to the body; the cloak hangs close to the body and does not spread out to the sides. Green above the head too. Only the waist (the bottom of the figure) touches the bottom edge of the image.
+- If the figure does not fit with these margins, draw it SMALLER: a smaller figure is fine, a cut arm is NOT.
 - The head near the top; the body fills about 80% of the height.
-- The three portraits are THE SAME PAINTING repeated: exactly the same man, face shape, hair, clothes, cloak, jewellery, colors, size, position, pose and hands, as if copied and pasted. ONLY THE FACE (brows, eyes, mouth, cheeks) changes between them. The hands do not change.
-- Exactly three people in the image, one per panel. No throne, no room, no landscape, no props apart from what the leader wears or holds. No text, no labels, no numbers, no frames.
+- The three portraits are THE SAME PAINTING repeated: exactly the same man, face shape, hair, clothes, cloak, jewellery, colors, size, position, pose and hands, as if copied and pasted. ONLY THE FACE (brows, eyes, mouth, cheeks) changes between them.
+- Exactly three people in the image. No throne, no room, no landscape, no props apart from what the leader wears or holds. No text, no labels, no numbers.
 
-THE LEADER, a Roman consul: about 50 years old, short grey hair, strong jaw, clean-shaven; a white toga with a broad purple border draped over a white tunic, a green laurel wreath on the head, a gold ring.
+THE LEADER OF THE ROMANS: a Roman consul: about 50 years old, short grey hair, strong jaw, clean-shaven; a white toga with a broad purple border draped over a white tunic, a green laurel wreath on the head, a gold ring.
 
-THE THREE PANELS, from left to right:
-- LEFT panel, ANGRY (used when at war): brows lowered and drawn together, a hard glare straight at the viewer, jaw clenched, mouth tight and turned down.
-- MIDDLE panel, NEUTRAL (used in peace): calm, composed and dignified, a steady attentive look, mouth relaxed and closed.
-- RIGHT panel, HAPPY (used when the relation is good): a warm, confident smile that reaches the eyes (a little of the teeth may show), relaxed brows, cheeks slightly raised.
+THE THREE PORTRAITS, from left to right:
+- LEFT, ANGRY (used when at war): brows lowered and drawn together, a hard glare straight at the viewer, jaw clenched, mouth tight and turned down.
+- MIDDLE, NEUTRAL (used in peace): calm, composed and dignified, a steady attentive look, mouth relaxed and closed.
+- RIGHT, HAPPY (used when the relation is good): a warm, confident smile that reaches the eyes (a little of the teeth may show), relaxed brows, cheeks slightly raised.
 
-No text, no labels, no frames, no borders.
+BEFORE ANSWERING, CHECK:
+- Is it ONE image with all THREE portraits (angry, neutral, happy)?
+- Is it the same man in the same pose in the three, with only the face changing?
+- Does every arm, hand and cloak have plain green on both sides, with nothing cut by the edges?
+- Is there NO line or border between the portraits?
+- Is it as large as possible (at least 3072 pixels wide)?
+If any answer is no, fix it before sending.
 
 COLORS: normal colors for skin, clothes and metal (no team color in these images).
 
