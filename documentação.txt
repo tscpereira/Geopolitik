@@ -2807,6 +2807,29 @@ message_dialog.gd)
   abaixo de 700); os originais ficam em tools/art/gemini/originais/lideres/. No
   jogo, Nation.portrait gera os mipmaps uma vez e o palco desenha o
   retrato com filtro suave, na altura do palco.
+- COMÉRCIO (fase 3; pedido do usuário: as opções do encontro como falas,
+  "Gostaríamos de fazer uma proposta de troca" e "Declarar guerra"): em
+  paz, a fala de troca abre o PAINEL DE TROCA ao lado do líder (o palco
+  fica mais estreito, com a mesma altura): "Você oferece" e "Você pede",
+  cada um com ouro (de 10 em 10), madeira, ferro (se tiver), as armas do
+  arsenal, o mapa ("+N casas" que ele revela) e as tecnologias que o
+  outro ainda não tem e já pode pesquisar (scripts/players/trade.gd).
+  Embaixo, a disposição dele ao vivo e "Propor troca" / "Voltar" (Esc
+  volta ao encontro). A MÁQUINA AVALIA EM OURO (AIDiplomacy.trade_verdict):
+  ouro 1, madeira 2, ferro 3, arma = custo de produção x3 + a madeira e o
+  ferro dela, tecnologia = custo x2, mapa = 0,1 por casa nova; aceita se o
+  que recebe for pelo menos o que dá vezes a exigência pela confiança
+  (Indiferente 1,3; Amigável 1,0; Irmandade 0,8). Furioso não negocia (a
+  fala de troca fica desabilitada); tecnologia, só a quem é Amigável ou
+  mais; em guerra não há comércio. Ele responde com uma fala: aceita,
+  feliz ("Negócio fechado..."), as coisas mudam de dono, a confiança
+  sobe 5 dos dois lados e o painel fecha; recusa, neutro ("Isso é pouco
+  pelo que você pede.") ou, pela tecnologia, "Os segredos do meu povo não
+  estão à venda para estranhos.". Tecnologia recebida que estava sendo
+  pesquisada: a pesquisa fica vazia (escolher outra). Mapa recebido: a
+  névoa se refaz na hora e as cidades que ele conhecia aparecem. A
+  máquina agora LEMBRA DO QUE VIU (Player.explored, Game._explore_for no
+  começo da vez dela e ao abrir o jogo): é o mapa que ela troca.
 - TRATADO DE PAZ: "Propor paz" no encontro (a máquina responde na hora;
   recusada, o botão fica desabilitado e o próximo encontro só daqui a 5
   turnos) ou proposta da máquina (aviso com "Aceitar a paz" e "Recusar"; no
@@ -5028,6 +5051,15 @@ PRÓXIMO PASSO GRANDE 2: CONJUNTOS CULTURAIS DE UNIDADES E CIDADES
   deslocado (2, 1), feliz (1, 0)); fora do rosto, 0 pixels diferentes
   do neutro nos dois; ampliação dos rostos sem emenda visível; teste
   das respostas do líder.
+
+- COMÉRCIO NO ENCONTRO (pedido do usuário: "onde estão as opções de
+  negociação?"): ver DIPLOMACIA (COMÉRCIO). Validação: teste novo (opções
+  em paz; painel aparece; 300 de ouro por 10 de madeira recusado com a
+  fala; 3 lanças + 20 de madeira por 60 de ouro aceito, com os estoques
+  trocados, confiança +5, feliz e o painel fechando; mapa recebido muda
+  as casas exploradas; Furioso desabilita a troca), screenshot do painel
+  e testes de respostas, encontro, diplomacia, audiência, início, save
+  do mapa e IA instantânea.
 
 --------------------------------------------------------------
 7. BACKLOG (ideias para depois)

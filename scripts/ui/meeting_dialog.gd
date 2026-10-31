@@ -12,11 +12,19 @@ extends Control
 ##     relação: brava em guerra ou Furioso, feliz com Amigável ou Irmandade,
 ##     neutra no resto. Sem o retrato do Gemini ainda, uma silhueta.
 ##   EMBAIXO: como ele te recebe, o estado e a confiança, a resposta à última
-##     proposta e os botões: em guerra, propor a paz; em paz, declarar guerra;
-##     encerrar. A negociação (comércio, tratados) entra aqui nas próximas fases.
+##     proposta e as opções, como falas (pedido do usuário): em paz, "Gostaríamos
+##     de fazer uma proposta de troca" e "Declarar guerra"; em guerra, "Propor
+##     paz"; e encerrar.
+## TROCA (desde 30/10/2026): o painel de troca aparece ao lado do líder (o palco
+## fica mais estreito, mas com a mesma altura): à esquerda o que você oferece,
+## à direita o que você pede (ouro, madeira, ferro, armas do arsenal, o mapa e
+## tecnologias: Trade). Embaixo, a disposição dele ao vivo
+## (AIDiplomacy.trade_verdict) e "Propor troca" / "Voltar".
 
 signal peace_proposed(player: Player)
 signal war_declared(player: Player)
+## A proposta de troca: [param offer] sai do humano, [param ask] sai do outro.
+signal trade_proposed(player: Player, offer: Dictionary, ask: Dictionary)
 
 ## Retângulo do encontro, em frações da tela (esquerda, cima, direita, baixo).
 const ANCHORS := Vector4(0.187, 0.139, 0.834, 0.717)
@@ -32,6 +40,14 @@ var _greeting: RichTextLabel
 var _status: RichTextLabel
 var _reply: RichTextLabel
 var _actions: HBoxContainer
+var _trade: PanelContainer
+var _trade_columns: HBoxContainer
+var _trade_hint: RichTextLabel
+var _trade_button: Button
+var _trading := false
+## A proposta em montagem (Trade.empty): o que você oferece e o que pede.
+var _offer := {}
+var _ask := {}
 
 
 func _ready() -> void:
@@ -58,14 +74,19 @@ func _ready() -> void:
 	column.add_theme_constant_override("separation", 10)
 	panel.add_child(column)
 
-	# Em cima: o palco com o líder
+	# Em cima: o palco com o líder (e, na troca, o painel ao lado)
+	var top := HBoxContainer.new()
+	top.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	top.add_theme_constant_override("separation", 10)
+	column.add_child(top)
 	_stage = Control.new()
-	_stage.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	_stage.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_stage.clip_contents = true
 	# O retrato do líder é grande (até 1600 px): reduzido com suavidade
 	_stage.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
 	_stage.draw.connect(_draw_stage)
-	column.add_child(_stage)
+	top.add_child(_stage)
+	_build_trade_panel(top)
 
 	# Embaixo: a conversa e as opções
 	var talk := VBoxContainer.new()
@@ -99,6 +120,7 @@ func open(game: Game, other: Player) -> void:
 	_reply.text = ""
 	_reply.hide()
 	_mood_override = -1
+	_trading = false
 	refresh()
 	show()
 
@@ -130,6 +152,10 @@ func refresh() -> void:
 	var state := diplomacy.state(human, _other)
 	_status.text = "Relação: [b]%s[/b].   Confiança dele em você: [b]%s[/b] (%+d)." % [
 		Diplomacy.STATE_NAMES[state], Diplomacy.TRUST_NAMES[level], diplomacy.trust(_other, human)]
+	_trade.visible = _trading
+	_actions.visible = not _trading
+	if _trading:
+		_update_trade_hint()
 	for child in _actions.get_children():
 		_actions.remove_child(child)
 		child.queue_free()
@@ -141,6 +167,11 @@ func refresh() -> void:
 			peace.tooltip_text = "Ele recusou há pouco: espere alguns turnos."
 		_actions.add_child(peace)
 	else:
+		var trade := _make_button("Gostaríamos de fazer uma proposta de troca", open_trade)
+		trade.disabled = diplomacy.trust_level(_other, human) == Diplomacy.Trust.FURIOUS
+		if trade.disabled:
+			trade.tooltip_text = "Furioso com você: ele não negocia."
+		_actions.add_child(trade)
 		var war := _make_button("Declarar guerra", func() -> void: war_declared.emit(_other))
 		war.disabled = not diplomacy.can_declare_war(human, _other)
 		if diplomacy.truce_turns_left(human, _other) > 0:
@@ -150,6 +181,174 @@ func refresh() -> void:
 	spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_actions.add_child(spacer)
 	_actions.add_child(_make_button("Encerrar encontro [Esc]", hide))
+
+
+# --- Troca -----------------------------------------------------------------
+
+func _build_trade_panel(parent: Control) -> void:
+	_trade = PanelContainer.new()
+	_trade.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_trade.size_flags_stretch_ratio = 1.5
+	var box := StyleBoxFlat.new()
+	box.bg_color = Color(1, 1, 1, 0.55)
+	box.border_color = Color(StoneStyle.BRONZE, 0.8)
+	box.set_border_width_all(2)
+	box.set_corner_radius_all(4)
+	box.set_content_margin_all(10)
+	_trade.add_theme_stylebox_override("panel", box)
+	_trade.hide()
+	parent.add_child(_trade)
+	var column := VBoxContainer.new()
+	column.add_theme_constant_override("separation", 6)
+	_trade.add_child(column)
+	var title := _make_text(18)
+	title.text = "[b]Proposta de troca[/b]"
+	column.add_child(title)
+	var scroll := ScrollContainer.new()
+	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	column.add_child(scroll)
+	_trade_columns = HBoxContainer.new()
+	_trade_columns.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_trade_columns.add_theme_constant_override("separation", 16)
+	scroll.add_child(_trade_columns)
+	_trade_hint = _make_text(15)
+	column.add_child(_trade_hint)
+	var buttons := HBoxContainer.new()
+	buttons.add_theme_constant_override("separation", 10)
+	column.add_child(buttons)
+	_trade_button = _make_button("Propor troca", func() -> void: trade_proposed.emit(_other, _offer.duplicate(true), _ask.duplicate(true)))
+	buttons.add_child(_trade_button)
+	var spacer := Control.new()
+	spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	buttons.add_child(spacer)
+	buttons.add_child(_make_button("Voltar", close_trade))
+
+
+## "Gostaríamos de fazer uma proposta de troca": abre o painel, vazio.
+func open_trade() -> void:
+	_trading = true
+	_offer = Trade.empty()
+	_ask = Trade.empty()
+	_fill_trade_columns()
+	refresh()
+
+
+func close_trade() -> void:
+	_trading = false
+	refresh()
+
+
+## Depois de uma troca feita, o painel fecha (os estoques mudaram).
+func trade_done() -> void:
+	close_trade()
+
+
+func _fill_trade_columns() -> void:
+	for child in _trade_columns.get_children():
+		_trade_columns.remove_child(child)
+		child.queue_free()
+	var human := _game.viewer()
+	_trade_columns.add_child(_trade_side("Você oferece", human, _other, _offer))
+	_trade_columns.add_child(_trade_side("Você pede", _other, human, _ask))
+
+
+## Uma coluna da troca: o que [param giver] tem para dar a [param receiver].
+func _trade_side(title: String, giver: Player, receiver: Player, side: Dictionary) -> VBoxContainer:
+	var column := VBoxContainer.new()
+	column.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	column.add_theme_constant_override("separation", 4)
+	var head := _make_text(16)
+	head.text = "[b]%s[/b]" % title
+	column.add_child(head)
+	column.add_child(_amount_row("Ouro", giver.gold, 10, func(value: int) -> void: side["gold"] = value))
+	column.add_child(_amount_row("Madeira", giver.wood, 1, func(value: int) -> void: side["wood"] = value))
+	if giver.iron > 0:
+		column.add_child(_amount_row("Ferro", giver.iron, 1, func(value: int) -> void: side["iron"] = value))
+	for weapon: Arsenal.Weapon in Arsenal.NAMES:
+		var stock: int = giver.arsenal.get(weapon, 0)
+		if stock > 0:
+			column.add_child(_amount_row(Arsenal.PLURAL_NAMES[weapon], stock, 1,
+					func(value: int) -> void: side["weapons"][weapon] = value))
+	var gain := Trade.map_gain(giver, receiver)
+	if gain > 0:
+		column.add_child(_check_row("O mapa %s (+%d casas)" % ["seu" if giver == _game.viewer() else "dele", gain],
+				func(on: bool) -> void: side["map"] = on))
+	for tech in Trade.techs_to_offer(giver, receiver):
+		column.add_child(_check_row(Technology.tech_name(tech), func(on: bool) -> void:
+				if on:
+					side["techs"].append(tech)
+				else:
+					side["techs"].erase(tech)))
+	if column.get_child_count() == 1:
+		var none := _make_text(14)
+		none.text = "[i](nada para trocar)[/i]"
+		column.add_child(none)
+	return column
+
+
+## Linha "Ouro (tem 200)  [ 0 ]": quanto entra na proposta, até [param most].
+func _amount_row(label: String, most: int, step: int, on_change: Callable) -> HBoxContainer:
+	var row := HBoxContainer.new()
+	var name_label := Label.new()
+	name_label.text = "%s (tem %d)" % [label, most]
+	name_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	row.add_child(name_label)
+	var amount := SpinBox.new()
+	amount.min_value = 0
+	amount.max_value = most
+	amount.step = step if most >= step else 1
+	amount.allow_greater = false
+	amount.custom_minimum_size.x = 90
+	for icon in ["up_icon_modulate", "up_hover_icon_modulate", "down_icon_modulate", "down_hover_icon_modulate"]:
+		amount.add_theme_color_override(icon, StoneStyle.INK) # as setas apareçam no mármore
+	amount.value_changed.connect(func(value: float) -> void:
+		on_change.call(int(value))
+		_update_trade_hint())
+	row.add_child(amount)
+	return row
+
+
+func _check_row(label: String, on_toggle: Callable) -> CheckBox:
+	var check := CheckBox.new()
+	check.text = label
+	check.focus_mode = Control.FOCUS_NONE
+	for state in ["normal", "hover", "pressed", "hover_pressed", "disabled"]:
+		check.add_theme_stylebox_override(state, StyleBoxEmpty.new())
+	for color in ["font_color", "font_hover_color", "font_pressed_color", "font_hover_pressed_color"]:
+		check.add_theme_color_override(color, StoneStyle.INK)
+	check.toggled.connect(func(on: bool) -> void:
+		on_toggle.call(on)
+		_update_trade_hint())
+	return check
+
+
+## A disposição dele com a proposta como está agora (AIDiplomacy.trade_verdict).
+func _update_trade_hint() -> void:
+	var human := _game.viewer()
+	var verdict := AIDiplomacy.trade_verdict(_game, _other, human, _ask, _offer)
+	_trade_button.disabled = verdict["reason"] != "" and verdict["reason"] != "tech"
+	var text := ""
+	match verdict["reason"]:
+		"empty":
+			text = "Escolha o que você oferece e o que pede."
+		"furious":
+			text = "[color=#%s]Furioso com você: ele não negocia.[/color]" % StoneStyle.NEGATIVE.to_html(false)
+		"tech":
+			text = "[color=#%s]Ele só ensina tecnologias a quem é Amigável ou mais.[/color]" % StoneStyle.NEGATIVE.to_html(false)
+		"war":
+			text = "Em guerra não há comércio."
+		"missing":
+			text = "Alguém não tem o que a proposta pede."
+		_:
+			var ratio: float = verdict["ratio"]
+			if ratio >= 1.0:
+				text = "[color=#%s]Ele parece interessado.[/color]" % StoneStyle.POSITIVE.to_html(false)
+			elif ratio >= 0.75:
+				text = "Ele hesita: ofereça um pouco mais ou peça um pouco menos."
+			else:
+				text = "[color=#%s]Ele acha pouco: ofereça bem mais ou peça menos.[/color]" % StoneStyle.NEGATIVE.to_html(false)
+	_trade_hint.text = text
 
 
 ## Resposta do imperador a uma proposta, mostrada embaixo; com [param mood], o
@@ -224,4 +423,7 @@ func _make_button(text: String, on_pressed: Callable) -> Button:
 func _input(event: InputEvent) -> void:
 	if visible and event is InputEventKey and event.pressed and not event.echo and event.keycode == KEY_ESCAPE:
 		get_viewport().set_input_as_handled()
-		hide()
+		if _trading:
+			close_trade() # Esc na troca volta ao encontro
+		else:
+			hide()

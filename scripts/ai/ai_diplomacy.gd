@@ -22,6 +22,14 @@ const FURIOUS_LOSING_RATIO := 0.5
 ## Força para declarar guerra (sua / do alvo).
 const FURIOUS_WAR_RATIO := 1.0
 const INDIFFERENT_WAR_RATIO := 2.0
+## Troca (trade_verdict): quanto a mais ele quer receber do que dá, pela
+## confiança (Indiferente cobra caro; Irmandade faz desconto).
+const TRADE_FACTOR := {
+	Diplomacy.Trust.FURIOUS: 99.0,
+	Diplomacy.Trust.INDIFFERENT: 1.3,
+	Diplomacy.Trust.FRIENDLY: 1.0,
+	Diplomacy.Trust.BROTHERHOOD: 0.8,
+}
 
 
 ## Força militar do jogador: ataque + defesa de cada unidade militar de terra,
@@ -58,6 +66,37 @@ static func accepts_meeting(game: Game, ai: Player, visitor: Player) -> bool:
 	if game.diplomacy.trust_level(ai, visitor) != Diplomacy.Trust.FURIOUS:
 		return true
 	return accepts_peace(game, ai, visitor)
+
+
+## O que [param ai] acha de uma troca com [param other] (desde 30/10/2026;
+## diplomacia, fase 3): [param ai_gives] sai dele, [param ai_gets] entra.
+## Retorna {"accept": bool, "ratio": float, "reason": String}: "ratio" é o que
+## ele recebe dividido pelo que dá (vezes a exigência pela confiança, TRADE_FACTOR;
+## 1 ou mais, ele aceita); "reason" explica a recusa que não é de valor:
+## "war" (em guerra não há comércio), "furious" (Furioso não negocia),
+## "empty" (nada na proposta), "tech" (só ensina tecnologia a quem é Amigável
+## ou mais), "missing" (alguém não tem o que oferece).
+static func trade_verdict(game: Game, ai: Player, other: Player, ai_gives: Dictionary, ai_gets: Dictionary) -> Dictionary:
+	var diplomacy := game.diplomacy
+	var level := diplomacy.trust_level(ai, other)
+	var verdict := {"accept": false, "ratio": 0.0, "reason": ""}
+	if diplomacy.at_war(ai, other):
+		verdict["reason"] = "war"
+	elif level == Diplomacy.Trust.FURIOUS:
+		verdict["reason"] = "furious"
+	elif Trade.is_empty(ai_gives) and Trade.is_empty(ai_gets):
+		verdict["reason"] = "empty"
+	elif not ai_gives["techs"].is_empty() and level < Diplomacy.Trust.FRIENDLY:
+		verdict["reason"] = "tech"
+	elif not Trade.can_give(ai_gives, ai, other) or not Trade.can_give(ai_gets, other, ai):
+		verdict["reason"] = "missing"
+	if verdict["reason"] != "":
+		return verdict
+	var gets := Trade.value_of(ai_gets, other, ai)
+	var gives: float = Trade.value_of(ai_gives, ai, other) * TRADE_FACTOR[level]
+	verdict["ratio"] = gets / gives if gives > 0.0 else INF
+	verdict["accept"] = verdict["ratio"] >= 1.0
+	return verdict
 
 
 ## Se [param ai] quer declarar guerra a [param target] agora.

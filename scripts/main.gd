@@ -153,6 +153,7 @@ func _ready() -> void:
 	hud.diplomacy_dialog.meeting_requested.connect(request_meeting)
 	hud.meeting_dialog.war_declared.connect(request_declare_war)
 	hud.meeting_dialog.peace_proposed.connect(request_peace)
+	hud.meeting_dialog.trade_proposed.connect(request_trade)
 	# Encontro aberto: foco total (a câmera não anda com o teclado por trás)
 	hud.meeting_dialog.visibility_changed.connect(func() -> void: camera.locked = hud.meeting_dialog.visible)
 	Unit.watch = is_watched
@@ -161,6 +162,10 @@ func _ready() -> void:
 	hud.minimap.setup(self)
 	_update_vision()
 	TurnManager.turn_started.connect(_on_turn_started)
+	# O mapa que a máquina já viu (saves antigos não tinham): para a troca
+	for player in players:
+		if player.is_ai:
+			_explore_for(player)
 	_started = true
 	TurnManager.start_game(players)
 	if not _pending_load.is_empty():
@@ -1821,6 +1826,7 @@ func _on_turn_started(player: Player, turn_number: int) -> void:
 	_process_rebuilds(player)
 	_process_research(player)
 	if player.is_ai:
+		_explore_for(player)
 		_play_ai_turn(player)
 	else:
 		_start_human_turn(player)
@@ -2380,6 +2386,68 @@ func request_peace(target: Player) -> void:
 	hud.refresh_diplomacy()
 
 
+## "Propor troca" no encontro (desde 30/10/2026; diplomacia, fase 3):
+## [param offer] sai do humano, [param ask] sai de [param target]. Ele decide
+## na hora (AIDiplomacy.trade_verdict) e responde com uma fala e a expressão:
+## feliz se aceita, neutro se acha pouco, bravo se Furioso. Aceita, as coisas
+## mudam de dono (Trade.transfer), a confiança sobe Trade.TRADE_TRUST dos dois
+## lados e o painel fecha.
+func request_trade(target: Player, offer: Dictionary, ask: Dictionary) -> void:
+	var human := viewer()
+	if human == null or not can_act_in_diplomacy():
+		return
+	var verdict := AIDiplomacy.trade_verdict(self, target, human, ask, offer)
+	if not verdict["accept"]:
+		var lines := LEADER_LINES_TRADE_NO
+		var mood := Nation.Mood.NEUTRAL
+		match verdict["reason"]:
+			"tech":
+				lines = LEADER_LINES_TRADE_NO_TECH
+			"furious":
+				lines = LEADER_LINES_PEACE_NO_FURIOUS
+				mood = Nation.Mood.ANGRY
+		hud.meeting_dialog.show_reply(_leader_line(lines) + "
+[color=#%s][b]Ele recusa a troca.[/b][/color]" % StoneStyle.NEGATIVE.to_html(false), mood)
+		return
+	Trade.transfer(offer, human, target)
+	Trade.transfer(ask, target, human)
+	diplomacy.add_trust(target, human, Trade.TRADE_TRUST)
+	diplomacy.add_trust(human, target, Trade.TRADE_TRUST)
+	print("%s troca com %s: dá %s; recebe %s" % [human.display_name, target.display_name, Trade.describe(offer), Trade.describe(ask)])
+	if ask["map"]:
+		fog.reset() # o mapa novo aparece já
+		_update_vision()
+	if not ask["techs"].is_empty() and human.research < 0 and not human.cities.is_empty():
+		hud.show_message("Pesquisa em andamento recebida na troca: escolha outra.", Icons.SCIENCE_COLOR)
+	_update_resources()
+	hud.meeting_dialog.trade_done()
+	hud.meeting_dialog.show_reply(_leader_line(LEADER_LINES_TRADE_YES) +
+			"
+[color=#%s][b]Troca feita.[/b][/color] Você deu: %s. Recebeu: %s." % [
+			StoneStyle.POSITIVE.to_html(false), Trade.describe(offer), Trade.describe(ask)], Nation.Mood.HAPPY)
+	hud.refresh_diplomacy()
+
+
+## A máquina lembra do que já viu (Player.explored, como a névoa do humano):
+## em volta das unidades e das cidades, no começo da vez dela. É o mapa que ela
+## pode trocar (Trade).
+func _explore_for(player: Player) -> void:
+	var total := game_map.width * game_map.height
+	if player.explored.size() != total:
+		player.explored.resize(total)
+	var sources: Array[Vector3i] = []
+	for unit in player.units:
+		sources.append(Vector3i(unit.cell.x, unit.cell.y, unit.type.vision))
+	for city in player.cities:
+		sources.append(Vector3i(city.cell.x, city.cell.y, FogOfWar.CITY_VISION))
+	for source in sources:
+		for dy in range(-source.z, source.z + 1):
+			for dx in range(-source.z, source.z + 1):
+				var cell := Vector2i(source.x + dx, source.y + dy)
+				if game_map.is_in_bounds(cell):
+					player.explored[cell.y * game_map.width + cell.x] = 1
+
+
 ## Falas do líder no encontro, em resposta às propostas (uma sorteada; desde
 ## 30/10/2026, pedido do usuário). A expressão do retrato acompanha a resposta
 ## (MeetingDialog.show_reply).
@@ -2389,6 +2457,12 @@ const LEADER_LINES_PEACE_YES := ["Que haja paz entre nossos povos.", "Muito bem.
 		"Aceito. Já se derramou sangue demais."]
 const LEADER_LINES_PEACE_NO := ["Ainda não é hora de paz.", "Meus generais discordam. A guerra continua.",
 		"Volte quando tiver algo melhor a oferecer."]
+const LEADER_LINES_TRADE_YES := ["Negócio fechado. Que o comércio enriqueça os dois povos.",
+		"Aceito. Foi um prazer negociar com você.", "Uma troca justa. Meus mercadores ficarão contentes."]
+const LEADER_LINES_TRADE_NO := ["Isso é pouco pelo que você pede.", "Não. Meus conselheiros riram da sua oferta.",
+		"Traga algo mais valioso e conversaremos."]
+const LEADER_LINES_TRADE_NO_TECH := ["Os segredos do meu povo não estão à venda para estranhos.",
+		"Conhecimento só se divide entre amigos. Ainda não somos."]
 const LEADER_LINES_PEACE_NO_FURIOUS := ["Paz? Depois do que você fez? Nunca!",
 		"Só falaremos de paz sobre as ruínas das suas cidades.", "Saia da minha frente."]
 
