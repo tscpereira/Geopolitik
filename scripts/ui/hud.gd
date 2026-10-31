@@ -66,6 +66,7 @@ var game_menu: MenuButton
 ## Botão "Diplomacia", ao lado do Menu, e as janelas da diplomacia.
 var diplomacy_button: Button
 var diplomacy_dialog: DiplomacyDialog
+var meeting_dialog: MeetingDialog
 ## Pergunta ou aviso no mármore (ask).
 var message_dialog: MessageDialog
 ## Minimapa (canto esquerdo, abaixo do painel do turno; o Game chama setup).
@@ -118,6 +119,9 @@ func _ready() -> void:
 	diplomacy_dialog = DiplomacyDialog.new()
 	diplomacy_dialog.name = "DiplomacyDialog"
 	add_child(diplomacy_dialog)
+	meeting_dialog = MeetingDialog.new()
+	meeting_dialog.name = "MeetingDialog"
+	add_child(meeting_dialog)
 	message_dialog = MessageDialog.new()
 	message_dialog.name = "MessageDialog"
 	add_child(message_dialog)
@@ -133,6 +137,8 @@ func ask(title: String, text: String, buttons: Array = ["OK"]) -> int:
 func refresh_diplomacy() -> void:
 	if diplomacy_dialog:
 		diplomacy_dialog.refresh()
+	if meeting_dialog and meeting_dialog.visible:
+		meeting_dialog.refresh()
 
 
 ## Painel da unidade, preso ao canto inferior esquerdo. A barra de ações antiga

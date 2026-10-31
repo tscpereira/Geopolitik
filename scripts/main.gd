@@ -131,8 +131,9 @@ func _ready() -> void:
 	hud.menu_opening.connect(func() -> void: hud.set_save_enabled(_can_save()))
 	hud.menu_chosen.connect(_on_game_menu)
 	hud.diplomacy_pressed.connect(func() -> void: hud.diplomacy_dialog.open(self))
-	hud.diplomacy_dialog.declare_war_requested.connect(request_declare_war)
-	hud.diplomacy_dialog.peace_requested.connect(request_peace)
+	hud.diplomacy_dialog.meeting_requested.connect(request_meeting)
+	hud.meeting_dialog.war_declared.connect(request_declare_war)
+	hud.meeting_dialog.peace_proposed.connect(request_peace)
 	Unit.watch = is_watched
 	hud.tech_tree_dialog.research_chosen.connect(_on_tree_research_chosen)
 	hud.city_window.closed.connect(_on_city_window_closed)
@@ -184,7 +185,7 @@ func _unhandled_input(event: InputEvent) -> void:
 	if (hud.city_window.visible or hud.city_name_dialog.visible or hud.notice_dialog.visible
 			or hud.save_dialog.visible or hud.invasion_dialog.visible or hud.research_dialog.visible
 			or hud.tech_dialog.visible or hud.tech_tree_dialog.visible or hud.message_dialog.visible
-			or hud.diplomacy_dialog.visible):
+			or hud.diplomacy_dialog.visible or hud.meeting_dialog.visible):
 		return # as janelas cuidam dos próprios cliques e teclas
 	# Carregar: L (no editor do Godot o F9 pausa o jogo embutido) ou F9
 	if (key == KEY_L or key == KEY_F9) and not _is_busy:
@@ -2236,7 +2237,26 @@ func offer_peace_to_human(ai: Player, human: Player) -> void:
 					diplomacy.add_trust(ai, human, -5))
 
 
-## Botão "Declarar guerra" da janela de Diplomacia: confirma antes.
+## Botão "Propor encontro" da janela de Diplomacia: ele aceita receber o humano
+## ou não (AIDiplomacy.accepts_meeting); recusado, só depois de
+## Diplomacy.PROPOSAL_INTERVAL turnos. Aceito, abre a tela do encontro.
+func request_meeting(target: Player) -> void:
+	var human := viewer()
+	if human == null or not can_act_in_diplomacy():
+		return
+	if not diplomacy.can_propose(human, target):
+		hud.show_message("O %s não quer recebê-lo tão cedo." % leader_name(target), Color(1, 0.6, 0.4))
+		return
+	if not AIDiplomacy.accepts_meeting(self, target, human):
+		diplomacy.note_proposal(human, target)
+		hud.refresh_diplomacy()
+		await hud.ask("Encontro recusado", "O [b]%s[/b] se recusa a recebê-lo.\n\nEle está [b]%s[/b] com você. Tente de novo em %d turnos." % [
+				leader_name(target), Diplomacy.TRUST_NAMES[diplomacy.trust_level(target, human)].to_lower(), Diplomacy.PROPOSAL_INTERVAL], ["OK"])
+		return
+	hud.meeting_dialog.open(self, target)
+
+
+## "Declarar guerra" no encontro: confirma antes e encerra o encontro.
 func request_declare_war(target: Player) -> void:
 	var human := viewer()
 	if human == null or not diplomacy.can_declare_war(human, target):
@@ -2247,23 +2267,25 @@ func request_declare_war(target: Player) -> void:
 			["Declarar guerra", "Cancelar"])
 	if choice == 0:
 		declare_war(human, target)
+		hud.meeting_dialog.hide()
 		hud.show_message("Guerra contra o %s." % leader_name(target), Color(1, 0.6, 0.4))
 
 
-## Botão "Propor paz" da janela de Diplomacia: a máquina responde na hora.
+## "Propor paz" no encontro: ele responde na própria tela. Recusada, o próximo
+## encontro só depois de Diplomacy.PROPOSAL_INTERVAL turnos.
 func request_peace(target: Player) -> void:
 	var human := viewer()
 	if human == null or not diplomacy.at_war(human, target):
 		return
-	if not diplomacy.can_propose(human, target):
-		hud.show_message("O %s não quer ouvir outra proposta tão cedo." % leader_name(target), Color(1, 0.6, 0.4))
-		return
-	diplomacy.note_proposal(human, target)
 	if AIDiplomacy.accepts_peace(self, target, human):
 		sign_peace(human, target)
-		await hud.ask("Paz aceita", "O [b]%s[/b] aceita a paz. Começa uma trégua de %d turnos." % [leader_name(target), Diplomacy.TRUCE_TURNS], ["OK"])
+		hud.meeting_dialog.show_reply("[color=#%s][b]Ele aceita a paz.[/b][/color] Começa uma trégua de %d turnos: ninguém declara guerra nesse tempo." % [
+				StoneStyle.POSITIVE.to_html(false), Diplomacy.TRUCE_TURNS])
 	else:
-		await hud.ask("Paz recusada", "O [b]%s[/b] recusa a paz por enquanto.\n\nTente de novo em %d turnos." % [leader_name(target), Diplomacy.PROPOSAL_INTERVAL], ["OK"])
+		diplomacy.note_proposal(human, target)
+		hud.meeting_dialog.show_reply("[color=#%s][b]Ele recusa a paz[/b][/color] por enquanto. Você só poderá pedir outro encontro daqui a %d turnos." % [
+				StoneStyle.NEGATIVE.to_html(false), Diplomacy.PROPOSAL_INTERVAL])
+	hud.refresh_diplomacy()
 
 
 ## Ataque do humano a uma unidade de quem está em paz com ele: pergunta antes,

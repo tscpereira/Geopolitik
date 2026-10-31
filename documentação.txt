@@ -2688,13 +2688,24 @@ message_dialog.gd)
   outro, ninguém entra no território do outro (Movement.territory_open,
   decisão do usuário: bloqueado) e ninguém pilha. Em GUERRA vale tudo
   (ataque, invasão, pilhagem). Para guerrear é preciso DECLARAR: botão
-  "Declarar guerra" na janela de Diplomacia (o humano confirma) ou GUERRA
+  "Declarar guerra" no ENCONTRO (o humano confirma) ou GUERRA
   SURPRESA (pedido do usuário): o humano clica para atacar uma unidade de
   quem está em paz, confirma, e o ataque declara a guerra sem aviso (é
   traição). A máquina sempre declara formalmente (AIDiplomacy).
-- TRATADO DE PAZ: botão "Propor paz" (a máquina responde na hora; recusada,
-  só de novo daqui a 5 turnos) ou proposta da máquina (aviso com "Aceitar a
-  paz" e "Recusar"; no máximo uma a cada 5 turnos). A paz abre uma TRÉGUA de
+- ENCONTRO (desde 30/10/2026, pedido do usuário: o botão da lista é
+  "Propor encontro", e é no encontro que se propõe a paz): a máquina aceita
+  receber o humano se não estiver Furiosa; Furiosa, só em guerra e já
+  disposta à paz (AIDiplomacy.accepts_meeting). Recusado, um aviso, e o
+  próximo pedido só depois de 5 turnos. Aceito, abre a TELA DO ENCONTRO
+  (MeetingDialog, no mármore): o líder na cor dele, como ele te recebe
+  (frase pela confiança), a relação e a confiança, e as propostas: em
+  guerra "Propor paz", em paz "Declarar guerra" (desabilitado na trégua);
+  a resposta aparece na própria tela, e "Encerrar encontro [Esc]". A
+  negociação (comércio, tratados) entra nesta tela nas próximas fases.
+- TRATADO DE PAZ: "Propor paz" no encontro (a máquina responde na hora;
+  recusada, o botão fica desabilitado e o próximo encontro só daqui a 5
+  turnos) ou proposta da máquina (aviso com "Aceitar a paz" e "Recusar"; no
+  máximo uma a cada 5 turnos). A paz abre uma TRÉGUA de
   10 turnos (ninguém declara guerra, nem de surpresa) e as unidades no
   território do outro voltam para a casa livre mais próxima fora dele (isso
   também acontece no começo de cada vez: Game._expel_from_closed_borders).
@@ -2720,8 +2731,8 @@ message_dialog.gd)
   Jogador N" (o líder é sempre o Imperador por enquanto; o título vai variar
   com a civilização e o governo, sem nomes próprios: decisão do usuário), o
   estado, a confiança DELE em você (rosto e faixa, com o número) e a
-  situação (tempo de paz ou de guerra, trégua); o botão declara guerra ou
-  propõe a paz (só na sua vez).
+  situação (tempo de paz ou de guerra, trégua); o botão "Propor encontro"
+  (só na sua vez; desabilitado na espera depois de uma recusa).
 - O save guarda a diplomacia (save antigo: ninguém se conhece; os encontros
   acontecem de novo, em paz). Game.start_at_war (static) faz todos
   começarem se conhecendo e em guerra, como antes: os testes antigos usam.
@@ -3161,8 +3172,11 @@ PRÓXIMO PASSO GRANDE 2: CONJUNTOS CULTURAIS DE UNIDADES E CIDADES
 [x] Diplomacia, fase 1: encontro, paz/guerra, guerra surpresa, trégua,
     confiança, máquina declara guerra e faz a paz, janela de Diplomacia
     (30/10/2026)
-[ ] Diplomacia, fase 2: "Propor encontro" (a máquina aceita ou não pela
-    confiança) e a tela de negociação
+[x] Diplomacia: "Propor encontro" (a máquina aceita ou não pela
+    confiança) e a tela do encontro com a paz e a declaração de guerra
+    (30/10/2026)
+[ ] Diplomacia, fase 2: a negociação na tela do encontro (duas colunas,
+    "Você oferece" e "Ele oferece")
 [ ] Diplomacia, fase 3: comércio de ouro, recursos, armas do arsenal,
     mapas e tecnologias, com a avaliação da máquina (preço pela confiança)
 [ ] Diplomacia, fase 4: fronteiras abertas, aliança (defesa mútua:
@@ -4803,6 +4817,13 @@ PRÓXIMO PASSO GRANDE 2: CONJUNTOS CULTURAIS DE UNIDADES E CIDADES
   save), screenshots (encontro, janela) e todos os testes antigos (agora
   com Game.start_at_war); partida da máquina contra ela mesma com a
   diplomacia: elas se encontram e ficam em paz as 100 rodadas.
+
+- ENCONTRO (pedido do usuário: na lista, "Propor encontro", e no encontro
+  propor a paz): ver DIPLOMACIA. Validação: teste novo (botão da lista;
+  Furioso e mais forte recusa o encontro e a espera de 5 turnos; encontro
+  aceito em guerra com "Propor paz"; paz recusada com a resposta na tela e
+  o botão travado; paz aceita perdendo; "Declarar guerra" travado na
+  trégua), screenshots do encontro e o teste da diplomacia.
 
 --------------------------------------------------------------
 7. BACKLOG (ideias para depois)

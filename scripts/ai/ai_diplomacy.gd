@@ -52,6 +52,14 @@ static func accepts_peace(game: Game, ai: Player, other: Player) -> bool:
 	return power < LOSING_RATIO or diplomacy.turns_in_state(ai, other) >= WEARY_WAR_TURNS
 
 
+## Se [param ai] aceita receber [param visitor] num encontro: sempre, menos
+## Furiosa; Furiosa, só em guerra e já disposta a fazer a paz (perdendo).
+static func accepts_meeting(game: Game, ai: Player, visitor: Player) -> bool:
+	if game.diplomacy.trust_level(ai, visitor) != Diplomacy.Trust.FURIOUS:
+		return true
+	return accepts_peace(game, ai, visitor)
+
+
 ## Se [param ai] quer declarar guerra a [param target] agora.
 static func wants_war(game: Game, ai: Player, target: Player) -> bool:
 	var diplomacy := game.diplomacy

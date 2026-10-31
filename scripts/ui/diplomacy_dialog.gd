@@ -5,12 +5,11 @@ extends Control
 ## no mármore das janelas, uma linha por império que o jogador humano já
 ## encontrou: o líder (na cor do jogador), o estado da relação (Paz, Guerra,
 ## Aliado), a confiança DELE em você (rosto e faixa) e a situação (trégua,
-## tempo de guerra). Na sua vez, o botão da linha declara guerra (em paz) ou
-## propõe a paz (em guerra); o Game confirma e resolve. As negociações
-## (encontros, comércio, tratados) vêm nas próximas fases.
+## tempo de guerra). Na sua vez, o botão "Propor encontro" pede para ser
+## recebido (ele aceita ou não pela confiança); no ENCONTRO (MeetingDialog) se
+## propõe a paz ou se declara guerra. O Game resolve.
 
-signal declare_war_requested(player: Player)
-signal peace_requested(player: Player)
+signal meeting_requested(player: Player)
 
 var _game: Game
 var _rows: VBoxContainer
@@ -60,7 +59,7 @@ func _ready() -> void:
 	_hint.add_theme_font_size_override("font_size", 14)
 	_hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_hint.custom_minimum_size.x = 760
-	_hint.text = "Paz: ninguém ataca o outro nem entra no território dele. Guerra: só declarando (ou atacando de surpresa, uma traição). A confiança é a que o outro imperador tem em você: Furioso, Indiferente, Amigável ou Irmandade."
+	_hint.text = "Paz: ninguém ataca o outro nem entra no território dele. Guerra: só declarando, num encontro (ou atacando de surpresa, uma traição). A confiança é a que o outro imperador tem em você: Furioso, Indiferente, Amigável ou Irmandade."
 	box.add_child(_hint)
 
 
@@ -160,17 +159,14 @@ func _make_row(human: Player, other: Player, can_act: bool) -> Control:
 	var action := Button.new()
 	action.focus_mode = Control.FOCUS_NONE
 	CityWindow.style_button(action)
-	if state == Diplomacy.State.WAR:
-		action.text = "Propor paz"
-		action.pressed.connect(func() -> void: peace_requested.emit(other))
-		action.disabled = not can_act
-	else:
-		action.text = "Declarar guerra"
-		action.pressed.connect(func() -> void: declare_war_requested.emit(other))
-		action.disabled = not can_act or not diplomacy.can_declare_war(human, other)
-		if diplomacy.truce_turns_left(human, other) > 0:
-			action.tooltip_text = "Trégua: ninguém declara guerra por mais %d turnos." % diplomacy.truce_turns_left(human, other)
+	action.text = "Propor encontro"
+	action.pressed.connect(func() -> void: meeting_requested.emit(other))
+	action.disabled = not can_act or not diplomacy.can_propose(human, other)
 	if not can_act:
 		action.tooltip_text = "Só na sua vez."
+	elif not diplomacy.can_propose(human, other):
+		action.tooltip_text = "Ele recusou há pouco: espere alguns turnos para pedir de novo."
+	else:
+		action.tooltip_text = "Pedir para ser recebido. Ele aceita ou não conforme a confiança em você; no encontro se propõe a paz ou se declara guerra."
 	row.add_child(action)
 	return row
