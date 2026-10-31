@@ -25,6 +25,9 @@ var _game: Game
 var _other: Player
 var _stage: Control
 var _portrait_texture: Texture2D
+## Expressão da última resposta do líder (show_reply), que vale até o fim do
+## encontro; -1 = pela relação (mood_for).
+var _mood_override := -1
 var _greeting: RichTextLabel
 var _status: RichTextLabel
 var _reply: RichTextLabel
@@ -95,6 +98,7 @@ func open(game: Game, other: Player) -> void:
 	_other = other
 	_reply.text = ""
 	_reply.hide()
+	_mood_override = -1
 	refresh()
 	show()
 
@@ -115,10 +119,14 @@ func refresh() -> void:
 		return
 	var human := _game.viewer()
 	var diplomacy := _game.diplomacy
-	_portrait_texture = Nation.portrait(_other.nation, mood_for(diplomacy, human, _other))
+	var mood: Nation.Mood = (_mood_override as Nation.Mood) if _mood_override >= 0 else mood_for(diplomacy, human, _other)
+	_portrait_texture = Nation.portrait(_other.nation, mood)
 	_stage.queue_redraw()
 	var level := diplomacy.trust_level(_other, human)
 	_greeting.text = "[i]%s[/i]" % _greeting_for(level, diplomacy.at_war(human, _other))
+	# Depois que ele responde, a fala dele toma o lugar da recepção (o palco do
+	# líder não encolhe)
+	_greeting.visible = not _reply.visible
 	var state := diplomacy.state(human, _other)
 	_status.text = "Relação: [b]%s[/b].   Confiança dele em você: [b]%s[/b] (%+d)." % [
 		Diplomacy.STATE_NAMES[state], Diplomacy.TRUST_NAMES[level], diplomacy.trust(_other, human)]
@@ -144,10 +152,12 @@ func refresh() -> void:
 	_actions.add_child(_make_button("Encerrar encontro [Esc]", hide))
 
 
-## Resposta do imperador a uma proposta, mostrada embaixo.
-func show_reply(text: String) -> void:
+## Resposta do imperador a uma proposta, mostrada embaixo; com [param mood], o
+## retrato muda para essa expressão (bravo na guerra, feliz na paz aceita...).
+func show_reply(text: String, mood: int = -1) -> void:
 	_reply.text = text
 	_reply.show()
+	_mood_override = mood
 	refresh()
 
 

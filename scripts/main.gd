@@ -2342,7 +2342,8 @@ func request_meeting(target: Player) -> void:
 	hud.meeting_dialog.open(self, target)
 
 
-## "Declarar guerra" no encontro: confirma antes e encerra o encontro.
+## "Declarar guerra" no encontro: confirma antes; o encontro continua, com a
+## resposta dele (brava).
 func request_declare_war(target: Player) -> void:
 	var human := viewer()
 	if human == null or not diplomacy.can_declare_war(human, target):
@@ -2353,8 +2354,10 @@ func request_declare_war(target: Player) -> void:
 			["Declarar guerra", "Cancelar"])
 	if choice == 0:
 		declare_war(human, target)
-		hud.meeting_dialog.hide()
-		hud.show_message("Guerra contra o %s." % leader_name(target), Color(1, 0.6, 0.4))
+		# O encontro continua: ele responde, bravo
+		hud.meeting_dialog.show_reply(_leader_line(LEADER_LINES_WAR) +
+				"\n[color=#%s][b]Guerra declarada.[/b][/color] Vocês podem se atacar e invadir o território um do outro." % StoneStyle.NEGATIVE.to_html(false),
+				Nation.Mood.ANGRY)
 
 
 ## "Propor paz" no encontro: ele responde na própria tela. Recusada, o próximo
@@ -2365,13 +2368,34 @@ func request_peace(target: Player) -> void:
 		return
 	if AIDiplomacy.accepts_peace(self, target, human):
 		sign_peace(human, target)
-		hud.meeting_dialog.show_reply("[color=#%s][b]Ele aceita a paz.[/b][/color] Começa uma trégua de %d turnos: ninguém declara guerra nesse tempo." % [
-				StoneStyle.POSITIVE.to_html(false), Diplomacy.TRUCE_TURNS])
+		hud.meeting_dialog.show_reply(_leader_line(LEADER_LINES_PEACE_YES) +
+				"\n[color=#%s][b]Ele aceita a paz.[/b][/color] Começa uma trégua de %d turnos: ninguém declara guerra nesse tempo." % [
+				StoneStyle.POSITIVE.to_html(false), Diplomacy.TRUCE_TURNS], Nation.Mood.HAPPY)
 	else:
 		diplomacy.note_proposal(human, target)
-		hud.meeting_dialog.show_reply("[color=#%s][b]Ele recusa a paz[/b][/color] por enquanto. Você só poderá pedir outro encontro daqui a %d turnos." % [
-				StoneStyle.NEGATIVE.to_html(false), Diplomacy.PROPOSAL_INTERVAL])
+		var furious := diplomacy.trust_level(target, human) == Diplomacy.Trust.FURIOUS
+		hud.meeting_dialog.show_reply(_leader_line(LEADER_LINES_PEACE_NO_FURIOUS if furious else LEADER_LINES_PEACE_NO) +
+				"\n[color=#%s][b]Ele recusa a paz[/b][/color] por enquanto. Você só poderá pedir outro encontro daqui a %d turnos." % [
+				StoneStyle.NEGATIVE.to_html(false), Diplomacy.PROPOSAL_INTERVAL], Nation.Mood.ANGRY if furious else Nation.Mood.NEUTRAL)
 	hud.refresh_diplomacy()
+
+
+## Falas do líder no encontro, em resposta às propostas (uma sorteada; desde
+## 30/10/2026, pedido do usuário). A expressão do retrato acompanha a resposta
+## (MeetingDialog.show_reply).
+const LEADER_LINES_WAR := ["Você vai se arrepender!", "Então que os deuses decidam no campo de batalha.",
+		"Meus exércitos já marcham. Até breve, estrangeiro.", "Foi um erro. Um erro que vai custar caro ao seu povo."]
+const LEADER_LINES_PEACE_YES := ["Que haja paz entre nossos povos.", "Muito bem. Que nossas espadas descansem.",
+		"Aceito. Já se derramou sangue demais."]
+const LEADER_LINES_PEACE_NO := ["Ainda não é hora de paz.", "Meus generais discordam. A guerra continua.",
+		"Volte quando tiver algo melhor a oferecer."]
+const LEADER_LINES_PEACE_NO_FURIOUS := ["Paz? Depois do que você fez? Nunca!",
+		"Só falaremos de paz sobre as ruínas das suas cidades.", "Saia da minha frente."]
+
+
+## Uma fala sorteada de [param lines], entre aspas e em itálico.
+func _leader_line(lines: Array) -> String:
+	return "[i]\"%s\"[/i]" % lines[_rng.randi_range(0, lines.size() - 1)]
 
 
 ## Ataque do humano a uma unidade de quem está em paz com ele: pergunta antes,

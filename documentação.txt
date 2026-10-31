@@ -2740,6 +2740,16 @@ message_dialog.gd)
   última proposta e os botões: em guerra "Propor paz", em paz "Declarar
   guerra" (desabilitado na trégua) e "Encerrar encontro [Esc]". A
   negociação (comércio, tratados) entra nesta tela nas próximas fases.
+- RESPOSTAS DO LÍDER (desde 30/10/2026, pedido do usuário): a cada
+  proposta o encontro continua aberto e o líder responde com uma fala
+  sorteada (Game.LEADER_LINES_*), em itálico e entre aspas, seguida do
+  resultado; o retrato muda para a expressão da resposta e fica assim
+  até o fim do encontro (MeetingDialog.show_reply): declarar guerra:
+  bravo ("Você vai se arrepender!"...); paz aceita: feliz ("Que haja paz
+  entre nossos povos."...); paz recusada: bravo se Furioso ("Paz? Depois
+  do que você fez? Nunca!"...), neutro no resto ("Ainda não é hora de
+  paz."...). Depois da resposta, a frase de recepção some (o palco do
+  líder não encolhe).
 - RETRATOS DOS LÍDERES (pedido do usuário; os líderes vão mudar com as
   eras): assets/leaders/<líder>_<brava|neutra|feliz>.png, da cintura para
   cima, fundo transparente. Pedidos ao Gemini 13 a 18 (lider_gregos,
@@ -4924,6 +4934,12 @@ PRÓXIMO PASSO GRANDE 2: CONJUNTOS CULTURAIS DE UNIDADES E CIDADES
   encontro, início, três continentes, névoa e batalha da IA. Para o
   usuário testar: o Espaço 5 dos saves tem os Romanos com os Gregos a 3
   casas, ainda sem se conhecerem.
+
+- RESPOSTAS DO LÍDER (pedido do usuário): ver DIPLOMACIA. Validação:
+  teste novo (Gregos: neutro em paz; declarar guerra: o encontro continua,
+  ele responde com uma das falas de guerra e fica bravo; paz aceita: fala
+  de paz e feliz), screenshots e testes do encontro, diplomacia e
+  audiência.
 
 --------------------------------------------------------------
 7. BACKLOG (ideias para depois)
