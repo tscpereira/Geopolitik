@@ -2829,7 +2829,9 @@ message_dialog.gd)
   pesquisada: a pesquisa fica vazia (escolher outra). Mapa recebido: a
   névoa se refaz na hora e as cidades que ele conhecia aparecem. A
   máquina agora LEMBRA DO QUE VIU (Player.explored, Game._explore_for no
-  começo da vez dela e ao abrir o jogo): é o mapa que ela troca.
+  começo da vez dela, ao abrir o jogo e ao carregar um save; e a cada
+  passo das unidades dela, Game.move_unit): é o mapa que ela troca. O
+  mapa dela só tem o que as unidades e cidades dela já viram desde então.
 - TRATADO DE PAZ: "Propor paz" no encontro (a máquina responde na hora;
   recusada, o botão fica desabilitado e o próximo encontro só daqui a 5
   turnos) ou proposta da máquina (aviso com "Aceitar a paz" e "Recusar"; no
@@ -5060,6 +5062,14 @@ PRÓXIMO PASSO GRANDE 2: CONJUNTOS CULTURAIS DE UNIDADES E CIDADES
   as casas exploradas; Furioso desabilita a troca), screenshot do painel
   e testes de respostas, encontro, diplomacia, audiência, início, save
   do mapa e IA instantânea.
+  CORREÇÃO (usuário: trocou mapas e não recebeu nada): ao carregar um
+  save, o mapa da máquina ficava vazio até a vez dela, e ela só marcava
+  o que via no começo da vez. Agora marca ao carregar e em cada passo das
+  unidades. No Espaço 5 (cenário de teste) os Gregos têm só 2 unidades e
+  nenhuma cidade, ao lado de Roma: o mapa deles quase não acrescenta (12
+  casas, a maioria já vista). Validação: a cópia do Espaço 5 agora mostra
+  12 casas no mapa grego (antes 0); testes da troca, IA instantânea,
+  batalha da IA e save do mapa.
 
 --------------------------------------------------------------
 7. BACKLOG (ideias para depois)

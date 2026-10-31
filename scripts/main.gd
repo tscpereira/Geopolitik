@@ -1137,7 +1137,12 @@ func move_unit(unit: Unit, target: Vector2i) -> void:
 	var current := occupants()
 	var boat: Unit = current.get(target)
 	var reachable := Movement.find_reachable(game_map, unit, current)
-	await unit.move_along(Movement.build_path(reachable, target), game_map)
+	var path := Movement.build_path(reachable, target)
+	if unit.owner_player and unit.owner_player.is_ai:
+		# A máquina lembra do caminho todo (o mapa que ela troca)
+		for step: Vector2i in path:
+			_explore_around(unit.owner_player, step, unit.type.vision)
+	await unit.move_along(path, game_map)
 	_check_contacts() # o primeiro encontro aparece na hora em que um vê o outro
 	if boat and boat.can_carry(unit):
 		boat.board(unit)
@@ -2430,22 +2435,25 @@ func request_trade(target: Player, offer: Dictionary, ask: Dictionary) -> void:
 
 ## A máquina lembra do que já viu (Player.explored, como a névoa do humano):
 ## em volta das unidades e das cidades, no começo da vez dela. É o mapa que ela
-## pode trocar (Trade).
+## pode trocar (Trade). Também a cada passo das unidades dela (move_unit) e ao
+## carregar um save.
 func _explore_for(player: Player) -> void:
+	for unit in player.units:
+		_explore_around(player, unit.cell, unit.type.vision)
+	for city in player.cities:
+		_explore_around(player, city.cell, FogOfWar.CITY_VISION)
+
+
+## Marca como explorado por [param player] o quadrado de raio [param radius] em volta de [param center].
+func _explore_around(player: Player, center: Vector2i, radius: int) -> void:
 	var total := game_map.width * game_map.height
 	if player.explored.size() != total:
 		player.explored.resize(total)
-	var sources: Array[Vector3i] = []
-	for unit in player.units:
-		sources.append(Vector3i(unit.cell.x, unit.cell.y, unit.type.vision))
-	for city in player.cities:
-		sources.append(Vector3i(city.cell.x, city.cell.y, FogOfWar.CITY_VISION))
-	for source in sources:
-		for dy in range(-source.z, source.z + 1):
-			for dx in range(-source.z, source.z + 1):
-				var cell := Vector2i(source.x + dx, source.y + dy)
-				if game_map.is_in_bounds(cell):
-					player.explored[cell.y * game_map.width + cell.x] = 1
+	for dy in range(-radius, radius + 1):
+		for dx in range(-radius, radius + 1):
+			var cell := center + Vector2i(dx, dy)
+			if game_map.is_in_bounds(cell):
+				player.explored[cell.y * game_map.width + cell.x] = 1
 
 
 ## Falas do líder no encontro, em resposta às propostas (uma sorteada; desde
@@ -2583,6 +2591,9 @@ func load_game(slot: int) -> bool:
 	if data.is_empty():
 		return false
 	restore_state(data)
+	for player in players:
+		if player.is_ai:
+			_explore_for(player) # saves antigos não tinham o mapa da máquina
 	hud.show_message("Partida carregada (%s, turno %d)." % [SaveGame.slot_name(slot), TurnManager.turn_number],
 			Color(0.75, 1, 0.75))
 	return true
