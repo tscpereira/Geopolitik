@@ -2706,9 +2706,14 @@ DIPLOMACIA (fase 1 desde 30/10/2026, pedido do usuário; scripts/players/
 diplomacy.gd, scripts/ai/ai_diplomacy.gd, scripts/ui/diplomacy_dialog.gd,
 message_dialog.gd)
 - ENCONTRO: dois jogadores se conhecem quando um vê alguma unidade ou cidade
-  do outro (Game._check_contacts, pela visão das unidades e cidades; a cada
-  12 quadros e no começo de cada vez). Começam em PAZ, com confiança 0
-  (Indiferente). O humano vê o aviso "Primeiro encontro" no mármore.
+  do outro (Game._check_contacts, pela visão das unidades e cidades; no
+  fim de cada movimento, a cada 12 quadros e no começo de cada vez).
+  Começam em PAZ, com confiança 0 (Indiferente). O humano vê NA HORA o
+  aviso "Primeiro encontro" (desde 30/10/2026, pedido do usuário): "Meu
+  senhor, encontramos um emissário dos Gregos. Devemos propor uma
+  audiência?" com "Sim" e "Não" (Game._offer_audience). "Sim" abre o
+  encontro com o líder; na vez da máquina, a audiência fica para o
+  começo da vez do humano (_pending_audiences).
 - ESTADOS: Paz, Guerra e Aliado (Aliado: fase 4). Em PAZ ninguém ataca o
   outro, ninguém entra no território do outro (Movement.territory_open,
   decisão do usuário: bloqueado) e ninguém pilha. Em GUERRA vale tudo
@@ -4911,6 +4916,14 @@ PRÓXIMO PASSO GRANDE 2: CONJUNTOS CULTURAIS DE UNIDADES E CIDADES
   duas partes): ver DIPLOMACIA (TELA DO ENCONTRO e RETRATOS DOS LÍDERES).
   Pedidos 13 a 18 ao Gemini e o importador (testado com uma folha
   falsa). Validação: teste do encontro e screenshot do modal novo.
+
+- AUDIÊNCIA NO PRIMEIRO ENCONTRO (pedido do usuário): ver DIPLOMACIA
+  (ENCONTRO). Validação: teste novo (o guerreiro romano anda até o lado
+  do grego: o encontro e o aviso aparecem na hora, com o texto do
+  conselheiro e Sim/Não; Sim abre o encontro) e testes da diplomacia,
+  encontro, início, três continentes, névoa e batalha da IA. Para o
+  usuário testar: o Espaço 5 dos saves tem os Romanos com os Gregos a 3
+  casas, ainda sem se conhecerem.
 
 --------------------------------------------------------------
 7. BACKLOG (ideias para depois)

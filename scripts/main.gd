@@ -100,6 +100,9 @@ var _contact_frames := 0
 ## Avisos de diplomacia para o humano, um de cada vez: [{title, text,
 ## buttons, callback}] (ver _queue_diplomacy_notice).
 var _diplomacy_queue: Array = []
+## Audiências de primeiro encontro aceitas na vez da máquina: abrem no começo
+## da vez do humano (_offer_audience).
+var _pending_audiences: Array[Player] = []
 ## A partida já começou (depois da tela de início): até lá, _process e a
 ## entrada não fazem nada.
 var _started := false
@@ -1130,6 +1133,7 @@ func move_unit(unit: Unit, target: Vector2i) -> void:
 	var boat: Unit = current.get(target)
 	var reachable := Movement.find_reachable(game_map, unit, current)
 	await unit.move_along(Movement.build_path(reachable, target), game_map)
+	_check_contacts() # o primeiro encontro aparece na hora em que um vê o outro
 	if boat and boat.can_carry(unit):
 		boat.board(unit)
 		hud.show_message("%s embarcou na Galé (%d/%d)." % [unit.type.display_name, boat.cargo.size(), boat.type.cargo_capacity],
@@ -1833,6 +1837,11 @@ func _start_human_turn(player: Player, autosave := true) -> void:
 			push_warning("Salvamento automático falhou (%s)." % error_string(error))
 	await _run_goto_orders(player)
 	await _show_completion_notices()
+	# Audiências aceitas durante a vez da máquina: abrem agora
+	while not _pending_audiences.is_empty() and not game_over:
+		var guest: Player = _pending_audiences.pop_front()
+		hud.meeting_dialog.open(self, guest)
+		await hud.meeting_dialog.visibility_changed
 	if _research_done >= 0 and not game_over:
 		# Pesquisa concluída no início da vez: escolher a próxima
 		var done := _research_done
@@ -2237,9 +2246,24 @@ func _check_contacts() -> void:
 				diplomacy.meet(a, b)
 				print("Primeiro encontro: %s e %s (paz)" % [a.display_name, b.display_name])
 				if not a.is_ai or not b.is_ai:
-					var other := b if not a.is_ai else a
-					_queue_diplomacy_notice("Primeiro encontro",
-							"O [b]%s[/b] se apresenta ao seu povo.\n\nNossos impérios começam em [b]PAZ[/b]: ninguém ataca o outro nem entra no território dele. Para guerrear, é preciso declarar guerra (ou atacar de surpresa, o que é traição).\n\nConfiança inicial: Indiferente. Veja tudo no botão Diplomacia." % leader_name(other))
+					_offer_audience(b if not a.is_ai else a)
+
+
+## Primeiro encontro do humano com [param other]: na hora, o conselheiro avisa
+## e pergunta se propõe uma audiência (pedido do usuário, 30/10/2026). "Sim"
+## abre o encontro com o líder (na vez da máquina, fica para o começo da vez
+## do humano: _pending_audiences).
+func _offer_audience(other: Player) -> void:
+	_queue_diplomacy_notice("Primeiro encontro",
+			"[i]\"Meu senhor, encontramos um emissário %s. Devemos propor uma audiência?\"[/i]\n\nNossos impérios começam em [b]paz[/b]: ninguém ataca o outro nem entra no território dele." % other.of_name(),
+			["Sim", "Não"],
+			func(choice: int) -> void:
+				if choice != 0 or game_over or other.eliminated:
+					return
+				if can_act_in_diplomacy():
+					hud.meeting_dialog.open(self, other)
+				elif not _pending_audiences.has(other):
+					_pending_audiences.append(other))
 
 
 ## Se [param viewer] vê alguma unidade ou cidade de [param other].
@@ -2572,6 +2596,7 @@ func restore_state(data: Dictionary) -> void:
 	diplomacy.turn = TurnManager.turn_number
 	Movement.diplomacy = diplomacy
 	_diplomacy_queue.clear()
+	_pending_audiences.clear()
 	var current := TurnManager.current_player()
 	print("Partida carregada: turno %d, vez do %s" % [TurnManager.turn_number, current.display_name])
 	hud.set_turn(TurnManager.turn_number, current)
