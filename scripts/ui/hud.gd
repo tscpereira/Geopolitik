@@ -16,6 +16,8 @@ signal research_pressed
 ## set_save_enabled) e item escolhido (MENU_SAVE ou MENU_LOAD).
 signal menu_opening
 signal menu_chosen(id: int)
+## Botão "Diplomacia" (ao lado do Menu): abrir a janela de Diplomacia.
+signal diplomacy_pressed
 ## Botão "Árvore [T]" do painel de Ciência: abrir a árvore de tecnologias.
 signal tech_tree_pressed
 
@@ -61,6 +63,11 @@ const MENU_SAVE := 0
 const MENU_LOAD := 1
 ## Botão "Menu" do canto de cima à esquerda (ver _build_game_menu).
 var game_menu: MenuButton
+## Botão "Diplomacia", ao lado do Menu, e as janelas da diplomacia.
+var diplomacy_button: Button
+var diplomacy_dialog: DiplomacyDialog
+## Pergunta ou aviso no mármore (ask).
+var message_dialog: MessageDialog
 ## Minimapa (canto esquerdo, abaixo do painel do turno; o Game chama setup).
 var minimap: Minimap
 var _minimap_panel: PanelContainer
@@ -107,6 +114,25 @@ func _ready() -> void:
 	_iron_icon.tooltip_text = "Ferro: vem das minas nas colinas com ferro (1 por trabalhador por turno; a mina não se esgota)."
 	_build_arsenal_rows()
 	_build_science_panel()
+	# Janelas da diplomacia por cima de tudo do HUD
+	diplomacy_dialog = DiplomacyDialog.new()
+	diplomacy_dialog.name = "DiplomacyDialog"
+	add_child(diplomacy_dialog)
+	message_dialog = MessageDialog.new()
+	message_dialog.name = "MessageDialog"
+	add_child(message_dialog)
+
+
+## Pergunta (ou aviso) no mármore: espera e retorna o botão escolhido.
+func ask(title: String, text: String, buttons: Array = ["OK"]) -> int:
+	message_dialog.open(title, text, buttons)
+	return await message_dialog.chosen
+
+
+## A diplomacia mudou: atualiza a janela, se aberta.
+func refresh_diplomacy() -> void:
+	if diplomacy_dialog:
+		diplomacy_dialog.refresh()
 
 
 ## Painel da unidade, preso ao canto inferior esquerdo. A barra de ações antiga
@@ -186,10 +212,24 @@ func _build_game_menu() -> void:
 	popup.add_item("Carregar partida   [L]", MENU_LOAD)
 	popup.about_to_popup.connect(func() -> void: menu_opening.emit())
 	popup.id_pressed.connect(func(id: int) -> void: menu_chosen.emit(id))
-	# O painel do turno vai para o lado do botão (e o minimapa o acompanha)
+	# Botão "Diplomacia" ao lado do Menu, também em pedra
+	diplomacy_button = Button.new()
+	diplomacy_button.name = "DiplomacyButton"
+	diplomacy_button.text = "Diplomacia"
+	diplomacy_button.focus_mode = Control.FOCUS_NONE
+	diplomacy_button.tooltip_text = "Impérios conhecidos: paz, guerra e confiança"
+	diplomacy_button.add_theme_font_size_override("font_size", 20)
+	StoneStyle.style_button(diplomacy_button)
+	diplomacy_button.pressed.connect(func() -> void: diplomacy_pressed.emit())
+	add_child(diplomacy_button)
+	move_child(diplomacy_button, $TurnPanel.get_index())
+	# O painel do turno vai para o lado dos botões (e o minimapa o acompanha)
 	var place := func() -> void:
-		$TurnPanel.position.x = game_menu.position.x + game_menu.size.x + 8.0
+		diplomacy_button.position = Vector2(game_menu.position.x + game_menu.size.x + 8.0, game_menu.position.y)
+		diplomacy_button.size.y = game_menu.size.y
+		$TurnPanel.position.x = diplomacy_button.position.x + diplomacy_button.size.x + 8.0
 	game_menu.resized.connect(place)
+	diplomacy_button.resized.connect(place)
 	place.call()
 
 

@@ -17,6 +17,35 @@ const DIRECTIONS: Array[Vector2i] = [
 	Vector2i(-1, 1), Vector2i(0, 1), Vector2i(1, 1),
 ]
 
+## Diplomacia da partida (o Game põe a dele aqui). Sem ela (testes, ferramentas),
+## todos são inimigos de todos, como antes de 30/10/2026.
+static var diplomacy: Diplomacy = null
+
+
+## Se [param a] e [param b] estão em guerra (podem se atacar e invadir).
+static func at_war(a: Player, b: Player) -> bool:
+	return a != b and (diplomacy == null or diplomacy.at_war(a, b))
+
+
+## Se [param attacker] pode atacar uma unidade de [param victim]: em guerra ou,
+## para o humano, numa GUERRA SURPRESA (em paz e fora da trégua: o ataque
+## declara a guerra sem aviso; o Game confirma antes). A máquina só ataca quem
+## já está em guerra com ela (ela declara guerra antes: AIDiplomacy).
+static func can_attack_player(attacker: Player, victim: Player) -> bool:
+	if at_war(attacker, victim):
+		return true
+	return attacker != victim and not attacker.is_ai and diplomacy != null and diplomacy.can_declare_war(attacker, victim)
+
+
+## Se uma unidade de [param player] pode entrar na casa pelo território: sem
+## dono, dele, de quem está em guerra com ele ou com fronteiras abertas. O
+## território de quem está em paz é fechado (decisão do usuário, 30/10/2026).
+static func territory_open(map: GameMap, player: Player, cell: Vector2i) -> bool:
+	var owner: Player = map.territory_owners.get(cell)
+	return owner == null or owner == player or diplomacy == null \
+			or diplomacy.at_war(player, owner) or diplomacy.open_borders(player, owner)
+
+
 ## Sem limite de movimentos (busca de caminho da ordem "Mover").
 const NO_LIMIT := 1 << 30
 ## Pontos de movimento por movimento (unit.movement) e o custo de um passo de
@@ -75,7 +104,7 @@ static func attack_targets(map: GameMap, unit: Unit, reachable: Dictionary, occu
 		for offset in attack_offsets(unit):
 			var target: Vector2i = cell + offset
 			var occupant: Unit = occupants.get(target)
-			if occupant == null or occupant.owner_player == unit.owner_player \
+			if occupant == null or not can_attack_player(unit.owner_player, occupant.owner_player) \
 					or not in_attack_range(map, unit, cell, target):
 				continue
 			if not best_distance.has(target) or distance < best_distance[target]:
@@ -208,13 +237,15 @@ static func can_enter(map: GameMap, unit: Unit, cell: Vector2i, occupants: Dicti
 		return boat != null and boat.can_carry(unit)
 	if is_enemy_city(map, unit, cell) and (unit.attack <= 0 or unit.is_ranged()):
 		return false
+	if not territory_open(map, unit.owner_player, cell):
+		return false
 	var occupant: Unit = occupants.get(cell)
 	return occupant == null or occupant.owner_player == unit.owner_player
 
 
 static func is_enemy_city(map: GameMap, unit: Unit, cell: Vector2i) -> bool:
 	var city_owner: Player = map.city_owners.get(cell)
-	return city_owner != null and city_owner != unit.owner_player
+	return city_owner != null and at_war(unit.owner_player, city_owner)
 
 
 ## Busca pelo menor custo (Dijkstra com "baldes": buckets[c] = casas

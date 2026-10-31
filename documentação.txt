@@ -2677,6 +2677,55 @@ CIÊNCIA E PESQUISA (scripts/science/technology.gd, Player.research)
   (AIController.choose_research). Ela ainda não põe cidadãos
   pesquisando na Prefeitura.
 
+DIPLOMACIA (fase 1 desde 30/10/2026, pedido do usuário; scripts/players/
+diplomacy.gd, scripts/ai/ai_diplomacy.gd, scripts/ui/diplomacy_dialog.gd,
+message_dialog.gd)
+- ENCONTRO: dois jogadores se conhecem quando um vê alguma unidade ou cidade
+  do outro (Game._check_contacts, pela visão das unidades e cidades; a cada
+  12 quadros e no começo de cada vez). Começam em PAZ, com confiança 0
+  (Indiferente). O humano vê o aviso "Primeiro encontro" no mármore.
+- ESTADOS: Paz, Guerra e Aliado (Aliado: fase 4). Em PAZ ninguém ataca o
+  outro, ninguém entra no território do outro (Movement.territory_open,
+  decisão do usuário: bloqueado) e ninguém pilha. Em GUERRA vale tudo
+  (ataque, invasão, pilhagem). Para guerrear é preciso DECLARAR: botão
+  "Declarar guerra" na janela de Diplomacia (o humano confirma) ou GUERRA
+  SURPRESA (pedido do usuário): o humano clica para atacar uma unidade de
+  quem está em paz, confirma, e o ataque declara a guerra sem aviso (é
+  traição). A máquina sempre declara formalmente (AIDiplomacy).
+- TRATADO DE PAZ: botão "Propor paz" (a máquina responde na hora; recusada,
+  só de novo daqui a 5 turnos) ou proposta da máquina (aviso com "Aceitar a
+  paz" e "Recusar"; no máximo uma a cada 5 turnos). A paz abre uma TRÉGUA de
+  10 turnos (ninguém declara guerra, nem de surpresa) e as unidades no
+  território do outro voltam para a casa livre mais próxima fora dele (isso
+  também acontece no começo de cada vez: Game._expel_from_closed_borders).
+- CONFIANÇA (como cada um vê cada outro, de -100 a +100; não é simétrica),
+  em faixas: Furioso (até -41), Indiferente (até 20), Amigável (até 60) e
+  Irmandade. Mexem nela: declaração de guerra -50 (do atacado), guerra
+  surpresa -80 (do atacado) e -20 (de todos que conhecem o traidor), cada
+  ataque sofrido -5, cidade perdida -30, paz assinada +10 (os dois),
+  inimigo em comum +2 por turno, +1 a cada 10 turnos de paz, e fora da
+  guerra ela volta 1 ponto para o zero a cada 5 turnos.
+- MÁQUINA (AIDiplomacy, no começo da vez dela): declara guerra a quem
+  alcança por terra (mesma massa de terra: GameMap.landmass) quando está
+  Furiosa e pelo menos tão forte, ou Indiferente com o dobro da força e o
+  exército pronto (personality.army_to_attack; já em guerra com alguém,
+  só Furiosa). Amigável e Irmandade nunca. Personalidade que não ataca
+  (army_to_attack 0), nunca. Força = ataque + defesa das unidades militares
+  de terra, pela energia. Paz: depois de 5 turnos de guerra, quando está
+  perdendo (força < 80% da do outro) ou cansada (30 turnos); Furiosa, só
+  perdendo feio (< 50%). A máquina só ataca, avança contra e se defende de
+  quem está em guerra com ela.
+- JANELA DE DIPLOMACIA: botão "Diplomacia" ao lado do Menu (pedra em
+  relevo); no mármore, uma linha por império conhecido: "Imperador do
+  Jogador N" (o líder é sempre o Imperador por enquanto; o título vai variar
+  com a civilização e o governo, sem nomes próprios: decisão do usuário), o
+  estado, a confiança DELE em você (rosto e faixa, com o número) e a
+  situação (tempo de paz ou de guerra, trégua); o botão declara guerra ou
+  propõe a paz (só na sua vez).
+- O save guarda a diplomacia (save antigo: ninguém se conhece; os encontros
+  acontecem de novo, em paz). Game.start_at_war (static) faz todos
+  começarem se conhecendo e em guerra, como antes: os testes antigos usam.
+
 SALVAR E CARREGAR (scripts/save/save_game.gd)
 - MENU DO JOGO (desde 30/10/2026, pedido do usuário): botão "Menu" (ícone
   de três barras) no canto de cima à esquerda, com a lista "Salvar
@@ -3109,6 +3158,18 @@ PRÓXIMO PASSO GRANDE 2: CONJUNTOS CULTURAIS DE UNIDADES E CIDADES
 [ ] IA: fazer e usar Quadrirremes e construir Docas (pescar)
 [x] Afluentes nos rios e mapa de três continentes com 3 jogadores
     (29/10/2026)
+[x] Diplomacia, fase 1: encontro, paz/guerra, guerra surpresa, trégua,
+    confiança, máquina declara guerra e faz a paz, janela de Diplomacia
+    (30/10/2026)
+[ ] Diplomacia, fase 2: "Propor encontro" (a máquina aceita ou não pela
+    confiança) e a tela de negociação
+[ ] Diplomacia, fase 3: comércio de ouro, recursos, armas do arsenal,
+    mapas e tecnologias, com a avaliação da máquina (preço pela confiança)
+[ ] Diplomacia, fase 4: fronteiras abertas, aliança (defesa mútua:
+    agressão a um aliado põe os dois em guerra com o agressor; recusar
+    quebra a aliança) e tratado de paz negociado (com ouro, recursos...)
+[ ] Diplomacia, fase 5: a máquina propõe encontros e negócios (no máximo
+    um a cada 5 rodadas por jogador) e traição de fronteiras abertas/aliança
 [ ] EDITOR DE MAPAS (pedido do usuário para depois): pintar terrenos,
     ferro, rios e a casa inicial de cada jogador, gravando o PNG e o
     JSON de data/maps/
@@ -4731,6 +4792,17 @@ PRÓXIMO PASSO GRANDE 2: CONJUNTOS CULTURAIS DE UNIDADES E CIDADES
   consumo 1 eram 3 e 9); Expansionista 7 cidades e 26 habitantes, mas
   sem chegar ao Quartel General (6 de 9 marcos). Testes de comida,
   classe, desordem, Marcenaria, derrota, Cartografia e IA passam.
+
+- DIPLOMACIA, FASE 1 (pedido do usuário, com as decisões: território em paz
+  bloqueado, a máquina ataca quando achar melhor, líder sempre "Imperador",
+  sem cidades nas negociações, e a guerra surpresa): ver a seção DIPLOMACIA.
+  Validação: teste novo (encontro e aviso, paz sem ataque da máquina e com
+  a guerra surpresa disponível ao humano, território fechado, sem pilhagem,
+  declaração, paz com trégua e expulsão, guerra surpresa com a confiança,
+  máquina Furiosa e mais forte declara guerra e o humano é avisado, janela,
+  save), screenshots (encontro, janela) e todos os testes antigos (agora
+  com Game.start_at_war); partida da máquina contra ela mesma com a
+  diplomacia: elas se encontram e ficam em paz as 100 rodadas.
 
 --------------------------------------------------------------
 7. BACKLOG (ideias para depois)

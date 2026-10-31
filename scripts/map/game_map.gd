@@ -69,6 +69,9 @@ var height := 0
 ## Dono de cada casa com cidade: {casa: Player}. Mantido pelo Game
 ## (refresh_territories); o Movement usa para as regras de invasão.
 var city_owners := {}
+## Dono do território de cada casa: {casa: Player}. Mantido pelo Game
+## (refresh_territories); o Movement fecha o território de quem está em paz.
+var territory_owners := {}
 ## Cidade em cada casa com cidade: {casa: City}. Também mantido pelo Game; a
 ## unidade usa para a defesa da Muralha (Unit.walls_defense_bonus).
 var cities := {}
@@ -100,6 +103,8 @@ var _bridge_layer: Node2D
 var _terrain := PackedByteArray()
 ## Casas de oceano (is_ocean): {casa: true}; vazio = calcular de novo.
 var _ocean := {}
+## Massa de terra de cada casa de terra (landmass): {casa: número}; vazio = calcular.
+var _landmass := {}
 ## Rios: cada um é a lista dos cantos da grade por onde passa (ver Rivers).
 var rivers: Array = []
 ## Madeira que resta nas florestas já exploradas: {casa: quantidade}. Casa de
@@ -489,6 +494,37 @@ func get_terrain(cell: Vector2i) -> Terrain.Type:
 	return _terrain[cell.y * width + cell.x] as Terrain.Type
 
 
+## Massa de terra da casa (continente ou ilha): o mesmo número para casas de
+## terra ligadas por terra (8 direções); -1 na água. Calculado uma vez e refeito
+## quando o terreno muda (a máquina só declara guerra a quem alcança: AIDiplomacy).
+func landmass(cell: Vector2i) -> int:
+	if _landmass.is_empty():
+		_find_landmasses()
+	return _landmass.get(cell, -1)
+
+
+func _find_landmasses() -> void:
+	_landmass = {}
+	var next_id := 0
+	for y in height:
+		for x in width:
+			var start := Vector2i(x, y)
+			if _landmass.has(start) or Terrain.is_navigable(get_terrain(start)):
+				continue
+			_landmass[start] = next_id
+			var queue: Array[Vector2i] = [start]
+			var head := 0
+			while head < queue.size():
+				var cell := queue[head]
+				head += 1
+				for direction in Movement.DIRECTIONS:
+					var other := cell + direction
+					if is_in_bounds(other) and not _landmass.has(other) and not Terrain.is_navigable(get_terrain(other)):
+						_landmass[other] = next_id
+						queue.append(other)
+			next_id += 1
+
+
 ## Se a casa é OCEANO: água ligada à borda do mapa (um lago no meio da terra
 ## não conta). Calculado uma vez e refeito quando o terreno muda.
 func is_ocean(cell: Vector2i) -> bool:
@@ -555,6 +591,7 @@ func mark_deep_water() -> void:
 func set_terrain(cell: Vector2i, type: Terrain.Type) -> void:
 	_terrain[cell.y * width + cell.x] = type
 	_ocean = {} # refeito na próxima consulta (is_ocean)
+	_landmass = {}
 	_wood.erase(cell)
 	_terrain_image.set_pixelv(cell, Color8(type, 0, 0))
 	_terrain_map.update(_terrain_image)

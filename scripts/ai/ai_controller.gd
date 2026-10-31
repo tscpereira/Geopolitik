@@ -242,8 +242,8 @@ func _threatened_cells(game: Game, player: Player) -> Dictionary:
 	var threatened := {}
 	var occupants := game.occupants()
 	for other in game.players:
-		if other == player:
-			continue
+		if not Movement.at_war(player, other):
+			continue # só quem está em guerra ameaça (a guerra surpresa do humano não dá para prever)
 		for enemy in other.units:
 			if enemy.attack <= 0 or enemy.is_naval() or enemy.transport:
 				continue # não ataca, não ameaça
@@ -281,8 +281,8 @@ func _distance_to_enemies(game: Game, player: Player) -> Dictionary:
 	var distance := {}
 	var queue: Array[Vector2i] = []
 	for other in game.players:
-		if other == player:
-			continue
+		if not Movement.at_war(player, other):
+			continue # só avança contra quem está em guerra com ela
 		for enemy in other.units:
 			if not distance.has(enemy.cell):
 				distance[enemy.cell] = 0

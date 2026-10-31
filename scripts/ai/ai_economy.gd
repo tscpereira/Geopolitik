@@ -776,7 +776,7 @@ func _garrison_needed(city: City) -> int:
 ## Se há unidade militar inimiga a até [param radius] casas.
 func _enemy_near(cell: Vector2i, radius: int) -> bool:
 	for other in _game.players:
-		if other == _player:
+		if not Movement.at_war(_player, other):
 			continue
 		for unit in other.units:
 			if unit.attack > 0 and maxi(absi(unit.cell.x - cell.x), absi(unit.cell.y - cell.y)) <= radius:

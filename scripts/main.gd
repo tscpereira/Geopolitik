@@ -16,6 +16,9 @@ static var map_name := "tres_continentes"
 ## Save de outro mapa à espera: o jogo recarrega a cena com o mapa dele e então
 ## o carrega (ver restore_state).
 static var _pending_load := {}
+## Começa com todos se conhecendo e em guerra (como era antes da diplomacia; os
+## testes antigos usam).
+static var start_at_war := false
 const WARRIOR: UnitType = preload("res://data/units/guerreiro.tres")
 const ARCHER: UnitType = preload("res://data/units/arqueiro.tres")
 const LIGHT_CAVALRY: UnitType = preload("res://data/units/cavalaria_leve.tres")
@@ -87,6 +90,13 @@ var _finished_workers: Array[Unit] = []
 @onready var hud: Hud = $HUD
 ## Névoa de guerra (criada em _ready, logo depois das cidades na cena).
 var fog: FogOfWar
+## Relações entre os jogadores (ver Diplomacy). Também posta em Movement.diplomacy.
+var diplomacy: Diplomacy
+## Quadros desde a última busca de primeiros encontros (_check_contacts).
+var _contact_frames := 0
+## Avisos de diplomacia para o humano, um de cada vez: [{title, text,
+## buttons, callback}] (ver _queue_diplomacy_notice).
+var _diplomacy_queue: Array = []
 
 
 func _ready() -> void:
@@ -107,12 +117,22 @@ func _ready() -> void:
 		players.append(Player.new(players.size() + 1, entry["nome"], Color.html(entry["cor"]), entry.get("maquina", true)))
 		starts.append(Vector2i(int(entry["inicio"][0]), int(entry["inicio"][1])))
 	_spawn_starting_units(starts)
+	diplomacy = Diplomacy.new()
+	Movement.diplomacy = diplomacy
+	if start_at_war:
+		for i in players.size():
+			for j in range(i + 1, players.size()):
+				diplomacy.meet(players[i], players[j])
+				diplomacy.set_state(players[i], players[j], Diplomacy.State.WAR)
 
 	hud.action_pressed.connect(_on_unit_action)
 	hud.research_pressed.connect(_on_research_pressed)
 	hud.tech_tree_pressed.connect(_open_tech_tree)
 	hud.menu_opening.connect(func() -> void: hud.set_save_enabled(_can_save()))
 	hud.menu_chosen.connect(_on_game_menu)
+	hud.diplomacy_pressed.connect(func() -> void: hud.diplomacy_dialog.open(self))
+	hud.diplomacy_dialog.declare_war_requested.connect(request_declare_war)
+	hud.diplomacy_dialog.peace_requested.connect(request_peace)
 	Unit.watch = is_watched
 	hud.tech_tree_dialog.research_chosen.connect(_on_tree_research_chosen)
 	hud.city_window.closed.connect(_on_city_window_closed)
@@ -144,6 +164,10 @@ func _load_map(name: String) -> Dictionary:
 
 func _process(_delta: float) -> void:
 	_update_vision()
+	_contact_frames += 1
+	if _contact_frames >= CONTACT_CHECK_FRAMES:
+		_contact_frames = 0
+		_check_contacts()
 	var cell := game_map.world_to_cell(get_global_mouse_position())
 	if cell != _hover_cell:
 		_hover_cell = cell
@@ -159,7 +183,8 @@ func _unhandled_input(event: InputEvent) -> void:
 	var key: int = event.keycode if event is InputEventKey and event.pressed and not event.echo else KEY_NONE
 	if (hud.city_window.visible or hud.city_name_dialog.visible or hud.notice_dialog.visible
 			or hud.save_dialog.visible or hud.invasion_dialog.visible or hud.research_dialog.visible
-			or hud.tech_dialog.visible or hud.tech_tree_dialog.visible):
+			or hud.tech_dialog.visible or hud.tech_tree_dialog.visible or hud.message_dialog.visible
+			or hud.diplomacy_dialog.visible):
 		return # as janelas cuidam dos próprios cliques e teclas
 	# Carregar: L (no editor do Godot o F9 pausa o jogo embutido) ou F9
 	if (key == KEY_L or key == KEY_F9) and not _is_busy:
@@ -328,6 +353,7 @@ func territory_owner(cell: Vector2i) -> City:
 ## redesenha as fronteiras.
 func refresh_territories() -> void:
 	_territory = {}
+	game_map.territory_owners = {}
 	game_map.city_owners = {}
 	game_map.cities = {}
 	for city in cities():
@@ -335,6 +361,7 @@ func refresh_territories() -> void:
 		game_map.cities[city.cell] = city
 		for cell in city.territory:
 			_territory[cell] = city
+			game_map.territory_owners[cell] = city.owner_player
 	territory_overlay.set_territories(_territory)
 	game_map.redraw_roads() # a cidade liga as estradas vizinhas
 
@@ -694,7 +721,8 @@ func pillage_target(cell: Vector2i) -> Dictionary:
 func is_pillageable_by(player: Player, cell: Vector2i) -> bool:
 	var target := pillage_target(cell)
 	var owner_city := territory_owner(cell)
-	return not target.is_empty() and target["owner"] != player and (owner_city == null or owner_city.owner_player != player)
+	return (not target.is_empty() and target["owner"] != player and (owner_city == null or owner_city.owner_player != player)
+			and Movement.at_war(player, target["owner"]))
 
 
 ## Motivo pelo qual a unidade não pode pilhar a casa em que está ("" = pode).
@@ -710,6 +738,8 @@ func pillage_error(unit: Unit) -> String:
 		return "Não há fazenda, madeireira nem mina nesta casa."
 	if target["owner"] == unit.owner_player:
 		return "Não dá para pilhar as próprias melhorias."
+	if not Movement.at_war(unit.owner_player, target["owner"]):
+		return "Só se pilha quem está em guerra com você (veja a Diplomacia)."
 	if not is_pillageable_by(unit.owner_player, unit.cell):
 		return "Não dá para pilhar no próprio território."
 	if unit.moves_left < PILLAGE_COST * Movement.POINTS:
@@ -895,7 +925,7 @@ func check_invasion(unit: Unit) -> void:
 	if game_over or not is_instance_valid(unit) or unit.attack <= 0:
 		return
 	var city := get_city_at(unit.cell)
-	if city == null or city.owner_player == unit.owner_player:
+	if city == null or not Movement.at_war(unit.owner_player, city.owner_player):
 		return
 	var raze := false
 	if unit.owner_player.is_ai:
@@ -927,6 +957,7 @@ func _raze_tooltip(city: City) -> String:
 ## primeira cidade dele. Retorna a mensagem.
 func occupy_city(city: City, new_owner: Player) -> String:
 	var old_owner := city.owner_player
+	diplomacy.on_city_lost(old_owner, new_owner)
 	old_owner.cities.erase(city)
 	var was_capital := city.is_capital
 	city.is_capital = new_owner.cities.is_empty()
@@ -948,6 +979,7 @@ func occupy_city(city: City, new_owner: Player) -> String:
 ## (RuinsLayer). Obras em andamento se perdem. Retorna a mensagem.
 func raze_city(city: City, raider: Player) -> String:
 	var old_owner := city.owner_player
+	diplomacy.on_city_lost(old_owner, raider)
 	var loot := loot_amount(city)
 	old_owner.gold -= loot
 	raider.gold += loot
@@ -1077,6 +1109,7 @@ func attack(attacker: Unit, target_cell: Vector2i) -> void:
 	else:
 		await attacker.play_attack(defender.position)
 	var result := Combat.resolve(attacker, defender, _rng)
+	diplomacy.on_attacked(defender.owner_player, attacker.owner_player)
 	attacker.skip_turn()
 	_show_damage(defender, result.damage_to_defender)
 	if not attacker.is_ranged():
@@ -1192,8 +1225,15 @@ func _on_cell_clicked(cell: Vector2i) -> void:
 	var own_unit := unit if unit and unit.owner_player == current and not unit.hidden_in_city else null
 	var mill := lumber_mill_at(cell)
 	if selected_unit and _attack_targets.has(cell):
-		selected_unit.goto_target = Unit.NO_TARGET # ordem manual cancela o "Mover"
-		_human_action(attack.bind(selected_unit, cell))
+		var attacker := selected_unit
+		var victim: Unit = occupants().get(cell)
+		# Unidade de quem está em paz: guerra surpresa (pergunta antes)
+		if victim and not Movement.at_war(attacker.owner_player, victim.owner_player):
+			if not await _confirm_surprise_attack(victim.owner_player) or not is_instance_valid(attacker) \
+					or not is_instance_valid(victim) or attacker != selected_unit:
+				return
+		attacker.goto_target = Unit.NO_TARGET # ordem manual cancela o "Mover"
+		_human_action(attack.bind(attacker, cell))
 	elif selected_unit and own_unit and own_unit.can_carry(selected_unit) and _reachable.has(cell):
 		selected_unit.goto_target = Unit.NO_TARGET
 		_human_action(move_unit.bind(selected_unit, cell)) # embarca na Galé
@@ -1701,6 +1741,10 @@ func _select_next_unit() -> void:
 
 func _on_turn_started(player: Player, turn_number: int) -> void:
 	print("Turno %d - vez do %s" % [turn_number, player.display_name])
+	diplomacy.turn = turn_number
+	diplomacy.update_trust(player, players)
+	_check_contacts()
+	_expel_from_closed_borders(player)
 	_awaiting_end_turn = false
 	hud.set_turn(turn_number, player)
 	_heal_fortified_units(player)
@@ -1753,6 +1797,7 @@ func _play_ai_turn(player: Player) -> void:
 	select_unit(null)
 	if not _ais.has(player):
 		_ais[player] = AIController.new()
+	AIDiplomacy.play(self, player)
 	await _ais[player].play_turn(self, player)
 	select_unit(null)
 	_is_busy = false
@@ -2096,6 +2141,196 @@ func _eliminate(player: Player) -> void:
 	_update_vision()
 
 
+# --- Diplomacia (ver Diplomacy) -------------------------------------------------
+
+## Quadros entre duas buscas de primeiros encontros.
+const CONTACT_CHECK_FRAMES := 12
+
+
+## Se o humano pode agir na diplomacia agora (declarar guerra, propor paz): na
+## vez dele, sem nada acontecendo.
+func can_act_in_diplomacy() -> bool:
+	return not _is_busy and not game_over and not TurnManager.current_player().is_ai
+
+
+## "Imperador do Jogador 2" (por enquanto todo líder é Imperador; o título vai
+## variar com a civilização e o governo).
+static func leader_name(player: Player) -> String:
+	return "Imperador do %s" % player.display_name
+
+
+## Primeiros encontros: dois jogadores se conhecem quando um vê alguma unidade
+## ou cidade do outro (pela visão das unidades e cidades). Começam em paz.
+func _check_contacts() -> void:
+	if diplomacy == null:
+		return
+	for i in players.size():
+		for j in range(i + 1, players.size()):
+			var a: Player = players[i]
+			var b: Player = players[j]
+			if a.eliminated or b.eliminated or diplomacy.have_met(a, b):
+				continue
+			if _sees(a, b) or _sees(b, a):
+				diplomacy.meet(a, b)
+				print("Primeiro encontro: %s e %s (paz)" % [a.display_name, b.display_name])
+				if not a.is_ai or not b.is_ai:
+					var other := b if not a.is_ai else a
+					_queue_diplomacy_notice("Primeiro encontro",
+							"O [b]%s[/b] se apresenta ao seu povo.\n\nNossos impérios começam em [b]PAZ[/b]: ninguém ataca o outro nem entra no território dele. Para guerrear, é preciso declarar guerra (ou atacar de surpresa, o que é traição).\n\nConfiança inicial: Indiferente. Veja tudo no botão Diplomacia." % leader_name(other))
+
+
+## Se [param viewer] vê alguma unidade ou cidade de [param other].
+func _sees(viewer: Player, other: Player) -> bool:
+	var sources: Array[Vector3i] = []
+	for unit in viewer.units:
+		sources.append(Vector3i(unit.sight_cell.x, unit.sight_cell.y, unit.type.vision))
+	for city in viewer.cities:
+		sources.append(Vector3i(city.cell.x, city.cell.y, FogOfWar.CITY_VISION))
+	var things: Array[Vector2i] = []
+	for unit in other.units:
+		if unit.working_mill == null and unit.transport == null:
+			things.append(unit.cell)
+	for city in other.cities:
+		things.append(city.cell)
+	for source in sources:
+		for thing in things:
+			if maxi(absi(thing.x - source.x), absi(thing.y - source.y)) <= source.z:
+				return true
+	return false
+
+
+## Declaração de guerra de [param aggressor] a [param target] (ou guerra
+## surpresa, com [param surprise]). O humano atacado fica sabendo.
+func declare_war(aggressor: Player, target: Player, surprise := false) -> void:
+	if not diplomacy.can_declare_war(aggressor, target):
+		return
+	diplomacy.declare_war(aggressor, target, players, surprise)
+	print("%s declarou guerra%s a %s" % [aggressor.display_name, " SURPRESA" if surprise else "", target.display_name])
+	if not target.is_ai:
+		_queue_diplomacy_notice("Guerra!", "O [b]%s[/b] declarou [color=#%s][b]GUERRA[/b][/color] contra você.\n\nAs unidades dele podem atacar as suas e invadir o seu território (e você, as dele)." % [
+				leader_name(aggressor), StoneStyle.NEGATIVE.to_html(false)])
+	hud.refresh_diplomacy()
+
+
+## Tratado de paz entre [param a] e [param b]: trégua, e as unidades de cada um
+## no território do outro voltam para fora dele.
+func sign_peace(a: Player, b: Player) -> void:
+	diplomacy.make_peace(a, b)
+	print("Paz entre %s e %s" % [a.display_name, b.display_name])
+	_expel_from_closed_borders(a)
+	_expel_from_closed_borders(b)
+	hud.refresh_diplomacy()
+
+
+## A máquina [param ai] propõe a paz ao humano [param human] (aviso com Aceitar e Recusar).
+func offer_peace_to_human(ai: Player, human: Player) -> void:
+	_queue_diplomacy_notice("Proposta de paz",
+			"O [b]%s[/b] propõe um tratado de paz.\n\nCom a paz, a guerra acaba e começa uma trégua de %d turnos: ninguém declara guerra nesse tempo. As unidades no território do outro voltam para fora dele." % [
+				leader_name(ai), Diplomacy.TRUCE_TURNS],
+			["Aceitar a paz", "Recusar"],
+			func(choice: int) -> void:
+				if choice == 0 and diplomacy.at_war(ai, human):
+					sign_peace(ai, human)
+					hud.show_message("Paz com o %s." % leader_name(ai), Color(0.75, 1, 0.75))
+				elif choice != 0:
+					diplomacy.add_trust(ai, human, -5))
+
+
+## Botão "Declarar guerra" da janela de Diplomacia: confirma antes.
+func request_declare_war(target: Player) -> void:
+	var human := viewer()
+	if human == null or not diplomacy.can_declare_war(human, target):
+		return
+	var choice: int = await hud.ask("Declarar guerra?",
+			"Declarar [color=#%s][b]GUERRA[/b][/color] ao [b]%s[/b]?\n\nA confiança dele em você cai %d. Vocês poderão se atacar e invadir o território um do outro até assinarem a paz." % [
+				StoneStyle.NEGATIVE.to_html(false), leader_name(target), -Diplomacy.DECLARE_WAR_TRUST],
+			["Declarar guerra", "Cancelar"])
+	if choice == 0:
+		declare_war(human, target)
+		hud.show_message("Guerra contra o %s." % leader_name(target), Color(1, 0.6, 0.4))
+
+
+## Botão "Propor paz" da janela de Diplomacia: a máquina responde na hora.
+func request_peace(target: Player) -> void:
+	var human := viewer()
+	if human == null or not diplomacy.at_war(human, target):
+		return
+	if not diplomacy.can_propose(human, target):
+		hud.show_message("O %s não quer ouvir outra proposta tão cedo." % leader_name(target), Color(1, 0.6, 0.4))
+		return
+	diplomacy.note_proposal(human, target)
+	if AIDiplomacy.accepts_peace(self, target, human):
+		sign_peace(human, target)
+		await hud.ask("Paz aceita", "O [b]%s[/b] aceita a paz. Começa uma trégua de %d turnos." % [leader_name(target), Diplomacy.TRUCE_TURNS], ["OK"])
+	else:
+		await hud.ask("Paz recusada", "O [b]%s[/b] recusa a paz por enquanto.\n\nTente de novo em %d turnos." % [leader_name(target), Diplomacy.PROPOSAL_INTERVAL], ["OK"])
+
+
+## Ataque do humano a uma unidade de quem está em paz com ele: pergunta antes,
+## porque é uma GUERRA SURPRESA (traição: a confiança do atacado e de quem te
+## conhece cai). Retorna true se o ataque deve seguir.
+func _confirm_surprise_attack(victim: Player) -> bool:
+	var human := viewer()
+	var choice: int = await hud.ask("Guerra surpresa?",
+			"Você está em [b]paz[/b] com o [b]%s[/b]. Atacar agora, sem aviso, é uma [color=#%s][b]GUERRA SURPRESA[/b][/color]: uma traição.\n\nA confiança dele em você cai %d, e a de todos os imperadores que te conhecem cai %d." % [
+				leader_name(victim), StoneStyle.NEGATIVE.to_html(false), -Diplomacy.SURPRISE_WAR_TRUST, -Diplomacy.SURPRISE_WAR_WITNESS_TRUST],
+			["Atacar (guerra surpresa)", "Cancelar"])
+	if choice != 0 or not diplomacy.can_declare_war(human, victim):
+		return false
+	declare_war(human, victim, true)
+	return true
+
+
+## Unidades de [param player] dentro do território de quem está em paz com ele
+## (sem fronteiras abertas) vão para a casa livre mais próxima fora dele.
+func _expel_from_closed_borders(player: Player) -> void:
+	var current := occupants()
+	for unit in player.units:
+		if unit.working_mill or unit.transport or Movement.territory_open(game_map, player, unit.cell):
+			continue
+		var cell := _nearest_open_cell(unit, current)
+		if cell == Unit.NO_TARGET:
+			continue
+		current.erase(unit.cell)
+		unit.cell = cell
+		unit.position = game_map.cell_to_world(cell)
+		current[cell] = unit
+		print("%s (%s) saiu do território fechado para %s" % [unit.type.display_name, player.display_name, cell])
+
+
+func _nearest_open_cell(unit: Unit, current: Dictionary) -> Vector2i:
+	for radius in range(1, 12):
+		for y in range(-radius, radius + 1):
+			for x in range(-radius, radius + 1):
+				if maxi(absi(x), absi(y)) != radius:
+					continue
+				var cell := unit.cell + Vector2i(x, y)
+				if Movement.can_stand(game_map, unit.type, cell) and not current.has(cell) \
+						and Movement.territory_open(game_map, unit.owner_player, cell):
+					return cell
+	return Unit.NO_TARGET
+
+
+## Aviso de diplomacia para o humano (um de cada vez, em ordem). Com
+## [param callback], ele recebe o botão escolhido.
+func _queue_diplomacy_notice(title: String, text: String, buttons: Array = ["OK"], callback := Callable()) -> void:
+	_diplomacy_queue.append({"title": title, "text": text, "buttons": buttons, "callback": callback})
+	if _diplomacy_queue.size() == 1:
+		_show_diplomacy_notices.call_deferred()
+
+
+func _show_diplomacy_notices() -> void:
+	while not _diplomacy_queue.is_empty():
+		var notice: Dictionary = _diplomacy_queue[0]
+		var choice: int = await hud.ask(notice["title"], notice["text"], notice["buttons"])
+		var callback: Callable = notice["callback"]
+		if callback.is_valid():
+			callback.call(choice)
+		if not _diplomacy_queue.is_empty():
+			_diplomacy_queue.pop_front()
+		hud.refresh_diplomacy()
+
+
 # --- Salvar e carregar (ver SaveGame) ----------------------------------------
 
 ## F5 / L (ou F9): janela dos espaços de save. Salvar só na vez do humano, sem nada
@@ -2159,6 +2394,7 @@ func capture_state() -> Dictionary:
 			data["ai_turns_waiting"] = _ais[player].turns_waiting if _ais.has(player) else 0
 		players_data.append(data)
 	return {"turn_manager": TurnManager.to_dict(), "map_name": map_name, "map": game_map.to_dict(), "players": players_data,
+			"diplomacy": diplomacy.to_dict(),
 			"ruins": ruins_layer.to_dict()}
 
 
@@ -2247,6 +2483,11 @@ func restore_state(data: Dictionary) -> void:
 		if city.has_large_territory() and not city.territory_expanded:
 			expand_territory(city)
 	TurnManager.restore(players, data["turn_manager"])
+	# Save anterior à diplomacia: ninguém se conhece; os encontros acontecem de novo (em paz)
+	diplomacy = Diplomacy.from_dict(data.get("diplomacy", {}))
+	diplomacy.turn = TurnManager.turn_number
+	Movement.diplomacy = diplomacy
+	_diplomacy_queue.clear()
 	var current := TurnManager.current_player()
 	print("Partida carregada: turno %d, vez do %s" % [TurnManager.turn_number, current.display_name])
 	hud.set_turn(TurnManager.turn_number, current)
