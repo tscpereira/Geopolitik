@@ -15,7 +15,8 @@ extends SceneTree
 ## Passos:
 ##   1. tira o fundo verde (e o verde que vaza nas bordas);
 ##   2. na folha, acha as 3 figuras pelas colunas com desenho (sem achar 3,
-##      divide a folha em três partes iguais);
+##      divide a folha em três partes iguais), avisa se alguma encosta na
+##      borda (cortada) e recorta as três com o mesmo tamanho e enquadramento;
 ##   3. recorta cada uma no tamanho da figura, reduz só se passar de
 ##      MAX_HEIGHT de altura (a resolução alta é o que importa aqui) e grava
 ##      em assets/leaders/<líder>_<brava|neutra|feliz>.png (Nation.portrait).
@@ -47,7 +48,10 @@ func _initialize() -> void:
 			return
 		single.save_png(ProjectSettings.globalize_path("%s%s_%s_original.png" % [SHEETS, leader, args[2]]))
 		_remove_green(single)
-		_save(single, _bounding_box(single, Vector2i(0, single.get_width() - 1)), leader, args[2])
+		var box := _bounding_box(single, Vector2i(0, single.get_width() - 1))
+		if box.position.x <= 0 or box.end.x >= single.get_width() or box.position.y <= 0:
+			print("  aviso: o retrato encosta na borda (pode estar cortado)")
+		_save(single, box, leader, args[2])
 	elif args.size() == 4:
 		# Três imagens separadas, na ordem brava, neutra, feliz
 		for i in 3:
@@ -67,8 +71,20 @@ func _initialize() -> void:
 		sheet.save_png(ProjectSettings.globalize_path(SHEETS + leader + "_folha.png"))
 		_remove_green(sheet)
 		var columns := _figure_columns(sheet)
+		var boxes: Array[Rect2i] = []
 		for i in 3:
-			_save(sheet, _bounding_box(sheet, columns[i]), leader, MOODS[i])
+			boxes.append(_bounding_box(sheet, columns[i]))
+			if boxes[i].position.x <= columns[i].x or boxes[i].end.x > columns[i].y or boxes[i].position.y <= 0:
+				print("  aviso: o retrato %s encosta na borda (pode estar cortado; peça de novo com mais margem)" % MOODS[i])
+		# Os três com o MESMO tamanho e enquadramento (as mesmas linhas, a mesma
+		# largura em volta do centro de cada figura): ao mudar de expressão no
+		# encontro, só o rosto muda, a imagem não pula.
+		var top: int = boxes.map(func(b: Rect2i) -> int: return b.position.y).min()
+		var bottom: int = boxes.map(func(b: Rect2i) -> int: return b.end.y).max()
+		var width: int = boxes.map(func(b: Rect2i) -> int: return b.size.x).max()
+		for i in 3:
+			var x := boxes[i].get_center().x - width / 2
+			_save(sheet, Rect2i(x, top, width, bottom - top), leader, MOODS[i])
 	quit()
 
 
@@ -86,7 +102,11 @@ func _save(image: Image, box: Rect2i, leader: String, mood: String) -> void:
 	if box.size.x <= 0:
 		print("ERRO: retrato %s vazio" % mood)
 		return
-	var portrait := image.get_region(box.grow(4).intersection(Rect2i(Vector2i.ZERO, image.get_size())))
+	# Fora da imagem fica transparente (o recorte mantém o tamanho pedido)
+	var area := box.grow(4)
+	var portrait := Image.create(area.size.x, area.size.y, false, Image.FORMAT_RGBA8)
+	var inside := area.intersection(Rect2i(Vector2i.ZERO, image.get_size()))
+	portrait.blit_rect(image, inside, inside.position - area.position)
 	if portrait.get_height() > MAX_HEIGHT:
 		var width := roundi(portrait.get_width() * float(MAX_HEIGHT) / portrait.get_height())
 		portrait.resize(width, MAX_HEIGHT, Image.INTERPOLATE_LANCZOS)

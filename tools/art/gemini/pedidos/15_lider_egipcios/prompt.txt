@@ -1,20 +1,25 @@
 I am making the art of a 2D turn-based strategy game about ancient civilizations. The attached image shows three units already made for the game. It is ONLY the STYLE REFERENCE: paint in exactly this painted style, with the same detail, palette and light. Do not copy or include those units.
 
-Create ONE LARGE IMAGE: the NEUTRAL portrait of a leader. It is shown big, on the diplomacy screen, when the player meets this leader, so make it LARGE and DETAILED: a tall portrait-format image (2:3, like 1024 x 1536 pixels or bigger), never a small or square thumbnail. (The angry and happy versions will be made later by editing this same image.)
+Create ONE WIDE IMAGE with the SAME leader painted THREE times, side by side, with three facial expressions. Each portrait is cut out and shown BIG on the diplomacy screen, so the image must be as LARGE as you can make it: landscape 16:9, at least 3072 x 1728 pixels (4K if possible). Never a small image.
 
 STYLE (copy it from the attached units):
 - Detailed painted digital illustration with realistic proportions and a dignified, heroic look: soft painted shading, visible texture of skin, cloth and metal, rich but natural colors. Not cartoon, not chibi, not anime, not pixel art, no thick black outlines, not a photo.
-- Soft daylight from the TOP-LEFT.
+- Soft daylight from the TOP-LEFT, the same in the three portraits.
 
-FRAMING (very important):
-- ONE portrait of the leader, from the head down to about the WAIST, facing the viewer (turned very slightly, three-quarter), centered, the head near the top and the figure filling most of the height. Nothing cropped on the sides; the bottom of the figure (the waist) may touch the bottom of the image.
-- Only ONE person in the image.
-- No throne, no room, no landscape, no props apart from what the leader wears or holds.
+LAYOUT AND FRAMING (very important, follow every point):
+- The image is split into THREE EQUAL VERTICAL PANELS (left, middle, right), each one third of the width, on ONE flat solid green background (#00B140) with no lines between the panels.
+- One portrait per panel, centered in its panel: the leader from the top of the head down to the WAIST, facing the viewer (turned very slightly, three-quarter).
+- THE WHOLE FIGURE STAYS INSIDE ITS PANEL: hair, shoulders, arms, hands, cloak, cape, weapons and every piece of clothing. Keep a clear band of green of at least 6% of the panel width on the LEFT and on the RIGHT of each figure, and green above the head. The cloak hangs close to the body, it does not spread out to the sides. Nothing is cut by the edges of the image or touches the neighbouring portrait. Only the waist (the bottom of the figure) may touch the bottom edge.
+- The figure is tall in its panel: the head near the top, the body filling about 85% of the height.
+- The three portraits are THE SAME PAINTING repeated: exactly the same man, face shape, hair, clothes, cloak, jewellery, colors, size, position, pose and hands, as if copied and pasted. ONLY THE FACE (brows, eyes, mouth, cheeks) changes between them. The hands do not change.
+- Exactly three people in the image, one per panel. No throne, no room, no landscape, no props apart from what the leader wears or holds. No text, no labels, no numbers, no frames.
 
 THE LEADER, an Egyptian pharaoh: a striped gold-and-blue nemes headdress with the golden cobra (uraeus) on the brow, a braided ceremonial false beard, eyes lined with kohl, a wide broad collar of gold and lapis beads on the bare chest, golden arm bands, holding a crook.
 
-THE EXPRESSION:
-- NEUTRAL (used in peace): calm, composed and dignified, a steady attentive look, mouth relaxed and closed; hands at rest.
+THE THREE PANELS, from left to right:
+- LEFT panel, ANGRY (used when at war): brows lowered and drawn together, a hard glare straight at the viewer, jaw clenched, mouth tight and turned down.
+- MIDDLE panel, NEUTRAL (used in peace): calm, composed and dignified, a steady attentive look, mouth relaxed and closed.
+- RIGHT panel, HAPPY (used when the relation is good): a warm, confident smile that reaches the eyes (a little of the teeth may show), relaxed brows, cheeks slightly raised.
 
 No text, no labels, no frames, no borders.
 

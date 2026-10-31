@@ -2754,14 +2754,24 @@ message_dialog.gd)
   eras): assets/leaders/<líder>_<brava|neutra|feliz>.png, da cintura para
   cima, fundo transparente. Pedidos ao Gemini 13 a 18 (lider_gregos,
   lider_romanos, lider_egipcios, lider_fenicios, lider_americanos,
-  lider_ingleses; um por líder, com as 3 expressões em TRÊS IMAGENS
-  SEPARADAS e grandes, em pé (2:3, 1024 x 1536 ou mais), no estilo das
-  unidades; pedido do usuário: o líder em resolução proporcional ao
-  palco, bem maior que os outros desenhos; numa folha só cada retrato
-  sairia com ~340 px): Gregos como Alexandre, o Grande; Romanos, um
+  lider_ingleses; um por líder, no estilo das unidades; pedido do
+  usuário: o líder em resolução proporcional ao palco, bem maior que os
+  outros desenhos): Gregos como Alexandre, o Grande; Romanos, um
   cônsul de toga branca e coroa de louros; Egípcios, um faraó; Fenícios,
   um general como Aníbal; Americanos, um líder colonial do século 18;
-  Ingleses, um chefe celta. FLUXO (desde 30/10/2026: no grego, o Gemini
+  Ingleses, um chefe celta. PEDIDO ATUAL (30/10/2026, pedido do usuário:
+  as três expressões num pedido só; nas edições do rosto uma a uma a
+  imagem inteira mudava de uma expressão para outra, e a capa do grego
+  saiu cortada à esquerda): UMA FOLHA LARGA, 16:9, de 3072 x 1728 ou
+  mais (4K se der), com TRÊS PAINÉIS IGUAIS (bravo, neutro, feliz, da
+  esquerda para a direita): a mesma pintura repetida, só o rosto muda
+  (as mãos também não); cada figura inteira dentro do seu painel, com
+  faixa verde de pelo menos 6% dos lados e acima da cabeça, a capa junto
+  ao corpo; só a cintura encosta embaixo. Importar: -- folha.png <líder>:
+  os três saem com o MESMO tamanho e enquadramento (mesmas linhas,
+  mesma largura em volta do centro de cada figura) e o importador avisa
+  quando uma figura encosta na borda (cortada). Os pedidos de edição do
+  rosto (edicao_*.txt) saíram. FLUXO ANTERIOR (no grego, o Gemini
   fez o neutro sozinho, grande e bom, mas não as outras duas; a folha
   com as três saiu estreita, cortada e com OUTRO homem): prompt.txt pede
   SÓ O NEUTRO, grande; edicao_brava.txt e edicao_feliz.txt pedem para
@@ -4940,6 +4950,14 @@ PRÓXIMO PASSO GRANDE 2: CONJUNTOS CULTURAIS DE UNIDADES E CIDADES
   ele responde com uma das falas de guerra e fica bravo; paz aceita: fala
   de paz e feliz), screenshots e testes do encontro, diplomacia e
   audiência.
+
+- PEDIDO DOS LÍDERES REFEITO (pedido do usuário: a imagem mudava inteira
+  entre as expressões e a capa do grego saiu cortada): ver DIPLOMACIA
+  (RETRATOS DOS LÍDERES). As três expressões numa folha só, com regras
+  de margem e "mesma pintura, só o rosto muda"; o importador iguala o
+  tamanho dos três e avisa corte. Validação: folha montada com os três
+  gregos atuais (saíram 601 x 876 os três, com o aviso de borda que
+  confirma a capa cortada) e os pedidos 13 a 18 regenerados.
 
 --------------------------------------------------------------
 7. BACKLOG (ideias para depois)

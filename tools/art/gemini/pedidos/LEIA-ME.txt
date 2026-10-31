@@ -25,17 +25,12 @@ Cada pasta é um pedido, com uma folha do tema:
                         tundra e neve (5x1; no jogo, provisórias geradas
                         por tools/art/gen_terrenos_novos.gd)
   13 a 18 lider_*       os LÍDERES (gregos, romanos, egípcios, fenícios,
-                        americanos, ingleses): 3 retratos do mesmo líder,
-                        da cintura para cima, grandes. Para cada líder,
-                        numa CONVERSA NOVA: 1) prompt.txt (com
-                        referencia.png) dá o NEUTRO; salve como
-                        neutra.png. 2) Em OUTRA conversa nova, anexando
-                        só neutra.png, edicao_brava.txt; e em mais uma,
-                        edicao_feliz.txt (na mesma conversa o Gemini
-                        edita a imagem errada): só o rosto muda; salve
-                        como brava.png e feliz.png. Importar cada um:
-                        ... import_lideres_gemini.gd -- <imagem> <líder>
-                        <brava|neutra|feliz>
+                        americanos, ingleses): UMA folha larga com os 3
+                        retratos do mesmo líder (bravo, neutro, feliz),
+                        da cintura para cima. Um pedido por líder, cada
+                        um numa CONVERSA NOVA, com referencia.png. Peça a
+                        maior resolução (3K/4K). Importar: ...
+                        import_lideres_gemini.gd -- folha.png <líder>
   12_quadrirreme        o Quadrirreme, barco de guerra mais imponente que
                         a Galé (importar como avulsa: ...
                         import_folha_unidades.gd -- resultado.png
