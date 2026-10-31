@@ -13,37 +13,37 @@ enum Id { ROMANS, GREEKS, PHOENICIANS, EGYPTIANS, AMERICANS, ENGLISH }
 
 const DATA := {
 	Id.ROMANS: {
-		"name": "Romanos", "color": Color8(200, 40, 40), "personality": "expansionist",
+		"leader": "romanos", "name": "Romanos", "color": Color8(200, 40, 40), "personality": "expansionist",
 		"description": "Construtores de estradas e conquistadores.",
 		"cities": ["Roma", "Óstia", "Cápua", "Pompeia", "Ravena", "Verona", "Mediolano", "Neápolis",
 				"Aquileia", "Tarento", "Arímino", "Pisa"],
 	},
 	Id.GREEKS: {
-		"name": "Gregos", "color": Color8(40, 96, 220), "personality": "balanced",
+		"leader": "gregos", "name": "Gregos", "color": Color8(40, 96, 220), "personality": "balanced",
 		"description": "Filósofos, navegantes e cidades-estado.",
 		"cities": ["Atenas", "Esparta", "Corinto", "Tebas", "Argos", "Delfos", "Olímpia", "Mégara",
 				"Siracusa", "Mileto", "Rodes", "Éfeso"],
 	},
 	Id.PHOENICIANS: {
-		"name": "Fenícios", "color": Color8(160, 80, 220), "personality": "economist",
+		"leader": "fenicios", "name": "Fenícios", "color": Color8(160, 80, 220), "personality": "economist",
 		"description": "Mercadores do mar e da púrpura.",
 		"cities": ["Tiro", "Sídon", "Biblos", "Cartago", "Útica", "Gades", "Arados", "Léptis",
 				"Hipona", "Motia", "Berito", "Panormo"],
 	},
 	Id.EGYPTIANS: {
-		"name": "Egípcios", "color": Color8(250, 210, 40), "personality": "defensive",
+		"leader": "egipcios", "name": "Egípcios", "color": Color8(250, 210, 40), "personality": "defensive",
 		"description": "Os reinos do Nilo e das pirâmides.",
 		"cities": ["Mênfis", "Tebas do Nilo", "Heliópolis", "Alexandria", "Abidos", "Tânis", "Elefantina",
 				"Assuã", "Sais", "Bubástis", "Hermópolis", "Edfu"],
 	},
 	Id.AMERICANS: {
-		"name": "Americanos", "color": Color8(40, 160, 80), "personality": "expansionist",
+		"leader": "americanos", "name": "Americanos", "color": Color8(40, 160, 80), "personality": "expansionist",
 		"description": "Pioneiros de uma terra nova.",
 		"cities": ["Washington", "Nova York", "Filadélfia", "Boston", "Chicago", "Atlanta",
 				"São Francisco", "Nova Orleans", "Seattle", "Denver", "Dallas", "Baltimore"],
 	},
 	Id.ENGLISH: {
-		"name": "Ingleses", "color": Color8(240, 140, 40), "personality": "balanced",
+		"leader": "ingleses", "name": "Ingleses", "color": Color8(240, 140, 40), "personality": "balanced",
 		"description": "Um povo de ilha, de reis e de marinheiros.",
 		"cities": ["Londres", "York", "Cantuária", "Bristol", "Oxford", "Nottingham", "Liverpool",
 				"Manchester", "Plymouth", "Dover", "Cambridge", "Norwich"],
@@ -56,6 +56,26 @@ const COLORS: Array[Color] = [
 	Color8(200, 40, 40), Color8(40, 96, 220), Color8(160, 80, 220), Color8(250, 210, 40),
 	Color8(40, 160, 80), Color8(240, 140, 40), Color8(40, 190, 200), Color8(230, 90, 160),
 ]
+
+
+## Expressão do retrato do líder no encontro (MeetingDialog): brava em guerra
+## ou Furioso, feliz com boa relação (Amigável, Irmandade), neutra no resto.
+enum Mood { ANGRY, NEUTRAL, HAPPY }
+const MOOD_FILES := {Mood.ANGRY: "brava", Mood.NEUTRAL: "neutra", Mood.HAPPY: "feliz"}
+## Retratos dos líderes (da cintura para cima, fundo transparente):
+## assets/leaders/<líder>_<brava|neutra|feliz>.png, feitos pelo Gemini (pedidos
+## tools/art/gemini/pedidos/NN_lider_<líder>; importar com
+## tools/art/import_lideres_gemini.gd). Os líderes vão mudar com as eras.
+const LEADERS_DIR := "res://assets/leaders/"
+
+
+## Retrato do líder da nação com a expressão [param mood], ou null se ainda não
+## existir (o encontro desenha uma silhueta no lugar).
+static func portrait(nation: int, mood: Mood) -> Texture2D:
+	if nation < 0:
+		return null
+	var path := "%s%s_%s.png" % [LEADERS_DIR, DATA[nation]["leader"], MOOD_FILES[mood]]
+	return load(path) if ResourceLoader.exists(path) else null
 
 
 static func name_of(nation: int) -> String:

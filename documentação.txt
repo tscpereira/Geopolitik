@@ -2722,11 +2722,30 @@ message_dialog.gd)
   receber o humano se não estiver Furiosa; Furiosa, só em guerra e já
   disposta à paz (AIDiplomacy.accepts_meeting). Recusado, um aviso, e o
   próximo pedido só depois de 5 turnos. Aceito, abre a TELA DO ENCONTRO
-  (MeetingDialog, no mármore): o líder na cor dele, como ele te recebe
-  (frase pela confiança), a relação e a confiança, e as propostas: em
-  guerra "Propor paz", em paz "Declarar guerra" (desabilitado na trégua);
-  a resposta aparece na própria tela, e "Encerrar encontro [Esc]". A
+  (MeetingDialog, no mármore). Desde 30/10/2026 (esboço do usuário): um
+  retângulo grande no meio da tela (MeetingDialog.ANCHORS: ~65% da
+  largura e ~58% da altura, um pouco acima do centro) com FOCO TOTAL (o
+  fundo escurece e bloqueia os cliques fora; a câmera trava). Em cima, a
+  parte maior: o palco com o LÍDER (Nation.portrait) sobre um fundo
+  escuro na cor da nação, com uma luz atrás dele e o nome numa placa;
+  a expressão segue a relação: BRAVA em guerra ou Furioso, FELIZ com
+  Amigável ou Irmandade, NEUTRA no resto (sem o retrato ainda: uma
+  silhueta, "Retrato em breve"). Embaixo, a parte menor: como ele te
+  recebe (frase pela confiança), a relação e a confiança, a resposta à
+  última proposta e os botões: em guerra "Propor paz", em paz "Declarar
+  guerra" (desabilitado na trégua) e "Encerrar encontro [Esc]". A
   negociação (comércio, tratados) entra nesta tela nas próximas fases.
+- RETRATOS DOS LÍDERES (pedido do usuário; os líderes vão mudar com as
+  eras): assets/leaders/<líder>_<brava|neutra|feliz>.png, da cintura para
+  cima, fundo transparente. Pedidos ao Gemini 13 a 18 (lider_gregos,
+  lider_romanos, lider_egipcios, lider_fenicios, lider_americanos,
+  lider_ingleses; um por líder, com as 3 expressões lado a lado, no
+  estilo das unidades): Gregos como Alexandre, o Grande; Romanos, um
+  cônsul de toga branca e coroa de louros; Egípcios, um faraó; Fenícios,
+  um general como Aníbal; Americanos, um líder colonial do século 18;
+  Ingleses, um chefe celta. Importar: tools/art/import_lideres_gemini.gd
+  -- resultado.png <líder> (tira o verde, separa as 3 figuras e grava os
+  3 arquivos; a folha original fica em tools/art/gemini/lideres/).
 - TRATADO DE PAZ: "Propor paz" no encontro (a máquina responde na hora;
   recusada, o botão fica desabilitado e o próximo encontro só daqui a 5
   turnos) ou proposta da máquina (aviso com "Aceitar a paz" e "Recusar"; no
@@ -3217,6 +3236,9 @@ PRÓXIMO PASSO GRANDE 2: CONJUNTOS CULTURAIS DE UNIDADES E CIDADES
     continentes, 2 por continente (30/10/2026)
 [ ] Escolher o mapa ao começar a partida (hoje: Game.map_name)
 [ ] Título do líder pela civilização e pelo governo (hoje: Imperador)
+[ ] Retratos dos 6 líderes (pedidos 13 a 18 no Gemini; o importador está
+    pronto)
+[ ] Líderes que mudam com as eras (novos retratos por era)
 [ ] IA: atravessar o mar (Galés) para alcançar os outros continentes
 [x] Desenho definitivo do Quadrirreme (Gemini, pedido 12_quadrirreme:
     a 1ª tentativa, com a Galé de referência, voltou uma cópia dela; o
@@ -4864,6 +4886,11 @@ PRÓXIMO PASSO GRANDE 2: CONJUNTOS CULTURAIS DE UNIDADES E CIDADES
   (ajustado: 6 jogadores, os do mesmo continente na mesma terra, a 14+
   casas, ferro perto de cada um) e todos os testes antigos (agora com
   Game.show_start_screen = false). Rodada das 5 máquinas no começo: ~0,3 s.
+
+- ENCONTRO COM O LÍDER (pedido do usuário, com o esboço do tamanho e das
+  duas partes): ver DIPLOMACIA (TELA DO ENCONTRO e RETRATOS DOS LÍDERES).
+  Pedidos 13 a 18 ao Gemini e o importador (testado com uma folha
+  falsa). Validação: teste do encontro e screenshot do modal novo.
 
 --------------------------------------------------------------
 7. BACKLOG (ideias para depois)

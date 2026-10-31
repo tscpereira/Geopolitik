@@ -24,6 +24,12 @@ Cada pasta é um pedido, com uma folha do tema:
   11_terrenos_novos     águas profundas, selva (com palmeiras), deserto,
                         tundra e neve (5x1; no jogo, provisórias geradas
                         por tools/art/gen_terrenos_novos.gd)
+  13 a 18 lider_*       os LÍDERES (gregos, romanos, egípcios, fenícios,
+                        americanos, ingleses): 3 retratos do mesmo líder,
+                        da cintura para cima (brava, neutra, feliz). Um
+                        pedido por líder, cada um numa CONVERSA NOVA.
+                        Importar: ... import_lideres_gemini.gd --
+                        resultado.png <líder>
   12_quadrirreme        o Quadrirreme, barco de guerra mais imponente que
                         a Galé (importar como avulsa: ...
                         import_folha_unidades.gd -- resultado.png

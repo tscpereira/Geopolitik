@@ -150,6 +150,8 @@ func _ready() -> void:
 	hud.diplomacy_dialog.meeting_requested.connect(request_meeting)
 	hud.meeting_dialog.war_declared.connect(request_declare_war)
 	hud.meeting_dialog.peace_proposed.connect(request_peace)
+	# Encontro aberto: foco total (a câmera não anda com o teclado por trás)
+	hud.meeting_dialog.visibility_changed.connect(func() -> void: camera.locked = hud.meeting_dialog.visible)
 	Unit.watch = is_watched
 	hud.tech_tree_dialog.research_chosen.connect(_on_tree_research_chosen)
 	hud.city_window.closed.connect(_on_city_window_closed)

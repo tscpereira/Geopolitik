@@ -95,10 +95,10 @@ func _prompt(theme: Dictionary) -> String:
 			lines.append("    %d. %s" % [number, item[2]])
 	var parts: Array[String] = [theme.get("intro", INTRO) % theme["what"], theme.get("style", STYLE), theme["camera"],
 			GRID % [theme["columns"], ceili(items.size() / float(theme["columns"])), "\n".join(lines)]
-			if not theme.get("no_current", false) else "THE UNIT:\n" + "\n".join(theme["items"].map(func(item: Array) -> String: return "- " + item[2]))]
+			if not theme.get("no_current", false) else theme.get("items_title", "THE UNIT:") + "\n" + "\n".join(theme["items"].map(func(item: Array) -> String: return "- " + item[2]))]
 	if theme.has("extra"):
 		parts.append(theme["extra"])
-	parts.append(TEAM % theme["team"] if theme.has("team") else NO_TEAM)
+	parts.append(theme["team_note"] if theme.has("team_note") else TEAM % theme["team"] if theme.has("team") else NO_TEAM)
 	if not theme.get("no_green", false):
 		parts.append(GREEN)
 	return "\n\n".join(parts)
@@ -268,7 +268,50 @@ WHAT MAKES IT DIFFERENT (very important):
 		},
 	]
 	# As cidades, uma classe por pedido (as 14 juntas o Gemini não conseguiu)
-	return list.slice(0, 1) + _city_themes(c) + list.slice(1)
+	return list.slice(0, 1) + _city_themes(c) + list.slice(1) + _leader_themes(u)
+
+
+## Retratos dos LÍDERES (30/10/2026, pedido do usuário): um pedido por líder,
+## com as 3 expressões lado a lado na mesma folha (brava em guerra, neutra em
+## paz, feliz com boa relação), da cintura para cima, no estilo das unidades
+## (style_images; sem desenho atual: no_current). Importar com
+## tools/art/import_lideres_gemini.gd -- resultado.png <líder>. Os líderes vão
+## mudar com as eras (estes são os da era antiga).
+func _leader_themes(u: String) -> Array:
+	var leaders := [
+		["gregos", "a young Macedonian king in the image of Alexander the Great: about 25 years old, clean-shaven, thick wavy light-brown hair swept up and back from the forehead, intense eyes; an ornate bronze muscle cuirass with a lion head on the chest and leather straps (pteruges) at the shoulders, a deep red cloak pinned at one shoulder"],
+		["romanos", "a Roman consul: about 50 years old, short grey hair, strong jaw, clean-shaven; a white toga with a broad purple border draped over a white tunic, a green laurel wreath on the head, a gold ring"],
+		["egipcios", "an Egyptian pharaoh: a striped gold-and-blue nemes headdress with the golden cobra (uraeus) on the brow, a braided ceremonial false beard, eyes lined with kohl, a wide broad collar of gold and lapis beads on the bare chest, golden arm bands, holding a crook"],
+		["fenicios", "a Carthaginian general in the image of Hannibal Barca: about 35 years old, dark curly hair and a short dark beard, weathered tanned face; bronze scale armour over a red tunic, a Tyrian-purple cloak, a bronze crested helmet held under one arm"],
+		["americanos", "an American colonial leader of the 1700s: about 40 years old, hair tied back, a black tricorn hat, a dark blue colonial coat with brass buttons over a buff waistcoat and a white shirt with a simple cravat"],
+		["ingleses", "a Celtic chieftain of ancient Britain: about 40 years old, long red-brown hair and a long braided moustache, a heavy twisted gold torc around the neck, a checked wool cloak in green and brown pinned with a big bronze brooch, bronze arm rings"],
+	]
+	var themes := []
+	for leader: Array in leaders:
+		themes.append({"name": "lider_" + leader[0], "what": "3 portraits of the same leader, side by side", "columns": 3, "cell": 200,
+		"style_images": [u + "retratos/lanceiro", u + "retratos/arqueiro", u + "retratos/colono"],
+		"no_current": true,
+		"intro": """I am making the art of a 2D turn-based strategy game about ancient civilizations. The attached image shows three units already made for the game. It is ONLY the STYLE REFERENCE: paint in exactly this painted style, with the same detail, palette and light. Do not copy or include those units.
+
+Create ONE image: %s. They are shown on the diplomacy screen when the player meets this leader.""",
+		"style": """STYLE (copy it from the attached units):
+- Detailed painted digital illustration with realistic proportions and a dignified, heroic look: soft painted shading, visible texture of skin, cloth and metal, rich but natural colors. Not cartoon, not chibi, not anime, not pixel art, no thick black outlines, not a photo.
+- Soft daylight from the TOP-LEFT, the same in the three portraits.""",
+		"camera": """FRAMING AND LAYOUT (very important):
+- THREE portraits of the SAME person side by side, in three equal columns, left to right: ANGRY, NEUTRAL, HAPPY.
+- Each portrait: the leader from the head down to about the WAIST, facing the viewer (turned very slightly, three-quarter), centered in its column, the head near the top. Nothing cropped on the sides; the bottom of the figure (the waist) may touch the bottom of the image.
+- Exactly the same person, face, clothes, hair, colors, size and position in the three portraits: ONLY the facial expression and the hands/gesture change.
+- No throne, no room, no landscape, no props apart from what the leader wears or holds.""",
+		"items_title": "THE LEADER, " + leader[1] + ".\n\nTHE THREE PORTRAITS (left to right):",
+		"items": [
+			["brava", "", "ANGRY (used when at war): brows lowered and drawn together, a hard glare straight at the viewer, jaw clenched, mouth tight; one hand clenched into a fist or resting on a weapon."],
+			["neutra", "", "NEUTRAL (used in peace): calm, composed and dignified, a steady attentive look, mouth relaxed and closed; hands at rest."],
+			["feliz", "", "HAPPY (used when the relation is good): a warm, confident smile that reaches the eyes, relaxed brows; one open hand raised slightly in a welcoming gesture."],
+		],
+		"team_note": "COLORS: normal colors for skin, clothes and metal (this sheet has no team color).",
+		"extra": "The three columns must be clearly separated by plain green space (the figures never touch or overlap). No text, no labels, no frames.",
+		})
+	return themes
 
 
 
@@ -343,6 +386,8 @@ func _reference(theme: Dictionary, path: String) -> void:
 	var size := Vector2(cell, cell * 0.62) if theme.get("wide", false) else Vector2(cell, cell)
 	var number := 0
 	for item: Array in theme["items"]:
+		if theme.get("no_current", false):
+			break # sem desenho atual (Quadrirreme, líderes): só a referência de estilo
 		var card := PanelContainer.new()
 		var style := StyleBoxFlat.new()
 		style.bg_color = CARD if item[0] != "" else Color(CARD, 0.35)
@@ -456,6 +501,12 @@ Cada pasta é um pedido, com uma folha do tema:
   11_terrenos_novos     águas profundas, selva (com palmeiras), deserto,
                         tundra e neve (5x1; no jogo, provisórias geradas
                         por tools/art/gen_terrenos_novos.gd)
+  13 a 18 lider_*       os LÍDERES (gregos, romanos, egípcios, fenícios,
+                        americanos, ingleses): 3 retratos do mesmo líder,
+                        da cintura para cima (brava, neutra, feliz). Um
+                        pedido por líder, cada um numa CONVERSA NOVA.
+                        Importar: ... import_lideres_gemini.gd --
+                        resultado.png <líder>
   12_quadrirreme        o Quadrirreme, barco de guerra mais imponente que
                         a Galé (importar como avulsa: ...
                         import_folha_unidades.gd -- resultado.png
