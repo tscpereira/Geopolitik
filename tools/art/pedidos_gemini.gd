@@ -328,11 +328,15 @@ Create ONE LARGE IMAGE: %s. It is shown big, on the diplomacy screen, when the p
 
 ## Edição do rosto do líder (anexar o retrato NEUTRO aprovado): muda só a
 ## expressão, todo o resto fica idêntico (mesma pessoa, pose e resolução).
-const EDIT_FACE := """Edit the attached image. Keep EVERYTHING exactly the same: the same person and face shape, the same hair, clothes, armour, cloak, jewellery, pose, hands, colors, lighting, framing, image size and the same flat green background.
+## Use numa CONVERSA NOVA, anexando só o neutro: na mesma conversa, o Gemini
+## editou a folha que ele tinha feito antes, e não o neutro (30/10/2026).
+const EDIT_FACE := """Edit the image attached to THIS message (ignore any other image from before). It is a SINGLE portrait of ONE person.
+
+Keep EVERYTHING exactly the same: the same person and face shape, the same hair, clothes, armour, cloak, jewellery, pose, hands, colors, lighting, framing, image size and the same flat green background.
 
 Change ONLY the FACIAL EXPRESSION to: %s.
 
-Do not change anything else: no new objects, no change of pose or of the hands, no crop, no zoom. Same resolution as the attached image."""
+Return ONE single portrait image of that same person, exactly like the attached one: never a sheet, a collage or several portraits side by side. Do not change anything else: no new objects, no change of pose or of the hands, no crop, no zoom. Same size and resolution as the attached image."""
 
 
 ## Um pedido por classe de cidade: as versões da MESMA cidade lado a lado
@@ -526,10 +530,11 @@ Cada pasta é um pedido, com uma folha do tema:
                         da cintura para cima, grandes. Para cada líder,
                         numa CONVERSA NOVA: 1) prompt.txt (com
                         referencia.png) dá o NEUTRO; salve como
-                        neutra.png. 2) Na mesma conversa (ou numa nova,
-                        anexando neutra.png), edicao_brava.txt e depois
-                        edicao_feliz.txt: só o rosto muda; salve como
-                        brava.png e feliz.png. Importar cada um:
+                        neutra.png. 2) Em OUTRA conversa nova, anexando
+                        só neutra.png, edicao_brava.txt; e em mais uma,
+                        edicao_feliz.txt (na mesma conversa o Gemini
+                        edita a imagem errada): só o rosto muda; salve
+                        como brava.png e feliz.png. Importar cada um:
                         ... import_lideres_gemini.gd -- <imagem> <líder>
                         <brava|neutra|feliz>
   12_quadrirreme        o Quadrirreme, barco de guerra mais imponente que

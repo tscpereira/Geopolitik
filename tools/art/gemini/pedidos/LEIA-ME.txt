@@ -29,10 +29,11 @@ Cada pasta é um pedido, com uma folha do tema:
                         da cintura para cima, grandes. Para cada líder,
                         numa CONVERSA NOVA: 1) prompt.txt (com
                         referencia.png) dá o NEUTRO; salve como
-                        neutra.png. 2) Na mesma conversa (ou numa nova,
-                        anexando neutra.png), edicao_brava.txt e depois
-                        edicao_feliz.txt: só o rosto muda; salve como
-                        brava.png e feliz.png. Importar cada um:
+                        neutra.png. 2) Em OUTRA conversa nova, anexando
+                        só neutra.png, edicao_brava.txt; e em mais uma,
+                        edicao_feliz.txt (na mesma conversa o Gemini
+                        edita a imagem errada): só o rosto muda; salve
+                        como brava.png e feliz.png. Importar cada um:
                         ... import_lideres_gemini.gd -- <imagem> <líder>
                         <brava|neutra|feliz>
   12_quadrirreme        o Quadrirreme, barco de guerra mais imponente que
