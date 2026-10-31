@@ -3024,6 +3024,29 @@ Screenshots também confirmaram o visual.
 --------------------------------------------------------------
 
 ==============================================================
+PLANO PARA 31/10/2026 (anotado em 30/10 pelo usuário)
+==============================================================
+1. TROCA DE PRESENTE SEM QUERER (print do usuário: "Troca feita. Você
+   deu: Trabalho em Ferro. Recebeu: nada."): o usuário marcou só a
+   tecnologia em "Você oferece" e a máquina, claro, aceitou na hora.
+   Ideias para decidir juntos:
+   - proposta sem nada pedido = PRESENTE: confirmar antes ("Você vai dar
+     X sem pedir nada em troca. Confirmar o presente?"), e o líder
+     agradece com uma fala própria (não "Negócio fechado");
+   - o texto do resultado diz "Presente dado" em vez de "Troca feita";
+   - presente pode render um pouco mais de confiança (proporcional ao
+     valor?), já que hoje é sempre +5;
+   - ou bloquear o botão "Propor troca" quando "Você pede" estiver vazio
+     (e ter um botão separado "Oferecer como presente").
+2. LÍDERES: as folhas das 5 civilizações que faltam (Romanos, Egípcios,
+   Fenícios, Americanos, Ingleses; pastas 14 a 18), uma chamada por
+   civilização; importar com import_lideres_gemini.gd (o corpo fica o do
+   neutro).
+3. Opcional: um cenário de teste em que os Gregos já exploraram o
+   continente deles e têm cidades, para testar a troca de mapas de
+   verdade (no Espaço 5 eles só têm 2 unidades ao lado de Roma).
+
+==============================================================
 PLANO PARA 27/10/2026: ARTE NO GEMINI (onde paramos em 26/10)
 ==============================================================
 Contexto: a Galé feita no Gemini virou o padrão de acabamento. Estamos
