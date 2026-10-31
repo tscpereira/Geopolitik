@@ -2789,8 +2789,9 @@ message_dialog.gd)
   SÓ O NEUTRO, grande; edicao_brava.txt e edicao_feliz.txt pedem para
   editar o rosto do neutro anexado (todo o resto idêntico: mesmo homem,
   pose e resolução). Sem a expressão pedida, o jogo usa o neutro
-  (Nation.portrait). GREGOS (30/10/2026, com a folha nova): os três de
-  461 x 722, mesmo enquadramento, só o rosto muda; a folha original
+  (Nation.portrait). GREGOS (30/10/2026, com o prompt final, uma
+  chamada só, aprovado pelo usuário): os três de 454 x 718, braços e
+  capa inteiros, mesmo enquadramento, só o rosto muda; a folha original
   (1376 x 768) em tools/art/gemini/originais/lideres/gregos_folha.png.
   O Gemini desenhou linhas pretas entre os painéis (o pedido diz que
   não): o importador apaga colunas quase inteiras escuras (e 4 colunas
@@ -5007,6 +5008,11 @@ PRÓXIMO PASSO GRANDE 2: CONJUNTOS CULTURAIS DE UNIDADES E CIDADES
   cajado do faraó junto ao peito (sairiam da margem). O LEIA-ME tem o
   passo a passo dos líderes. Validação: os 6 pedidos regenerados e
   conferidos (prompt e referência).
+
+- LÍDER GREGO FINAL (usuário: "finalmente agora parece ok"): a folha do
+  prompt novo, numa chamada só, importada (454 x 718 cada, braços e capa
+  inteiros, sem linhas). Validação: prévia dos três e teste das
+  respostas do líder.
 
 --------------------------------------------------------------
 7. BACKLOG (ideias para depois)
