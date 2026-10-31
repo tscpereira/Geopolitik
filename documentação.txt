@@ -181,7 +181,7 @@ C:\ProjetoGame
 |       |-- guerreiro_rustico.gd   (antigo, idem) montava o Guerreiro
 |       |                          rústico a partir do Trabalhador
 |       |-- folha_assets.gd        Folha com todos os desenhos e os
-|       |                          nomes (tools/art/gemini/), para
+|       |                          nomes (tools/art/gemini/previas/), para
 |       |                          pedir a refação no Gemini
 |       |-- import_terrenos_gemini.gd  Texturas de terreno do Gemini (sem
 |       |                          emenda, 160x160)
@@ -191,7 +191,11 @@ C:\ProjetoGame
 |       |-- evolucao_cidades.gd    Folha das cidades lado a lado (níveis
 |       |                          x versões), marcando as do Gemini
 |       |-- pedidos_gemini.gd      Um pedido por tema para o Gemini
-|       |                          (gemini/pedidos/: referência + prompt)
+|       |                          (gemini/pedidos/: referência + prompt;
+|       |                          só os que faltam)
+|       |-- gemini/originais/      As imagens do Gemini que entraram no
+|       |                          jogo (folhas; líderes em lideres/)
+|       |-- gemini/previas/        Prévias dos importadores (fora do git)
 |       |-- PROMPTS-GEMINI.txt     Índice dos pedidos ao Gemini e a
 |       |                          lógica dos desenhos das cidades
 |       |-- PROMPTS-CHATGPT.txt    Prompts para gerar os desenhos
@@ -348,7 +352,7 @@ MAPA (scripts/map/)
        mipmaps/generate=true nos .import novos.
 - REFAÇÃO NO GEMINI (desde 26/10/2026, pedido do usuário: a Galé do
   Gemini ficou com o melhor acabamento e virou o padrão). Folhas com
-  todos os desenhos e os nomes, em tools/art/gemini/ (assets_todos,
+  todos os desenhos e os nomes, em tools/art/gemini/previas/ (assets_todos,
   assets_unidades, assets_cidades, assets_terreno,
   assets_tecnologias), geradas COM janela por
     godot_console.cmd --path . --script tools/art/folha_assets.gd
@@ -363,7 +367,15 @@ MAPA (scripts/map/)
   desenhos atuais do tema, numerados, na grade pedida, à direita) e
   prompt.txt (o prompt inteiro: estilo, câmera, grade e ordem, onde vai
   o azul do time, fundo verde #00B140). Uma conversa nova por tema;
-  salvar a folha como resultado.png na pasta. Os textos ficam em
+  salvar a folha como resultado.png na pasta. ORGANIZAÇÃO (desde
+  30/10/2026, pedido do usuário: a pasta estava confusa): pedidos/ só
+  tem os pedidos que FALTAM (os feitos ficam em DONE, no gerador, e não
+  geram pasta); o gerador não apaga mais a pasta inteira (só o que ele
+  mesmo gerou nas pastas que saíram; a imagem do usuário fica, com
+  aviso); as imagens do Gemini já importadas ficam em
+  tools/art/gemini/originais/ (os importadores gravam lá; os retratos
+  dos líderes em originais/lideres/); as prévias, em
+  tools/art/gemini/previas/ (fora do git). Os textos ficam em
   pedidos_gemini.gd. Índice e lógica das cidades:
   tools/art/PROMPTS-GEMINI.txt; passo a passo:
   tools/art/gemini/pedidos/LEIA-ME.txt. Os importadores de cidade, terreno e melhoria ainda
@@ -2777,17 +2789,17 @@ message_dialog.gd)
   SÓ O NEUTRO, grande; edicao_brava.txt e edicao_feliz.txt pedem para
   editar o rosto do neutro anexado (todo o resto idêntico: mesmo homem,
   pose e resolução). Sem a expressão pedida, o jogo usa o neutro
-  (Nation.portrait). GREGOS: neutro importado (837 x 1223; o original em
-  tools/art/gemini/pedidos/13_lider_gregos/neutra.jpg) e bravo (679 x 992,
-  editado numa conversa nova a partir do neutro: brava.jpg) e feliz (679 x
-  992, feliz.jpg): GREGOS COMPLETOS
+  (Nation.portrait). GREGOS: neutro importado (837 x 1223) e bravo (679 x
+  992, editado numa conversa nova a partir do neutro) e feliz (679 x
+  992); os originais em tools/art/gemini/originais/lideres/: GREGOS
+  COMPLETOS (a refazer com a folha nova: a capa saiu cortada)
   (a 1ª edição, na mesma conversa, editou a folha de três e não
   o neutro: as edições vão em CONVERSA NOVA, anexando só o neutro). Importar: tools/art/import_lideres_gemini.gd
   -- <imagem> <líder> <brava|neutra|feliz> (uma de cada vez) ou
   -- brava.png neutra.png feliz.png <líder> (ou -- folha.png <líder>, se
   vierem juntas): tira o verde, recorta a figura e grava os 3 arquivos
   em alta resolução (reduz só acima de 1600 px de altura; avisa se ficar
-  abaixo de 700); os originais ficam em tools/art/gemini/lideres/. No
+  abaixo de 700); os originais ficam em tools/art/gemini/originais/lideres/. No
   jogo, Nation.portrait gera os mipmaps uma vez e o palco desenha o
   retrato com filtro suave, na altura do palco.
 - TRATADO DE PAZ: "Propor paz" no encontro (a máquina responde na hora;
@@ -3016,7 +3028,7 @@ SITUAÇÃO DE CADA TEMA
                         sorteio por casa.
   (melhorias)           madeireira, madeireira destruída, mina, mina
                         destruída e a bigorna do ferro vieram BONS em
-                        tools/art/gemini/melhorias_folha.png: FALTA o
+                        tools/art/gemini/originais/melhorias_folha.png: FALTA o
                         importador (como o de cidades: acha cada desenho,
                         tira o fundo, grava 80x80 em
                         assets/sprites/improvements/ e o ferro 64x64 em
@@ -4958,6 +4970,16 @@ PRÓXIMO PASSO GRANDE 2: CONJUNTOS CULTURAIS DE UNIDADES E CIDADES
   tamanho dos três e avisa corte. Validação: folha montada com os três
   gregos atuais (saíram 601 x 876 os três, com o aviso de borda que
   confirma a capa cortada) e os pedidos 13 a 18 regenerados.
+
+- PASTA DO GEMINI ORGANIZADA (pedido do usuário: "está uma confusão"):
+  ver ARTE (REFAÇÃO NO GEMINI, ORGANIZAÇÃO). pedidos/ ficou só com os 11
+  que faltam (povoado com muralha, ruínas, relevo, tecnologias, terrenos
+  novos e os 6 líderes); originais/ com as folhas importadas; apagados
+  os duplicados (o resultado do povoado = povoado_folha; a folha da
+  metrópole murada = a da metrópole; os jpg do grego = os originais em
+  png), as tentativas que não deram certo do grego e as prévias
+  geradas. Validação: gerador rodado (11 pedidos, as pastas dos feitos
+  sumiram) e todos os scripts de arte compilando.
 
 --------------------------------------------------------------
 7. BACKLOG (ideias para depois)

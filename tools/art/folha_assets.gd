@@ -5,7 +5,7 @@ extends SceneTree
 ## (tools/art/PROMPTS-GEMINI.txt). Rode COM janela (os títulos são desenhados
 ## pelo Godot):
 ##   godot_console.cmd --path . --script tools/art/folha_assets.gd
-## Grava em tools/art/gemini/:
+## Grava em tools/art/gemini/previas/:
 ##   assets_todos.png        tudo numa imagem só;
 ##   assets_unidades.png     as 10 unidades;
 ##   assets_cidades.png      as 15 cidades (classe x capital x muralha) e as
@@ -15,7 +15,7 @@ extends SceneTree
 ## As partes na cor do jogador (máscaras _time.png) aparecem no azul do time
 ## (#1E50FF), o padrão dos pedidos.
 
-const OUT := "res://tools/art/gemini/"
+const OUT := "res://tools/art/gemini/previas/"
 const TEAM_BLUE := Color8(30, 80, 255)
 const BACK := Color8(46, 50, 56)
 const CARD := Color8(70, 76, 84)

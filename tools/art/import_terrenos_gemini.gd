@@ -13,11 +13,13 @@ extends SceneTree
 ## quadrado, fica SEM EMENDA (mistura com uma cópia deslocada pela metade, que
 ## assume perto das bordas) e é gravado com SIZE x SIZE (o shader lê por
 ## coordenada: o tamanho não precisa ser o da casa). Guarda a folha em
-## tools/art/gemini/terrenos_folha.png e uma prévia de cada textura repetida
-## 3x3 em tools/art/gemini/terrenos_previa.png.
+## tools/art/gemini/originais/terrenos_folha.png e uma prévia de cada textura repetida
+## 3x3 em tools/art/gemini/previas/terrenos_previa.png.
 
 const TILES := "res://assets/tiles/"
-const GEMINI := "res://tools/art/gemini/"
+## Originais do Gemini (guardados no git) e prévias (geradas, fora do git).
+const GEMINI := "res://tools/art/gemini/originais/"
+const PREVIEWS := "res://tools/art/gemini/previas/"
 const SIZE := 160
 ## Margem cortada de cada lado do quadrado (pixels da folha).
 const INSET := 6
@@ -33,6 +35,8 @@ func _initialize() -> void:
 		return
 	var sheet := Image.load_from_file(args[0])
 	sheet.convert(Image.FORMAT_RGBA8)
+	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(GEMINI))
+	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(PREVIEWS))
 	sheet.save_png(ProjectSettings.globalize_path(GEMINI + "terrenos_folha.png"))
 	var bg := sheet.get_pixel(1, 1)
 	var columns := _runs(sheet, bg, true)
@@ -114,4 +118,4 @@ func _preview(tiles: Array[Image]) -> void:
 		for y in 3:
 			for x in 3:
 				sheet.blit_rect(tiles[t], Rect2i(0, 0, SIZE, SIZE), Vector2i(t * (SIZE * 3 + 10) + x * SIZE, y * SIZE))
-	sheet.save_png(ProjectSettings.globalize_path(GEMINI + "terrenos_previa.png"))
+	sheet.save_png(ProjectSettings.globalize_path(PREVIEWS + "terrenos_previa.png"))

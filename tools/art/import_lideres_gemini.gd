@@ -20,10 +20,10 @@ extends SceneTree
 ##   3. recorta cada uma no tamanho da figura, reduz só se passar de
 ##      MAX_HEIGHT de altura (a resolução alta é o que importa aqui) e grava
 ##      em assets/leaders/<líder>_<brava|neutra|feliz>.png (Nation.portrait).
-## Os originais ficam em tools/art/gemini/lideres/.
+## Os originais ficam em tools/art/gemini/originais/lideres/.
 
 const LEADERS := "res://assets/leaders/"
-const SHEETS := "res://tools/art/gemini/lideres/"
+const SHEETS := "res://tools/art/gemini/originais/lideres/"
 const MOODS := ["brava", "neutra", "feliz"]
 const MAX_HEIGHT := 1600
 ## Verde do fundo: quanto o verde passa do maior entre o vermelho e o azul.

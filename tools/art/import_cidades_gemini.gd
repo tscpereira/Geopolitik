@@ -13,11 +13,13 @@ extends SceneTree
 ## (são a mesma cidade): o maior cabe em MAX_WIDTH da classe e em MAX_HEIGHT,
 ## centralizado, com a base na linha BOTTOM (como os desenhos antigos). O azul
 ## do time vira a máscara <nome>_time.png (as ruínas não têm). Guarda a folha
-## em tools/art/gemini/<primeiro nome>_folha.png e grava uma prévia em
-## tools/art/gemini/<primeiro nome>_previa.png.
+## em tools/art/gemini/originais/<primeiro nome>_folha.png e grava uma prévia em
+## tools/art/gemini/previas/<primeiro nome>_previa.png.
 
 const CITIES := "res://assets/sprites/cities/"
-const GEMINI := "res://tools/art/gemini/"
+## Originais do Gemini (guardados no git) e prévias (geradas, fora do git).
+const GEMINI := "res://tools/art/gemini/originais/"
+const PREVIEWS := "res://tools/art/gemini/previas/"
 const SIZE := 128
 const BOTTOM := 124
 const MAX_HEIGHT := 120
@@ -43,6 +45,8 @@ func _initialize() -> void:
 	var sheet := Image.load_from_file(args[0])
 	sheet.convert(Image.FORMAT_RGBA8)
 	var first_name: String = names.filter(func(n: String) -> bool: return n != "-")[0]
+	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(GEMINI))
+	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(PREVIEWS))
 	sheet.save_png(ProjectSettings.globalize_path(GEMINI + first_name + "_folha.png"))
 	_remove_backdrop(sheet)
 	var boxes := _find_drawings(sheet)
@@ -63,7 +67,7 @@ func _initialize() -> void:
 		if names[i] == "-":
 			continue
 		previews.append(_install(sheet.get_region(boxes[i]), names[i], scale))
-	_preview(previews, GEMINI + first_name + "_previa.png")
+	_preview(previews, PREVIEWS + first_name + "_previa.png")
 	quit()
 
 

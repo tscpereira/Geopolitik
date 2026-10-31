@@ -33,7 +33,7 @@ const PRONTOS := "res://tools/art/chatgpt/prontos/"
 const ORIGINAL := "res://tools/art/chatgpt/folha_unidades.png"
 const AVULSA := "res://tools/art/chatgpt/%s_avulsa.png"
 ## Folha das unidades do Gemini (modo "grade").
-const GEMINI_SHEET := "res://tools/art/gemini/folha_unidades.png"
+const GEMINI_SHEET := "res://tools/art/gemini/originais/folha_unidades.png"
 ## Unidade avulsa -> altura do desenho no jogo, em pixels (a da folha, na
 ## mesma pose: o guerreiro em investida tinha 55).
 const AVULSAS := {"guerreiro_espada": 55, "gale": 66, "quadrirreme": 72}

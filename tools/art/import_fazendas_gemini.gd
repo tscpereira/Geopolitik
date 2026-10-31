@@ -10,11 +10,13 @@ extends SceneTree
 ## As 3 fazendas são achadas pelas faixas verticais de colunas vazias e usam a
 ## mesma escala (são o mesmo lugar): a maior cabe em FILL do quadro SIZE x SIZE,
 ## centralizada. Grava em assets/sprites/improvements/; guarda a folha em
-## tools/art/gemini/fazendas[_cerca]_folha.png e uma prévia sobre a pradaria em
-## tools/art/gemini/fazendas[_cerca]_previa.png.
+## tools/art/gemini/originais/fazendas[_cerca]_folha.png e uma prévia sobre a pradaria em
+## tools/art/gemini/previas/fazendas[_cerca]_previa.png.
 
 const IMPROVEMENTS := "res://assets/sprites/improvements/"
-const GEMINI := "res://tools/art/gemini/"
+## Originais do Gemini (guardados no git) e prévias (geradas, fora do git).
+const GEMINI := "res://tools/art/gemini/originais/"
+const PREVIEWS := "res://tools/art/gemini/previas/"
 const SIZE := 160
 ## Fração do quadro ocupada pela fazenda: quase a casa inteira, para fazendas
 ## vizinhas parecerem uma plantação contínua (pedido do usuário). Cada fazenda é
@@ -41,6 +43,8 @@ func _initialize() -> void:
 	var suffix := "_cerca" if args.size() > 1 and args[1] == "cerca" else ""
 	var sheet := Image.load_from_file(args[0])
 	sheet.convert(Image.FORMAT_RGBA8)
+	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(GEMINI))
+	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(PREVIEWS))
 	sheet.save_png(ProjectSettings.globalize_path(GEMINI + "fazendas%s_folha.png" % suffix))
 	_remove_backdrop(sheet)
 	var boxes := _find_farms(sheet)
@@ -71,7 +75,7 @@ func _initialize() -> void:
 		farm.save_png(ProjectSettings.globalize_path(IMPROVEMENTS + FARMS[i] + suffix + ".png"))
 		previews.append(farm)
 		print("ok: %s%s (%s -> %s)" % [FARMS[i], suffix, boxes[i].size, target])
-	_preview(previews, GEMINI + "fazendas%s_previa.png" % suffix)
+	_preview(previews, PREVIEWS + "fazendas%s_previa.png" % suffix)
 	quit()
 
 

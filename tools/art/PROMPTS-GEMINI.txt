@@ -22,7 +22,7 @@ granular demais. Por isso há UM PEDIDO POR TEMA:
     08_terrenos_relevo    colinas e montanhas, só a superfície, sem relevo
     09_fazendas           as 3 fazendas: só os 4 canteiros, a "cruz" e a
                           margem transparentes, sem casa (madeireira, mina
-                          e ferro já vieram: gemini/melhorias_folha.png)
+                          e ferro já vieram: gemini/originais/melhorias_folha.png)
     10_tecnologias        16 ilustrações (4x4, opcional)
   As 14 cidades numa folha só o Gemini não conseguiu (copiou a
   referência): por isso uma classe de cidade por pedido.
@@ -37,7 +37,7 @@ granular demais. Por isso há UM PEDIDO POR TEMA:
 
   Folhas com tudo junto (só para consulta):
     godot_console.cmd --path . --script tools/art/folha_assets.gd
-    -> tools/art/gemini/assets_*.png
+    -> tools/art/gemini/previas/assets_*.png
 
 LÓGICA DOS DESENHOS DAS CIDADES
   O desenho depende de 3 coisas (City.city_sprite):

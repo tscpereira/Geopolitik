@@ -12,3 +12,6 @@ build/
 Thumbs.db
 .vscode/
 
+
+# Prévias geradas pelos importadores da arte do Gemini
+tools/art/gemini/previas/

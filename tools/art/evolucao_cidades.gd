@@ -8,9 +8,9 @@ extends SceneTree
 ## não dá: a lista GEMINI abaixo é atualizada a cada importação).
 ## Rode COM janela:
 ##   godot_console.cmd --path . --script tools/art/evolucao_cidades.gd
-## Grava tools/art/gemini/evolucao_cidades.png.
+## Grava tools/art/gemini/previas/evolucao_cidades.png.
 
-const OUT := "res://tools/art/gemini/evolucao_cidades.png"
+const OUT := "res://tools/art/gemini/previas/evolucao_cidades.png"
 const CITIES := "res://assets/sprites/cities/"
 const TEAM_BLUE := Color8(30, 80, 255)
 const ZOOM := 2.0
@@ -74,6 +74,7 @@ func _run() -> void:
 	for i in 4:
 		await process_frame
 	await RenderingServer.frame_post_draw
+	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(OUT.get_base_dir()))
 	viewport.get_texture().get_image().save_png(ProjectSettings.globalize_path(OUT))
 	print("gravado %s (%dx%d)" % [OUT, viewport.size.x, viewport.size.y])
 	quit()

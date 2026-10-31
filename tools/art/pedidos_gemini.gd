@@ -4,7 +4,7 @@ extends SceneTree
 ## desenho ficou granular demais). Rode COM janela (os títulos são desenhados
 ## pelo Godot):
 ##   godot_console.cmd --path . --script tools/art/pedidos_gemini.gd
-## Grava tools/art/gemini/pedidos/<NN>_<tema>/ com:
+## Grava tools/art/gemini/pedidos/<NN>_<tema>/ (só os que faltam: DONE) com:
 ##   referencia.png  à esquerda a Galé (o ESTILO); à direita os desenhos atuais
 ##                   do tema (o CONTEÚDO), na MESMA grade e ordem que o
 ##                   prompt pede, numerados;
@@ -12,6 +12,9 @@ extends SceneTree
 ## E tools/art/gemini/pedidos/LEIA-ME.txt com o passo a passo.
 
 const OUT := "res://tools/art/gemini/pedidos/"
+## Temas já feitos e importados: não geram pedido (a pasta some; desde
+## 30/10/2026, pedido do usuário: só o que falta fica em pedidos/).
+const DONE := ["unidades", "cidades_vila", "cidades_cidade", "cidades_metropole", "terrenos", "fazendas", "quadrirreme"]
 const STYLE_IMAGE := "res://tools/art/chatgpt/gale_avulsa.png"
 const TEAM_BLUE := Color8(30, 80, 255)
 const BACK := Color8(46, 50, 56)
@@ -52,36 +55,50 @@ func _initialize() -> void:
 
 
 func _run() -> void:
-	# Guarda o que o usuário salvou nas pastas (ex.: resultado.png), pelo nome do
-	# tema (o número pode mudar), e apaga os pedidos antigos
-	var kept := _keep_user_files()
-	var dir := DirAccess.open(ProjectSettings.globalize_path("res://tools/art/gemini/"))
-	if dir and dir.dir_exists("pedidos"):
-		_remove_tree(ProjectSettings.globalize_path(OUT))
 	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(OUT))
+	var active: Array[String] = []
 	var n := 0
 	for theme: Dictionary in _themes():
-		n += 1
-		var folder := "%s%02d_%s/" % [OUT, n, theme["name"]]
+		n += 1 # o número fica o mesmo, feito ou não
+		if DONE.has(theme["name"]):
+			continue
+		var folder_name := "%02d_%s" % [n, theme["name"]]
+		active.append(folder_name)
+		var folder := OUT + folder_name + "/"
 		DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(folder))
-		for file_name: String in kept.get(theme["name"], {}):
-			var saved := FileAccess.open(ProjectSettings.globalize_path(folder + file_name), FileAccess.WRITE)
-			saved.store_buffer(kept[theme["name"]][file_name])
-			saved.close()
-			print("  mantido %s/%s" % [theme["name"], file_name])
 		var file := FileAccess.open(ProjectSettings.globalize_path(folder + "prompt.txt"), FileAccess.WRITE)
 		file.store_string(_prompt(theme) + "\n")
 		file.close()
-		# Prompts a mais do pedido (ex.: as edições do rosto dos líderes)
+		# Prompts a mais do pedido, se houver
 		for extra_name: String in theme.get("extra_files", {}):
 			var extra := FileAccess.open(ProjectSettings.globalize_path(folder + extra_name), FileAccess.WRITE)
 			extra.store_string(theme["extra_files"][extra_name] + "\n")
 			extra.close()
 		await _reference(theme, folder + "referencia.png")
+	_clean(active)
 	_readme()
-	print("ok: %d temas" % n)
+	print("ok: %d pedidos" % active.size())
 	quit()
 
+
+## Pastas de pedidos que saíram da lista (feitos ou renomeados): apaga o que
+## este script gerou nelas; o que for do usuário (a imagem do Gemini) fica, com
+## um aviso para mover para tools/art/gemini/originais/. Nunca apaga arquivo do
+## usuário (até 30/10/2026 a pasta inteira era apagada e recriada).
+func _clean(active: Array[String]) -> void:
+	var root_path := ProjectSettings.globalize_path(OUT)
+	for folder in DirAccess.get_directories_at(root_path):
+		if active.has(folder):
+			continue
+		var path := root_path.path_join(folder)
+		for file_name in DirAccess.get_files_at(path):
+			if file_name in ["prompt.txt", "referencia.png"] or (file_name.begins_with("edicao_") and file_name.ends_with(".txt")):
+				DirAccess.remove_absolute(path.path_join(file_name))
+		var left := DirAccess.get_files_at(path)
+		if left.is_empty():
+			DirAccess.remove_absolute(path)
+		else:
+			print("  aviso: %s não é mais pedido, mas tem arquivos seus (%s): mova para tools/art/gemini/originais/" % [folder, ", ".join(left)])
 
 func _prompt(theme: Dictionary) -> String:
 	var lines: Array[String] = []
@@ -177,7 +194,7 @@ func _themes() -> Array:
 			["montanhas", t + "montanhas", "Mountain rock: grey and warm-grey stone surface with cracks, small loose pebbles and a few patches of lichen; even, no peaks."],
 		]},
 		# Melhorias: madeireira, mina e o ferro já vieram bons na folha de 26/10/2026
-		# (tools/art/gemini/melhorias_folha.png). As fazendas vieram com uma casa e
+		# (tools/art/gemini/originais/melhorias_folha.png). As fazendas vieram com uma casa e
 		# ocupando a casa inteira: o usuário quer só os canteiros, com a "cruz" entre
 		# eles e a margem transparentes (o terreno do mapa aparece por baixo).
 		# Fazendas no estilo das do Civilization VI (pedido do usuário, 26/10/2026):
@@ -488,63 +505,40 @@ func _label(text: String, font_size: int) -> Label:
 
 
 func _readme() -> void:
-	var text := """PEDIDOS PARA O GEMINI: UM POR TEMA
-==================================
-Cada pasta é um pedido, com uma folha do tema:
-  01_unidades           9 unidades (3x3; a Galé já está pronta)
-  02_cidades_povoado    povoado: normal e com muralha (o povoado não
-                        tem palácio)
-  03_cidades_vila       vila: normal, capital (palácio), com muralha,
-                        capital com muralha
-  04_cidades_cidade     cidade: as mesmas 4 versões
-  05_cidades_metropole  metrópole: as mesmas 4 (o palácio é a acrópole)
+	var text := """PEDIDOS PARA O GEMINI (só o que ainda falta)
+===========================================
+Cada pasta é um pedido: referencia.png (anexar) + prompt.txt (colar).
+
+  02_cidades_povoado    povoado com muralha (o normal já foi feito)
   06_ruinas             8 ruínas (4x2: sem muralha / com muralha)
-  07_terrenos           6 texturas (3x2); FEITO: pradaria, cerrado,
-                        floresta e água (colinas e montanhas vieram com
-                        relevo pintado e não serviram)
   08_terrenos_relevo    colinas e montanhas: só a superfície, SEM relevo
                         (o mapa já desenha morros e picos)
-  09_fazendas           as 3 fazendas no estilo do Civilization VI
-                        (mosaico de campos listrados, vinhedo, oliveiras,
-                        cercas baixas; o verde entre os campos e na borda
-                        fica transparente; sem casa).
-                        Madeireira, mina e ferro já vieram bons (folha em
-                        tools/art/gemini/melhorias_folha.png)
-  10_tecnologias        16 ilustrações (4x4, opcional)
-  11_terrenos_novos     águas profundas, selva (com palmeiras), deserto,
-                        tundra e neve (5x1; no jogo, provisórias geradas
-                        por tools/art/gen_terrenos_novos.gd)
+  10_tecnologias        16 ilustrações (4x4; adiado, opcional)
+  11_terrenos_novos     águas profundas, selva, deserto, tundra e neve
+                        (5x1; no jogo, provisórias de código)
   13 a 18 lider_*       os LÍDERES (gregos, romanos, egípcios, fenícios,
                         americanos, ingleses): UMA folha larga com os 3
-                        retratos do mesmo líder (bravo, neutro, feliz),
-                        da cintura para cima. Um pedido por líder, cada
-                        um numa CONVERSA NOVA, com referencia.png. Peça a
-                        maior resolução (3K/4K). Importar: ...
-                        import_lideres_gemini.gd -- folha.png <líder>
-  12_quadrirreme        o Quadrirreme, barco de guerra mais imponente que
-                        a Galé (importar como avulsa: ...
-                        import_folha_unidades.gd -- resultado.png
-                        quadrirreme)
-  (As 14 cidades numa folha só o Gemini não conseguiu: copiou a
-  referência. Por isso uma classe por pedido.)
+                        retratos do mesmo líder (bravo, neutro, feliz).
+                        Peça a maior resolução (3K/4K). Importar:
+                        ... import_lideres_gemini.gd -- folha.png <líder>
+
+Já feitos (sem pasta aqui): unidades, vila, cidade, metrópole, terrenos,
+fazendas e quadrirreme. Os originais do Gemini que já entraram no jogo
+ficam em tools/art/gemini/originais/ (os retratos dos líderes em
+originais/lideres/); as prévias geradas pelos importadores, em
+tools/art/gemini/previas/ (fora do git).
 
 Para cada pasta:
   1. Abra uma CONVERSA NOVA no Gemini.
-  2. Anexe referencia.png (à esquerda o ESTILO, a Galé; à direita os
-     desenhos ATUAIS do tema, numerados, na mesma grade que o prompt
-     pede).
+  2. Anexe referencia.png.
   3. Cole o texto de prompt.txt inteiro.
-  4. Salve a imagem na pasta como resultado.png.
+  4. Salve a imagem na pasta como resultado.png (ou folha.png) e rode o
+     importador do tema.
 
 Se a folha sair errada, peça para refazer na mesma conversa, citando o
-problema, ex.: "Redo it: keep the same 4x4 grid and order", "Redo it:
-the background must be one flat green #00B140", "Redo it: the versions
-must be the same town", "Redo it: same painted style as the
-galley".
-
-Lógica das cidades: classe pela população (povoado 1-5, vila 6-15,
-cidade 16-30, metrópole 31+); capital = templo no alto (o Palácio; o
-povoado não tem); muralha = só com o prédio Muralha, em qualquer classe.
+problema, ex.: "Redo it: keep the same grid and order", "Redo it: the
+background must be one flat green #00B140", "Redo it: nothing may be
+cut by the edges".
 
 Gerado por tools/art/pedidos_gemini.gd (os textos dos prompts ficam lá).
 """
@@ -649,33 +643,3 @@ func _farm_patchwork(kind: String) -> Image:
 				if x * x + y * y <= 16:
 					image.set_pixelv(c + Vector2i(x, y), Color8(60, 92, 44) if kind != "civ_queimada" else Color8(40, 34, 28))
 	return image
-
-
-## Arquivos das pastas de pedido que não são gerados aqui (o resultado.png que
-## o usuário salvou): {tema: {arquivo: bytes}}.
-func _keep_user_files() -> Dictionary:
-	var kept := {}
-	var root_dir := DirAccess.open(ProjectSettings.globalize_path(OUT))
-	if root_dir == null:
-		return kept
-	for folder in root_dir.get_directories():
-		var theme := folder.substr(folder.find("_") + 1)
-		var path := ProjectSettings.globalize_path(OUT).path_join(folder)
-		for file_name in DirAccess.get_files_at(path):
-			if file_name in ["prompt.txt", "referencia.png"]:
-				continue
-			if not kept.has(theme):
-				kept[theme] = {}
-			kept[theme][file_name] = FileAccess.get_file_as_bytes(path.path_join(file_name))
-	return kept
-
-
-func _remove_tree(path: String) -> void:
-	var dir := DirAccess.open(path)
-	if dir == null:
-		return
-	for sub in dir.get_directories():
-		_remove_tree(path.path_join(sub))
-	for file in dir.get_files():
-		dir.remove(file)
-	DirAccess.remove_absolute(path)
