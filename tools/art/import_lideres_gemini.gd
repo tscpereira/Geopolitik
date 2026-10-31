@@ -29,6 +29,7 @@ const MAX_HEIGHT := 1600
 ## Verde do fundo: quanto o verde passa do maior entre o vermelho e o azul.
 const KEY_FULL := 0.22
 const KEY_EDGE := 0.06
+const DIVIDER_MARGIN := 4
 
 
 func _initialize() -> void:
@@ -70,6 +71,7 @@ func _initialize() -> void:
 			return
 		sheet.save_png(ProjectSettings.globalize_path(SHEETS + leader + "_folha.png"))
 		_remove_green(sheet)
+		_remove_dividers(sheet)
 		var columns := _figure_columns(sheet)
 		var boxes: Array[Rect2i] = []
 		for i in 3:
@@ -129,6 +131,28 @@ func _remove_green(image: Image) -> void:
 			elif key > KEY_EDGE:
 				var alpha := 1.0 - (key - KEY_EDGE) / (KEY_FULL - KEY_EDGE)
 				image.set_pixel(x, y, Color(p.r, maxf(p.r, p.b), p.b, alpha * p.a))
+
+
+## Linhas escuras entre os painéis (o Gemini às vezes desenha, mesmo pedindo
+## que não; 30/10/2026): colunas quase inteiras opacas e escuras ficam
+## transparentes, com DIVIDER_MARGIN colunas de cada lado (a borda borrada
+## da linha).
+func _remove_dividers(image: Image) -> void:
+	var lines: Array[int] = []
+	for x in image.get_width():
+		var dark := 0
+		for y in image.get_height():
+			var p := image.get_pixel(x, y)
+			if p.a > 0.5 and p.get_luminance() < 0.25:
+				dark += 1
+		if dark > image.get_height() * 0.9:
+			lines.append(x)
+	for line in lines:
+		for x in range(maxi(line - DIVIDER_MARGIN, 0), mini(line + DIVIDER_MARGIN + 1, image.get_width())):
+			for y in image.get_height():
+				image.set_pixel(x, y, Color(0, 0, 0, 0))
+	if not lines.is_empty():
+		print("  linhas entre os painéis apagadas (colunas %s)" % str(lines))
 
 
 ## Faixas de colunas [início, fim] das 3 figuras: as 3 maiores faixas de
