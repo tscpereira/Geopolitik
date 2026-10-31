@@ -1,23 +1,20 @@
 I am making the art of a 2D turn-based strategy game about ancient civilizations. The attached image shows three units already made for the game. It is ONLY the STYLE REFERENCE: paint in exactly this painted style, with the same detail, palette and light. Do not copy or include those units.
 
-Create THREE SEPARATE IMAGES: 3 portraits of the same leader, one image per facial expression (ANGRY, then NEUTRAL, then HAPPY). They are shown big, on the diplomacy screen, when the player meets this leader, so make each image LARGE and DETAILED: a tall portrait-format image (2:3, like 1024 x 1536 pixels or bigger), never a small or square thumbnail.
+Create ONE LARGE IMAGE: the NEUTRAL portrait of a leader. It is shown big, on the diplomacy screen, when the player meets this leader, so make it LARGE and DETAILED: a tall portrait-format image (2:3, like 1024 x 1536 pixels or bigger), never a small or square thumbnail. (The angry and happy versions will be made later by editing this same image.)
 
 STYLE (copy it from the attached units):
 - Detailed painted digital illustration with realistic proportions and a dignified, heroic look: soft painted shading, visible texture of skin, cloth and metal, rich but natural colors. Not cartoon, not chibi, not anime, not pixel art, no thick black outlines, not a photo.
-- Soft daylight from the TOP-LEFT, the same in the three portraits.
+- Soft daylight from the TOP-LEFT.
 
-FRAMING (very important, the same in the three images):
-- Each image: ONE portrait of the leader, from the head down to about the WAIST, facing the viewer (turned very slightly, three-quarter), centered, the head near the top and the figure filling most of the height. Nothing cropped on the sides; the bottom of the figure (the waist) may touch the bottom of the image.
-- Exactly the same person, face, clothes, hair, colors, size and position in the three images: ONLY the facial expression and the hands/gesture change.
-- Never put two or three portraits in the same image.
+FRAMING (very important):
+- ONE portrait of the leader, from the head down to about the WAIST, facing the viewer (turned very slightly, three-quarter), centered, the head near the top and the figure filling most of the height. Nothing cropped on the sides; the bottom of the figure (the waist) may touch the bottom of the image.
+- Only ONE person in the image.
 - No throne, no room, no landscape, no props apart from what the leader wears or holds.
 
 THE LEADER, an American colonial leader of the 1700s: about 40 years old, hair tied back, a black tricorn hat, a dark blue colonial coat with brass buttons over a buff waistcoat and a white shirt with a simple cravat.
 
-THE THREE IMAGES (in this order):
-- ANGRY (used when at war): brows lowered and drawn together, a hard glare straight at the viewer, jaw clenched, mouth tight; one hand clenched into a fist or resting on a weapon.
+THE EXPRESSION:
 - NEUTRAL (used in peace): calm, composed and dignified, a steady attentive look, mouth relaxed and closed; hands at rest.
-- HAPPY (used when the relation is good): a warm, confident smile that reaches the eyes, relaxed brows; one open hand raised slightly in a welcoming gesture.
 
 No text, no labels, no frames, no borders.
 

@@ -7,6 +7,9 @@ extends SceneTree
 ## Rode na pasta do projeto:
 ##   godot_console.cmd --headless --path . --script tools/art/import_lideres_gemini.gd -- <brava.png> <neutra.png> <feliz.png> <líder>
 ##   godot_console.cmd --headless --path . --script tools/art/import_lideres_gemini.gd -- <folha.png> <líder>
+##   godot_console.cmd --headless --path . --script tools/art/import_lideres_gemini.gd -- <imagem> <líder> <brava|neutra|feliz>
+## (a última forma importa uma expressão só: desde 30/10/2026 o pedido é o
+## neutro primeiro e depois as edições do rosto, uma de cada vez).
 ## <líder>: gregos, romanos, egipcios, fenicios, americanos ou ingleses
 ## (Nation.DATA "leader").
 ## Passos:
@@ -29,14 +32,23 @@ const KEY_EDGE := 0.06
 
 func _initialize() -> void:
 	var args := OS.get_cmdline_user_args()
-	if args.size() != 2 and args.size() != 4:
-		print("uso: -- <brava.png> <neutra.png> <feliz.png> <líder>   ou   -- <folha.png> <líder>")
+	if args.size() < 2 or args.size() > 4 or (args.size() == 3 and not MOODS.has(args[2])):
+		print("uso: -- <brava.png> <neutra.png> <feliz.png> <líder>   ou   -- <folha.png> <líder>   ou   -- <imagem> <líder> <brava|neutra|feliz>")
 		quit(1)
 		return
-	var leader: String = args[-1]
+	var leader: String = args[1] if args.size() == 3 else args[-1]
 	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(SHEETS))
 	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(LEADERS))
-	if args.size() == 4:
+	if args.size() == 3:
+		# Uma expressão só
+		var single := _open(args[0])
+		if single == null:
+			quit(1)
+			return
+		single.save_png(ProjectSettings.globalize_path("%s%s_%s_original.png" % [SHEETS, leader, args[2]]))
+		_remove_green(single)
+		_save(single, _bounding_box(single, Vector2i(0, single.get_width() - 1)), leader, args[2])
+	elif args.size() == 4:
 		# Três imagens separadas, na ordem brava, neutra, feliz
 		for i in 3:
 			var image := _open(args[i])

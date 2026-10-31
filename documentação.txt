@@ -2746,7 +2746,16 @@ message_dialog.gd)
   sairia com ~340 px): Gregos como Alexandre, o Grande; Romanos, um
   cônsul de toga branca e coroa de louros; Egípcios, um faraó; Fenícios,
   um general como Aníbal; Americanos, um líder colonial do século 18;
-  Ingleses, um chefe celta. Importar: tools/art/import_lideres_gemini.gd
+  Ingleses, um chefe celta. FLUXO (desde 30/10/2026: no grego, o Gemini
+  fez o neutro sozinho, grande e bom, mas não as outras duas; a folha
+  com as três saiu estreita, cortada e com OUTRO homem): prompt.txt pede
+  SÓ O NEUTRO, grande; edicao_brava.txt e edicao_feliz.txt pedem para
+  editar o rosto do neutro anexado (todo o resto idêntico: mesmo homem,
+  pose e resolução). Sem a expressão pedida, o jogo usa o neutro
+  (Nation.portrait). GREGOS: neutro importado (837 x 1223; o original em
+  tools/art/gemini/pedidos/13_lider_gregos/neutra.jpg); faltam o bravo e
+  o feliz. Importar: tools/art/import_lideres_gemini.gd
+  -- <imagem> <líder> <brava|neutra|feliz> (uma de cada vez) ou
   -- brava.png neutra.png feliz.png <líder> (ou -- folha.png <líder>, se
   vierem juntas): tira o verde, recorta a figura e grava os 3 arquivos
   em alta resolução (reduz só acima de 1600 px de altura; avisa se ficar

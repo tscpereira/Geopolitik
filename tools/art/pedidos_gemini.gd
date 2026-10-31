@@ -72,6 +72,11 @@ func _run() -> void:
 		var file := FileAccess.open(ProjectSettings.globalize_path(folder + "prompt.txt"), FileAccess.WRITE)
 		file.store_string(_prompt(theme) + "\n")
 		file.close()
+		# Prompts a mais do pedido (ex.: as edições do rosto dos líderes)
+		for extra_name: String in theme.get("extra_files", {}):
+			var extra := FileAccess.open(ProjectSettings.globalize_path(folder + extra_name), FileAccess.WRITE)
+			extra.store_string(theme["extra_files"][extra_name] + "\n")
+			extra.close()
 		await _reference(theme, folder + "referencia.png")
 	_readme()
 	print("ok: %d temas" % n)
@@ -274,10 +279,13 @@ WHAT MAKES IT DIFFERENT (very important):
 ## Retratos dos LÍDERES (30/10/2026, pedido do usuário): um pedido por líder,
 ## com as 3 expressões (brava em guerra, neutra em paz, feliz com boa
 ## relação), da cintura para cima, no estilo das unidades (style_images; sem
-## desenho atual: no_current). TRÊS IMAGENS SEPARADAS, em pé e grandes: o
-## retrato ocupa o palco do encontro, bem maior que os outros desenhos (numa
-## folha com as três, cada uma sairia com ~340 px de largura). Importar com
-## tools/art/import_lideres_gemini.gd -- brava.png neutra.png feliz.png <líder>.
+## desenho atual: no_current), grandes e em pé: o retrato ocupa o palco do
+## encontro, bem maior que os outros desenhos. Desde 30/10/2026 (o Gemini não
+## fez as três separadas, e a folha com as três saiu pequena e com outro
+## homem): prompt.txt pede SÓ O NEUTRO; edicao_brava.txt e edicao_feliz.txt
+## pedem para editar o rosto dele (anexado), mantendo todo o resto igual. Assim
+## é o mesmo homem, na mesma pose e resolução. Importar uma de cada vez:
+## tools/art/import_lideres_gemini.gd -- <imagem> <líder> <brava|neutra|feliz>.
 ## Os líderes vão mudar com as eras (estes são os da era antiga).
 func _leader_themes(u: String) -> Array:
 	var leaders := [
@@ -290,31 +298,41 @@ func _leader_themes(u: String) -> Array:
 	]
 	var themes := []
 	for leader: Array in leaders:
-		themes.append({"name": "lider_" + leader[0], "what": "3 portraits of the same leader", "columns": 3, "cell": 200,
+		themes.append({"name": "lider_" + leader[0], "what": "the NEUTRAL portrait of a leader", "columns": 1, "cell": 200,
 		"style_images": [u + "retratos/lanceiro", u + "retratos/arqueiro", u + "retratos/colono"],
 		"no_current": true,
 		"intro": """I am making the art of a 2D turn-based strategy game about ancient civilizations. The attached image shows three units already made for the game. It is ONLY the STYLE REFERENCE: paint in exactly this painted style, with the same detail, palette and light. Do not copy or include those units.
 
-Create THREE SEPARATE IMAGES: %s, one image per facial expression (ANGRY, then NEUTRAL, then HAPPY). They are shown big, on the diplomacy screen, when the player meets this leader, so make each image LARGE and DETAILED: a tall portrait-format image (2:3, like 1024 x 1536 pixels or bigger), never a small or square thumbnail.""",
+Create ONE LARGE IMAGE: %s. It is shown big, on the diplomacy screen, when the player meets this leader, so make it LARGE and DETAILED: a tall portrait-format image (2:3, like 1024 x 1536 pixels or bigger), never a small or square thumbnail. (The angry and happy versions will be made later by editing this same image.)""",
 		"style": """STYLE (copy it from the attached units):
 - Detailed painted digital illustration with realistic proportions and a dignified, heroic look: soft painted shading, visible texture of skin, cloth and metal, rich but natural colors. Not cartoon, not chibi, not anime, not pixel art, no thick black outlines, not a photo.
-- Soft daylight from the TOP-LEFT, the same in the three portraits.""",
-		"camera": """FRAMING (very important, the same in the three images):
-- Each image: ONE portrait of the leader, from the head down to about the WAIST, facing the viewer (turned very slightly, three-quarter), centered, the head near the top and the figure filling most of the height. Nothing cropped on the sides; the bottom of the figure (the waist) may touch the bottom of the image.
-- Exactly the same person, face, clothes, hair, colors, size and position in the three images: ONLY the facial expression and the hands/gesture change.
-- Never put two or three portraits in the same image.
+- Soft daylight from the TOP-LEFT.""",
+		"camera": """FRAMING (very important):
+- ONE portrait of the leader, from the head down to about the WAIST, facing the viewer (turned very slightly, three-quarter), centered, the head near the top and the figure filling most of the height. Nothing cropped on the sides; the bottom of the figure (the waist) may touch the bottom of the image.
+- Only ONE person in the image.
 - No throne, no room, no landscape, no props apart from what the leader wears or holds.""",
-		"items_title": "THE LEADER, " + leader[1] + ".\n\nTHE THREE IMAGES (in this order):",
+		"items_title": "THE LEADER, " + leader[1] + ".\n\nTHE EXPRESSION:",
 		"items": [
-			["brava", "", "ANGRY (used when at war): brows lowered and drawn together, a hard glare straight at the viewer, jaw clenched, mouth tight; one hand clenched into a fist or resting on a weapon."],
 			["neutra", "", "NEUTRAL (used in peace): calm, composed and dignified, a steady attentive look, mouth relaxed and closed; hands at rest."],
-			["feliz", "", "HAPPY (used when the relation is good): a warm, confident smile that reaches the eyes, relaxed brows; one open hand raised slightly in a welcoming gesture."],
 		],
+		"extra_files": {
+			"edicao_brava.txt": EDIT_FACE % "ANGRY (used when at war): brows lowered and drawn together, a hard glare straight at the viewer, jaw clenched, mouth tight and turned down",
+			"edicao_feliz.txt": EDIT_FACE % "HAPPY (used when the relation is good): a warm, confident smile that reaches the eyes (a little of the teeth may show), relaxed brows, cheeks slightly raised",
+		},
 		"team_note": "COLORS: normal colors for skin, clothes and metal (no team color in these images).",
 		"extra": "No text, no labels, no frames, no borders.",
 		})
 	return themes
 
+
+
+## Edição do rosto do líder (anexar o retrato NEUTRO aprovado): muda só a
+## expressão, todo o resto fica idêntico (mesma pessoa, pose e resolução).
+const EDIT_FACE := """Edit the attached image. Keep EVERYTHING exactly the same: the same person and face shape, the same hair, clothes, armour, cloak, jewellery, pose, hands, colors, lighting, framing, image size and the same flat green background.
+
+Change ONLY the FACIAL EXPRESSION to: %s.
+
+Do not change anything else: no new objects, no change of pose or of the hands, no crop, no zoom. Same resolution as the attached image."""
 
 
 ## Um pedido por classe de cidade: as versões da MESMA cidade lado a lado
@@ -505,12 +523,15 @@ Cada pasta é um pedido, com uma folha do tema:
                         por tools/art/gen_terrenos_novos.gd)
   13 a 18 lider_*       os LÍDERES (gregos, romanos, egípcios, fenícios,
                         americanos, ingleses): 3 retratos do mesmo líder,
-                        da cintura para cima, em TRÊS IMAGENS SEPARADAS e
-                        grandes (brava, neutra, feliz). Um pedido por
-                        líder, cada um numa CONVERSA NOVA. Salve como
-                        brava.png, neutra.png e feliz.png na pasta.
-                        Importar: ... import_lideres_gemini.gd --
-                        brava.png neutra.png feliz.png <líder>
+                        da cintura para cima, grandes. Para cada líder,
+                        numa CONVERSA NOVA: 1) prompt.txt (com
+                        referencia.png) dá o NEUTRO; salve como
+                        neutra.png. 2) Na mesma conversa (ou numa nova,
+                        anexando neutra.png), edicao_brava.txt e depois
+                        edicao_feliz.txt: só o rosto muda; salve como
+                        brava.png e feliz.png. Importar cada um:
+                        ... import_lideres_gemini.gd -- <imagem> <líder>
+                        <brava|neutra|feliz>
   12_quadrirreme        o Quadrirreme, barco de guerra mais imponente que
                         a Galé (importar como avulsa: ...
                         import_folha_unidades.gd -- resultado.png

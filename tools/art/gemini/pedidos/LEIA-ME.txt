@@ -26,12 +26,15 @@ Cada pasta é um pedido, com uma folha do tema:
                         por tools/art/gen_terrenos_novos.gd)
   13 a 18 lider_*       os LÍDERES (gregos, romanos, egípcios, fenícios,
                         americanos, ingleses): 3 retratos do mesmo líder,
-                        da cintura para cima, em TRÊS IMAGENS SEPARADAS e
-                        grandes (brava, neutra, feliz). Um pedido por
-                        líder, cada um numa CONVERSA NOVA. Salve como
-                        brava.png, neutra.png e feliz.png na pasta.
-                        Importar: ... import_lideres_gemini.gd --
-                        brava.png neutra.png feliz.png <líder>
+                        da cintura para cima, grandes. Para cada líder,
+                        numa CONVERSA NOVA: 1) prompt.txt (com
+                        referencia.png) dá o NEUTRO; salve como
+                        neutra.png. 2) Na mesma conversa (ou numa nova,
+                        anexando neutra.png), edicao_brava.txt e depois
+                        edicao_feliz.txt: só o rosto muda; salve como
+                        brava.png e feliz.png. Importar cada um:
+                        ... import_lideres_gemini.gd -- <imagem> <líder>
+                        <brava|neutra|feliz>
   12_quadrirreme        o Quadrirreme, barco de guerra mais imponente que
                         a Galé (importar como avulsa: ...
                         import_folha_unidades.gd -- resultado.png
