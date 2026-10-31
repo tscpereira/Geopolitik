@@ -272,11 +272,13 @@ WHAT MAKES IT DIFFERENT (very important):
 
 
 ## Retratos dos LÍDERES (30/10/2026, pedido do usuário): um pedido por líder,
-## com as 3 expressões lado a lado na mesma folha (brava em guerra, neutra em
-## paz, feliz com boa relação), da cintura para cima, no estilo das unidades
-## (style_images; sem desenho atual: no_current). Importar com
-## tools/art/import_lideres_gemini.gd -- resultado.png <líder>. Os líderes vão
-## mudar com as eras (estes são os da era antiga).
+## com as 3 expressões (brava em guerra, neutra em paz, feliz com boa
+## relação), da cintura para cima, no estilo das unidades (style_images; sem
+## desenho atual: no_current). TRÊS IMAGENS SEPARADAS, em pé e grandes: o
+## retrato ocupa o palco do encontro, bem maior que os outros desenhos (numa
+## folha com as três, cada uma sairia com ~340 px de largura). Importar com
+## tools/art/import_lideres_gemini.gd -- brava.png neutra.png feliz.png <líder>.
+## Os líderes vão mudar com as eras (estes são os da era antiga).
 func _leader_themes(u: String) -> Array:
 	var leaders := [
 		["gregos", "a young Macedonian king in the image of Alexander the Great: about 25 years old, clean-shaven, thick wavy light-brown hair swept up and back from the forehead, intense eyes; an ornate bronze muscle cuirass with a lion head on the chest and leather straps (pteruges) at the shoulders, a deep red cloak pinned at one shoulder"],
@@ -288,28 +290,28 @@ func _leader_themes(u: String) -> Array:
 	]
 	var themes := []
 	for leader: Array in leaders:
-		themes.append({"name": "lider_" + leader[0], "what": "3 portraits of the same leader, side by side", "columns": 3, "cell": 200,
+		themes.append({"name": "lider_" + leader[0], "what": "3 portraits of the same leader", "columns": 3, "cell": 200,
 		"style_images": [u + "retratos/lanceiro", u + "retratos/arqueiro", u + "retratos/colono"],
 		"no_current": true,
 		"intro": """I am making the art of a 2D turn-based strategy game about ancient civilizations. The attached image shows three units already made for the game. It is ONLY the STYLE REFERENCE: paint in exactly this painted style, with the same detail, palette and light. Do not copy or include those units.
 
-Create ONE image: %s. They are shown on the diplomacy screen when the player meets this leader.""",
+Create THREE SEPARATE IMAGES: %s, one image per facial expression (ANGRY, then NEUTRAL, then HAPPY). They are shown big, on the diplomacy screen, when the player meets this leader, so make each image LARGE and DETAILED: a tall portrait-format image (2:3, like 1024 x 1536 pixels or bigger), never a small or square thumbnail.""",
 		"style": """STYLE (copy it from the attached units):
 - Detailed painted digital illustration with realistic proportions and a dignified, heroic look: soft painted shading, visible texture of skin, cloth and metal, rich but natural colors. Not cartoon, not chibi, not anime, not pixel art, no thick black outlines, not a photo.
 - Soft daylight from the TOP-LEFT, the same in the three portraits.""",
-		"camera": """FRAMING AND LAYOUT (very important):
-- THREE portraits of the SAME person side by side, in three equal columns, left to right: ANGRY, NEUTRAL, HAPPY.
-- Each portrait: the leader from the head down to about the WAIST, facing the viewer (turned very slightly, three-quarter), centered in its column, the head near the top. Nothing cropped on the sides; the bottom of the figure (the waist) may touch the bottom of the image.
-- Exactly the same person, face, clothes, hair, colors, size and position in the three portraits: ONLY the facial expression and the hands/gesture change.
+		"camera": """FRAMING (very important, the same in the three images):
+- Each image: ONE portrait of the leader, from the head down to about the WAIST, facing the viewer (turned very slightly, three-quarter), centered, the head near the top and the figure filling most of the height. Nothing cropped on the sides; the bottom of the figure (the waist) may touch the bottom of the image.
+- Exactly the same person, face, clothes, hair, colors, size and position in the three images: ONLY the facial expression and the hands/gesture change.
+- Never put two or three portraits in the same image.
 - No throne, no room, no landscape, no props apart from what the leader wears or holds.""",
-		"items_title": "THE LEADER, " + leader[1] + ".\n\nTHE THREE PORTRAITS (left to right):",
+		"items_title": "THE LEADER, " + leader[1] + ".\n\nTHE THREE IMAGES (in this order):",
 		"items": [
 			["brava", "", "ANGRY (used when at war): brows lowered and drawn together, a hard glare straight at the viewer, jaw clenched, mouth tight; one hand clenched into a fist or resting on a weapon."],
 			["neutra", "", "NEUTRAL (used in peace): calm, composed and dignified, a steady attentive look, mouth relaxed and closed; hands at rest."],
 			["feliz", "", "HAPPY (used when the relation is good): a warm, confident smile that reaches the eyes, relaxed brows; one open hand raised slightly in a welcoming gesture."],
 		],
-		"team_note": "COLORS: normal colors for skin, clothes and metal (this sheet has no team color).",
-		"extra": "The three columns must be clearly separated by plain green space (the figures never touch or overlap). No text, no labels, no frames.",
+		"team_note": "COLORS: normal colors for skin, clothes and metal (no team color in these images).",
+		"extra": "No text, no labels, no frames, no borders.",
 		})
 	return themes
 
@@ -503,10 +505,12 @@ Cada pasta é um pedido, com uma folha do tema:
                         por tools/art/gen_terrenos_novos.gd)
   13 a 18 lider_*       os LÍDERES (gregos, romanos, egípcios, fenícios,
                         americanos, ingleses): 3 retratos do mesmo líder,
-                        da cintura para cima (brava, neutra, feliz). Um
-                        pedido por líder, cada um numa CONVERSA NOVA.
+                        da cintura para cima, em TRÊS IMAGENS SEPARADAS e
+                        grandes (brava, neutra, feliz). Um pedido por
+                        líder, cada um numa CONVERSA NOVA. Salve como
+                        brava.png, neutra.png e feliz.png na pasta.
                         Importar: ... import_lideres_gemini.gd --
-                        resultado.png <líder>
+                        brava.png neutra.png feliz.png <líder>
   12_quadrirreme        o Quadrirreme, barco de guerra mais imponente que
                         a Galé (importar como avulsa: ...
                         import_folha_unidades.gd -- resultado.png

@@ -69,13 +69,27 @@ const MOOD_FILES := {Mood.ANGRY: "brava", Mood.NEUTRAL: "neutra", Mood.HAPPY: "f
 const LEADERS_DIR := "res://assets/leaders/"
 
 
+## Retratos já carregados, com mipmaps: {caminho: Texture2D}.
+static var _portraits := {}
+
+
 ## Retrato do líder da nação com a expressão [param mood], ou null se ainda não
-## existir (o encontro desenha uma silhueta no lugar).
+## existir (o encontro desenha uma silhueta no lugar). O retrato é grande (até
+## 1600 px de altura) e o palco o reduz: os mipmaps são gerados aqui, uma vez,
+## para a redução ficar suave em qualquer resolução de tela.
 static func portrait(nation: int, mood: Mood) -> Texture2D:
 	if nation < 0:
 		return null
 	var path := "%s%s_%s.png" % [LEADERS_DIR, DATA[nation]["leader"], MOOD_FILES[mood]]
-	return load(path) if ResourceLoader.exists(path) else null
+	if not _portraits.has(path):
+		if not ResourceLoader.exists(path):
+			return null
+		var image := (load(path) as Texture2D).get_image()
+		if image.is_compressed():
+			image.decompress()
+		image.generate_mipmaps()
+		_portraits[path] = ImageTexture.create_from_image(image)
+	return _portraits[path]
 
 
 static func name_of(nation: int) -> String:

@@ -59,6 +59,8 @@ func _ready() -> void:
 	_stage = Control.new()
 	_stage.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	_stage.clip_contents = true
+	# O retrato do líder é grande (até 1600 px): reduzido com suavidade
+	_stage.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
 	_stage.draw.connect(_draw_stage)
 	column.add_child(_stage)
 

@@ -1,24 +1,27 @@
 extends SceneTree
 
-## Importa a folha de um LÍDER feita pelo Gemini (pedidos 13 a 18,
-## lider_<líder>: 3 retratos lado a lado, da esquerda para a direita brava,
-## neutra e feliz, sobre o verde #00B140). Rode na pasta do projeto:
+## Importa os retratos de um LÍDER feitos pelo Gemini (pedidos 13 a 18,
+## lider_<líder>: as 3 expressões, brava, neutra e feliz, sobre o verde
+## #00B140). O pedido é de TRÊS IMAGENS SEPARADAS e grandes (o retrato ocupa o
+## palco do encontro); se o Gemini juntar as três numa folha, também serve.
+## Rode na pasta do projeto:
+##   godot_console.cmd --headless --path . --script tools/art/import_lideres_gemini.gd -- <brava.png> <neutra.png> <feliz.png> <líder>
 ##   godot_console.cmd --headless --path . --script tools/art/import_lideres_gemini.gd -- <folha.png> <líder>
 ## <líder>: gregos, romanos, egipcios, fenicios, americanos ou ingleses
 ## (Nation.DATA "leader").
 ## Passos:
 ##   1. tira o fundo verde (e o verde que vaza nas bordas);
-##   2. acha as 3 figuras pelas colunas com desenho (sem achar 3, divide a
-##      folha em três partes iguais);
-##   3. recorta cada uma no tamanho da figura, reduz para no máximo MAX_HEIGHT
-##      de altura (o original grande fica guardado) e grava em
-##      assets/leaders/<líder>_<brava|neutra|feliz>.png (Nation.portrait).
-## A folha original fica em tools/art/gemini/lideres/<líder>_folha.png.
+##   2. na folha, acha as 3 figuras pelas colunas com desenho (sem achar 3,
+##      divide a folha em três partes iguais);
+##   3. recorta cada uma no tamanho da figura, reduz só se passar de
+##      MAX_HEIGHT de altura (a resolução alta é o que importa aqui) e grava
+##      em assets/leaders/<líder>_<brava|neutra|feliz>.png (Nation.portrait).
+## Os originais ficam em tools/art/gemini/lideres/.
 
 const LEADERS := "res://assets/leaders/"
 const SHEETS := "res://tools/art/gemini/lideres/"
 const MOODS := ["brava", "neutra", "feliz"]
-const MAX_HEIGHT := 900
+const MAX_HEIGHT := 1600
 ## Verde do fundo: quanto o verde passa do maior entre o vermelho e o azul.
 const KEY_FULL := 0.22
 const KEY_EDGE := 0.06
@@ -26,34 +29,60 @@ const KEY_EDGE := 0.06
 
 func _initialize() -> void:
 	var args := OS.get_cmdline_user_args()
-	if args.size() < 2:
-		print("uso: -- <folha.png> <líder>")
+	if args.size() != 2 and args.size() != 4:
+		print("uso: -- <brava.png> <neutra.png> <feliz.png> <líder>   ou   -- <folha.png> <líder>")
 		quit(1)
 		return
-	var sheet := Image.load_from_file(args[0])
-	if sheet == null:
-		print("não consegui abrir ", args[0])
-		quit(1)
-		return
-	sheet.convert(Image.FORMAT_RGBA8)
+	var leader: String = args[-1]
 	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(SHEETS))
 	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(LEADERS))
-	sheet.save_png(ProjectSettings.globalize_path(SHEETS + args[1] + "_folha.png"))
-	_remove_green(sheet)
-	var columns := _figure_columns(sheet)
-	for i in 3:
-		var box := _bounding_box(sheet, columns[i])
-		if box.size.x <= 0:
-			print("ERRO: figura %d vazia" % (i + 1))
-			continue
-		var portrait := sheet.get_region(box.grow(4).intersection(Rect2i(Vector2i.ZERO, sheet.get_size())))
-		if portrait.get_height() > MAX_HEIGHT:
-			var width := roundi(portrait.get_width() * float(MAX_HEIGHT) / portrait.get_height())
-			portrait.resize(width, MAX_HEIGHT, Image.INTERPOLATE_LANCZOS)
-		var path := "%s%s_%s.png" % [LEADERS, args[1], MOODS[i]]
-		portrait.save_png(ProjectSettings.globalize_path(path))
-		print("ok: %s (%s)" % [path, portrait.get_size()])
+	if args.size() == 4:
+		# Três imagens separadas, na ordem brava, neutra, feliz
+		for i in 3:
+			var image := _open(args[i])
+			if image == null:
+				quit(1)
+				return
+			image.save_png(ProjectSettings.globalize_path("%s%s_%s_original.png" % [SHEETS, leader, MOODS[i]]))
+			_remove_green(image)
+			var whole := Vector2i(0, image.get_width() - 1)
+			_save(image, _bounding_box(image, whole), leader, MOODS[i])
+	else:
+		var sheet := _open(args[0])
+		if sheet == null:
+			quit(1)
+			return
+		sheet.save_png(ProjectSettings.globalize_path(SHEETS + leader + "_folha.png"))
+		_remove_green(sheet)
+		var columns := _figure_columns(sheet)
+		for i in 3:
+			_save(sheet, _bounding_box(sheet, columns[i]), leader, MOODS[i])
 	quit()
+
+
+func _open(path: String) -> Image:
+	var image := Image.load_from_file(path)
+	if image == null:
+		print("não consegui abrir ", path)
+		return null
+	image.convert(Image.FORMAT_RGBA8)
+	return image
+
+
+## Recorta a figura em [param box] e grava o retrato (reduzido só acima de MAX_HEIGHT).
+func _save(image: Image, box: Rect2i, leader: String, mood: String) -> void:
+	if box.size.x <= 0:
+		print("ERRO: retrato %s vazio" % mood)
+		return
+	var portrait := image.get_region(box.grow(4).intersection(Rect2i(Vector2i.ZERO, image.get_size())))
+	if portrait.get_height() > MAX_HEIGHT:
+		var width := roundi(portrait.get_width() * float(MAX_HEIGHT) / portrait.get_height())
+		portrait.resize(width, MAX_HEIGHT, Image.INTERPOLATE_LANCZOS)
+	var path := "%s%s_%s.png" % [LEADERS, leader, mood]
+	portrait.save_png(ProjectSettings.globalize_path(path))
+	print("ok: %s (%s)" % [path, portrait.get_size()])
+	if portrait.get_height() < 700:
+		print("  aviso: só %d px de altura; o palco do encontro pede mais (peça a imagem maior)" % portrait.get_height())
 
 
 ## Fundo verde transparente; na borda (verde misturado), o verde some e o

@@ -2739,13 +2739,20 @@ message_dialog.gd)
   eras): assets/leaders/<líder>_<brava|neutra|feliz>.png, da cintura para
   cima, fundo transparente. Pedidos ao Gemini 13 a 18 (lider_gregos,
   lider_romanos, lider_egipcios, lider_fenicios, lider_americanos,
-  lider_ingleses; um por líder, com as 3 expressões lado a lado, no
-  estilo das unidades): Gregos como Alexandre, o Grande; Romanos, um
+  lider_ingleses; um por líder, com as 3 expressões em TRÊS IMAGENS
+  SEPARADAS e grandes, em pé (2:3, 1024 x 1536 ou mais), no estilo das
+  unidades; pedido do usuário: o líder em resolução proporcional ao
+  palco, bem maior que os outros desenhos; numa folha só cada retrato
+  sairia com ~340 px): Gregos como Alexandre, o Grande; Romanos, um
   cônsul de toga branca e coroa de louros; Egípcios, um faraó; Fenícios,
   um general como Aníbal; Americanos, um líder colonial do século 18;
   Ingleses, um chefe celta. Importar: tools/art/import_lideres_gemini.gd
-  -- resultado.png <líder> (tira o verde, separa as 3 figuras e grava os
-  3 arquivos; a folha original fica em tools/art/gemini/lideres/).
+  -- brava.png neutra.png feliz.png <líder> (ou -- folha.png <líder>, se
+  vierem juntas): tira o verde, recorta a figura e grava os 3 arquivos
+  em alta resolução (reduz só acima de 1600 px de altura; avisa se ficar
+  abaixo de 700); os originais ficam em tools/art/gemini/lideres/. No
+  jogo, Nation.portrait gera os mipmaps uma vez e o palco desenha o
+  retrato com filtro suave, na altura do palco.
 - TRATADO DE PAZ: "Propor paz" no encontro (a máquina responde na hora;
   recusada, o botão fica desabilitado e o próximo encontro só daqui a 5
   turnos) ou proposta da máquina (aviso com "Aceitar a paz" e "Recusar"; no
