@@ -19,6 +19,9 @@ static var _pending_load := {}
 ## Começa com todos se conhecendo e em guerra (como era antes da diplomacia; os
 ## testes antigos usam).
 static var start_at_war := false
+## Mostra a tela de início (nação e cor) antes de uma partida nova. Os testes
+## desligam: os jogadores vêm do JSON do mapa, como antes.
+static var show_start_screen := true
 const WARRIOR: UnitType = preload("res://data/units/guerreiro.tres")
 const ARCHER: UnitType = preload("res://data/units/arqueiro.tres")
 const LIGHT_CAVALRY: UnitType = preload("res://data/units/cavalaria_leve.tres")
@@ -97,6 +100,9 @@ var _contact_frames := 0
 ## Avisos de diplomacia para o humano, um de cada vez: [{title, text,
 ## buttons, callback}] (ver _queue_diplomacy_notice).
 var _diplomacy_queue: Array = []
+## A partida já começou (depois da tela de início): até lá, _process e a
+## entrada não fazem nada.
+var _started := false
 
 
 func _ready() -> void:
@@ -111,12 +117,22 @@ func _ready() -> void:
 	add_child(fog)
 	move_child(fog, cities_root.get_index() + 1)
 
-	players = []
+	# Partida nova: a tela de início (nação e cor). Save de outro mapa à espera
+	# e testes: sem ela
+	var choice := {}
+	if show_start_screen and _pending_load.is_empty():
+		var screen := StartScreen.new()
+		screen.name = "StartScreen"
+		hud.add_child(screen)
+		choice = await screen.chosen
+		screen.queue_free()
+	_create_players(map_info["jogadores"], choice)
 	var starts: Array[Vector2i] = []
 	for entry: Dictionary in map_info["jogadores"]:
-		players.append(Player.new(players.size() + 1, entry["nome"], Color.html(entry["cor"]), entry.get("maquina", true)))
 		starts.append(Vector2i(int(entry["inicio"][0]), int(entry["inicio"][1])))
 	_spawn_starting_units(starts)
+	if not choice.is_empty():
+		camera.position = game_map.cell_to_world(starts[0])
 	diplomacy = Diplomacy.new()
 	Movement.diplomacy = diplomacy
 	if start_at_war:
@@ -140,11 +156,51 @@ func _ready() -> void:
 	hud.minimap.setup(self)
 	_update_vision()
 	TurnManager.turn_started.connect(_on_turn_started)
+	_started = true
 	TurnManager.start_game(players)
 	if not _pending_load.is_empty():
 		var data := _pending_load
 		_pending_load = {}
 		restore_state(data)
+
+
+## Jogadores da partida, um por casa inicial do mapa ([param entries], do
+## JSON). Com a escolha da tela de início ([param choice]: "nation" e "color"),
+## o primeiro é o humano, com a nação e a cor escolhidas, e os outros são
+## máquinas com as outras nações (sorteadas; mais casas que nações: elas se
+## repetem), cada uma com a cor dela ou, se já usada, a próxima livre de
+## Nation.COLORS, e o estilo de jogo da nação. Sem escolha (testes, mapas
+## antigos): nome, cor e máquina do JSON, sem nação.
+func _create_players(entries: Array, choice: Dictionary) -> void:
+	players = []
+	if choice.is_empty():
+		for entry: Dictionary in entries:
+			players.append(Player.new(players.size() + 1, entry["nome"], Color.html(entry["cor"]), entry.get("maquina", true)))
+		return
+	var others: Array = Nation.Id.values()
+	others.erase(choice["nation"])
+	for i in range(others.size() - 1, 0, -1): # sorteio das nações das máquinas
+		var j := _rng.randi_range(0, i)
+		var swap: int = others[i]
+		others[i] = others[j]
+		others[j] = swap
+	var used_colors: Array[Color] = [choice["color"]]
+	for i in entries.size():
+		var nation: int = choice["nation"] if i == 0 else others[(i - 1) % others.size()]
+		var color: Color = choice["color"]
+		if i > 0:
+			color = Nation.DATA[nation]["color"]
+			if used_colors.has(color):
+				for free in Nation.COLORS:
+					if not used_colors.has(free):
+						color = free
+						break
+			used_colors.append(color)
+		var player := Player.new(i + 1, Nation.name_of(nation), color, i > 0)
+		player.nation = nation
+		if i > 0:
+			player.personality = Nation.personality(nation)
+		players.append(player)
 
 
 ## Monta o mapa [param name] (PNG + JSON de recursos, ver MAPS_DIR) e retorna o
@@ -164,6 +220,8 @@ func _load_map(name: String) -> Dictionary:
 	return info
 
 func _process(_delta: float) -> void:
+	if not _started:
+		return
 	_update_vision()
 	_contact_frames += 1
 	if _contact_frames >= CONTACT_CHECK_FRAMES:
@@ -179,6 +237,8 @@ func _process(_delta: float) -> void:
 
 
 func _unhandled_input(event: InputEvent) -> void:
+	if not _started:
+		return
 	var is_enter: bool = (event is InputEventKey and event.pressed and not event.echo
 			and event.keycode in [KEY_ENTER, KEY_KP_ENTER])
 	var key: int = event.keycode if event is InputEventKey and event.pressed and not event.echo else KEY_NONE
@@ -1141,7 +1201,7 @@ func found_city(settler: Unit, city_name := "") -> City:
 	if Terrain.has_wood(game_map.get_terrain(settler.cell)):
 		game_map.set_terrain(settler.cell, Terrain.Type.GRASSLAND)
 	var city := City.new()
-	city.setup(city_name if not city_name.is_empty() else _next_city_name(), player, settler.cell, game_map)
+	city.setup(city_name if not city_name.is_empty() else _next_city_name(player), player, settler.cell, game_map)
 	city.is_capital = player.cities.is_empty()
 	_claim_territory(city)
 	cities_root.add_child(city)
@@ -1498,7 +1558,7 @@ func _found_city_with_selected() -> void:
 		hud.show_message(error, Color(1, 0.6, 0.4))
 		return
 	camera.locked = true # setas/WASD e roda do mouse não mexem no mapa enquanto digita
-	hud.city_name_dialog.open(_next_city_name())
+	hud.city_name_dialog.open(_next_city_name(settler.owner_player))
 	var city_name: String = await hud.city_name_dialog.confirmed
 	camera.locked = false
 	if city_name.is_empty():
@@ -2157,7 +2217,7 @@ func can_act_in_diplomacy() -> bool:
 ## "Imperador do Jogador 2" (por enquanto todo líder é Imperador; o título vai
 ## variar com a civilização e o governo).
 static func leader_name(player: Player) -> String:
-	return "Imperador do %s" % player.display_name
+	return player.leader_title()
 
 
 ## Primeiros encontros: dois jogadores se conhecem quando um vê alguma unidade
@@ -2535,8 +2595,15 @@ func _spawn_starting_units(starts: Array[Vector2i]) -> void:
 				_spawn_unit(type, players[i], free_cell_near(starts[i], 3))
 
 
-func _next_city_name() -> String:
+## Nome da próxima cidade de [param player]: o primeiro livre da lista da nação
+## dele (Nation.DATA "cities"); acabando (ou sem nação), o primeiro livre de
+## City.NAMES.
+func _next_city_name(player: Player = null) -> String:
 	var used := cities().map(func(city: City) -> String: return city.city_name)
+	if player and player.nation >= 0:
+		for city_name: String in Nation.DATA[player.nation]["cities"]:
+			if not used.has(city_name):
+				return city_name
 	for city_name in City.NAMES:
 		if not used.has(city_name):
 			return city_name

@@ -646,18 +646,43 @@ MAPAS E JOGADORES (desde 29/10/2026, pedido do usuário)
   antigo, sem o nome: mapa_teste). Os testes antigos usam
   "mapa_teste" (a ilha de 2 jogadores).
 - TRES_CONTINENTES (140x90): três continentes separados por mar,
-  cada um com um jogador. Jogador 1 (humano, vermelho) no
-  continente do OESTE, que vai do norte frio ao sul quente; Jogador
-  2 (máquina, amarelo) no do NORDESTE, com tundra e neve no norte;
-  Jogador 3 (máquina, roxo) no do SUDESTE, com selva e deserto.
-  Tem todos os terrenos, lagos, 32 colinas com ferro (cada jogador
-  com uma a até 7 casas do Colono) e uns 46 rios (31 afluentes).
+  com DOIS jogadores em cada (desde 30/10/2026, pedido do usuário; 6
+  no total): o do OESTE (o humano e uma máquina), que vai do norte
+  frio ao sul quente; o do NORDESTE, com tundra e neve no norte; o do
+  SUDESTE, com selva e deserto. As duas casas iniciais de um
+  continente ficam a 14 casas ou mais uma da outra. Tem todos os
+  terrenos, lagos, 37 colinas com ferro (cada jogador com uma a até 7
+  casas do Colono) e uns 46 rios (31 afluentes).
   Gerado por tools/mapas/gera_tres_continentes.gd (ruído com
   semente fixa: relevo, umidade e latitude ondulada; a casa inicial
   é a que tem mais pradaria perto do meio do continente, e a área
   dela é ajeitada). Para mudar o mapa, ajuste o gerador e rode de
   novo (não edite o PNG à mão: o gerador o sobrescreve).
 - O passo seguinte é um EDITOR DE MAPAS (backlog).
+
+NAÇÕES E TELA DE INÍCIO (desde 30/10/2026, pedido do usuário;
+scripts/players/nation.gd, scripts/ui/start_screen.gd)
+- Nações: Romanos, Gregos, Fenícios, Egípcios, Americanos e Ingleses
+  (Nation.Id; novas entram no fim, o save guarda o número). Cada uma tem
+  o nome, a cor padrão, uma frase, 12 nomes de cidade próprios (Roma,
+  Atenas, Tiro, Mênfis, Washington, Londres...; acabando, City.NAMES) e
+  o estilo da máquina: Romanos e Americanos Expansionistas, Gregos e
+  Ingleses Equilibrados, Fenícios Econômicos, Egípcios Defensivos.
+- O líder é sempre o "Imperador dos <nação>" (Player.leader_title); o
+  título vai variar com a civilização e o governo, sem nomes próprios
+  (decisão do usuário). Textos com o artigo: "Vez dos Gregos", "Os
+  Gregos venceram!", "Turno 12, vez dos Gregos" no save.
+- TELA DE INÍCIO (antes de cada partida nova): no mármore, os 6 botões
+  das nações (a escolhida afundada, com o texto e uma moldura em bronze)
+  e as 8 cores (Nation.COLORS; escolher a nação já põe a cor dela), o
+  resumo ("Você será o Imperador dos Gregos...") e "Começar [Enter]".
+  O Game espera a escolha (_started) e monta os jogadores
+  (Game._create_players): o humano na primeira casa inicial do mapa
+  (o continente oeste), as outras 5 nações sorteadas para as máquinas,
+  cada uma com a cor dela ou, se você a pegou, a próxima livre.
+- Sem a tela (Game.show_start_screen = false: os testes; e ao carregar
+  um save de outro mapa), os jogadores vêm do JSON do mapa, sem nação
+  ("Jogador 1"...), como antes.
 - Uma unidade só é criada em casa andável (qualquer terreno menos
   as águas, rasas ou profundas, e Montanhas). Se não for, ou se estiver fora do mapa,
   aparece um aviso no console.
@@ -3187,7 +3212,11 @@ PRÓXIMO PASSO GRANDE 2: CONJUNTOS CULTURAIS DE UNIDADES E CIDADES
 [ ] EDITOR DE MAPAS (pedido do usuário para depois): pintar terrenos,
     ferro, rios e a casa inicial de cada jogador, gravando o PNG e o
     JSON de data/maps/
+[x] Nações (Romanos, Gregos, Fenícios, Egípcios, Americanos, Ingleses)
+    e tela de início com nação e cor; 6 nações no mapa de três
+    continentes, 2 por continente (30/10/2026)
 [ ] Escolher o mapa ao começar a partida (hoje: Game.map_name)
+[ ] Título do líder pela civilização e pelo governo (hoje: Imperador)
 [ ] IA: atravessar o mar (Galés) para alcançar os outros continentes
 [x] Desenho definitivo do Quadrirreme (Gemini, pedido 12_quadrirreme:
     a 1ª tentativa, com a Galé de referência, voltou uma cópia dela; o
@@ -4824,6 +4853,17 @@ PRÓXIMO PASSO GRANDE 2: CONJUNTOS CULTURAIS DE UNIDADES E CIDADES
   aceito em guerra com "Propor paz"; paz recusada com a resposta na tela e
   o botão travado; paz aceita perdendo; "Declarar guerra" travado na
   trégua), screenshots do encontro e o teste da diplomacia.
+
+- NAÇÕES E TELA DE INÍCIO (pedido do usuário): ver NAÇÕES E TELA DE
+  INÍCIO. O mapa de três continentes passou a ter 2 nações por
+  continente (o gerador escolhe duas casas iniciais afastadas em cada).
+  Validação: teste novo (a tela aparece e a partida espera; Gregos e
+  laranja escolhidos; 6 nações e 6 cores diferentes; os Ingleses sem o
+  laranja; 5 máquinas; primeira cidade "Atenas"; "Vez dos Gregos"),
+  screenshots (tela, escolha, jogo), o teste dos três continentes
+  (ajustado: 6 jogadores, os do mesmo continente na mesma terra, a 14+
+  casas, ferro perto de cada um) e todos os testes antigos (agora com
+  Game.show_start_screen = false). Rodada das 5 máquinas no começo: ~0,3 s.
 
 --------------------------------------------------------------
 7. BACKLOG (ideias para depois)

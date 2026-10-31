@@ -9,8 +9,12 @@ extends RefCounted
 const START_GOLD := 200
 
 var id: int
+## Nome mostrado: o da nação ("Romanos"); sem nação, o do mapa ("Jogador 2").
 var display_name: String
 var color: Color
+## Nação (Nation.Id), escolhida na tela de início ou sorteada; -1 = sem nação
+## (mapas e testes antigos).
+var nation := -1
 ## Controlado pela máquina (AIController) em vez de por cliques.
 var is_ai := false
 ## Estilo de jogo da máquina (só vale com is_ai).
@@ -133,7 +137,7 @@ func weapons_in_production(weapon: Arsenal.Weapon) -> int:
 ## unidades.
 func to_dict() -> Dictionary:
 	return {
-		"id": id, "name": display_name, "color": color.to_html(), "is_ai": is_ai,
+		"id": id, "name": display_name, "color": color.to_html(), "is_ai": is_ai, "nation": nation,
 		"founded_city": founded_city or not cities.is_empty(), "eliminated": eliminated,
 		"personality": personality.to_dict(), "wood": wood, "iron": iron, "gold": gold,
 		"arsenal": SaveGame.int_map_to_json(arsenal),
@@ -152,6 +156,7 @@ func to_dict() -> Dictionary:
 static func from_dict(data: Dictionary) -> Player:
 	var player := Player.new(int(data["id"]), data["name"], Color.html(data["color"]), data["is_ai"])
 	player.personality = AIPersonality.from_dict(data["personality"])
+	player.nation = int(data.get("nation", -1))
 	# Save antigo: quem tinha cidade já tinha fundado uma
 	player.founded_city = data.get("founded_city", not data.get("cities", []).is_empty())
 	player.eliminated = data.get("eliminated", false)
@@ -176,6 +181,21 @@ func is_defeated() -> bool:
 	if not cities.is_empty():
 		return false
 	return founded_city or units.is_empty()
+
+
+## O líder: "Imperador dos Romanos" (sem nação: "Imperador do Jogador 2").
+func leader_title() -> String:
+	return Nation.leader(nation) if nation >= 0 else "Imperador do %s" % display_name
+
+
+## Com o artigo e a preposição "de": "dos Romanos", "do Jogador 2".
+func of_name() -> String:
+	return "dos %s" % display_name if nation >= 0 else "do %s" % display_name
+
+
+## Com o artigo: "os Romanos", "o Jogador 2".
+func the_name() -> String:
+	return "os %s" % display_name if nation >= 0 else "o %s" % display_name
 
 
 func start_turn() -> void:

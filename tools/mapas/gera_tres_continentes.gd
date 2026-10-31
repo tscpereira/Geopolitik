@@ -2,31 +2,41 @@ extends SceneTree
 
 ## Gera o mapa "tres_continentes" (29/10/2026): data/maps/tres_continentes.png
 ## (1 pixel por casa, cores de Terrain.COLORS) e tres_continentes_recursos.json
-## (ferro, os 3 jogadores e a câmera). Sempre o mesmo mapa (sementes fixas).
+## (ferro, os 6 jogadores e a câmera). Sempre o mesmo mapa (sementes fixas).
 ## Rode na pasta do projeto:
 ##   godot_console.cmd --headless --path . --script tools/mapas/gera_tres_continentes.gd
 ##
 ## - Três continentes separados por mar (o jogo transforma o mar longe da costa
 ##   em Águas Profundas): o do OESTE, alto, vai do norte ao sul; o do NORDESTE,
-##   mais frio; o do SUDESTE, mais quente. Um jogador em cada.
+##   mais frio; o do SUDESTE, mais quente. DOIS jogadores em cada (desde
+##   30/10/2026, pedido do usuário: 6 nações; antes, um).
 ## - Terreno pelo ruído: relevo (colinas e cordilheiras), umidade (floresta e
 ##   cerrado) e latitude (neve e tundra no norte, deserto e selva no sul), mais
 ##   alguns lagos. Os rios o jogo gera ao montar o mapa (Rivers).
-## - Casa inicial de cada jogador: perto do meio do continente, a que tem mais
-##   pradaria em volta; o terreno em volta é ajeitado (sem montanha, pelo menos
-##   12 casas de pradaria ou cerrado) e há sempre uma colina com ferro perto.
+## - Casas iniciais: em cada continente, a que tem mais pradaria em volta
+##   (perto do meio) e a segunda, a pelo menos MIN_START_DISTANCE casas da
+##   primeira (quanto mais longe, melhor); o terreno em volta é ajeitado (sem
+##   montanha, pelo menos 12 casas de pradaria ou cerrado) e há sempre uma
+##   colina com ferro perto. O primeiro jogador (oeste) é o humano; a tela de
+##   início do jogo troca nomes e cores pelos das nações.
 
 const NAME := "tres_continentes"
 const MAPS := "res://data/maps/"
 const SIZE := Vector2i(140, 90)
 const SEED := 291026
 
-## Continentes: centro, raios (em casas) e o jogador.
+## Continentes: centro e raios (em casas).
 const CONTINENTS := [
-	{"center": Vector2(31, 46), "radius": Vector2(20, 33), "player": {"nome": "Jogador 1", "cor": "dc2828", "maquina": false}},
-	{"center": Vector2(99, 22), "radius": Vector2(31, 14), "player": {"nome": "Jogador 2", "cor": "fadc28", "maquina": true}},
-	{"center": Vector2(101, 68), "radius": Vector2(29, 15), "player": {"nome": "Jogador 3", "cor": "a050dc", "maquina": true}},
+	{"center": Vector2(31, 46), "radius": Vector2(20, 33)},
+	{"center": Vector2(99, 22), "radius": Vector2(31, 14)},
+	{"center": Vector2(101, 68), "radius": Vector2(29, 15)},
 ]
+## Jogadores por continente e a distância mínima entre as casas iniciais
+## do mesmo continente.
+const PLAYERS_PER_CONTINENT := 2
+const MIN_START_DISTANCE := 14
+## Cores dos jogadores no JSON (sem a tela de início: testes e ferramentas).
+const PLAYER_COLORS := ["dc2828", "fadc28", "a050dc", "2860dc", "28a050", "f08c28"]
 ## O mar entre dois continentes: uma casa só é terra se, para os outros, a
 ## distância normalizada passar de GAP.
 const GAP := 1.3
@@ -71,12 +81,15 @@ func _initialize() -> void:
 	var players := []
 	var iron := {}
 	for i in CONTINENTS.size():
-		var start := _pick_start(i)
-		_prepare_start(start)
-		var player: Dictionary = CONTINENTS[i]["player"].duplicate()
-		player["inicio"] = [start.x, start.y]
-		players.append(player)
-		iron[_iron_near(start)] = true
+		var placed: Array[Vector2i] = []
+		for k in PLAYERS_PER_CONTINENT:
+			var start := _pick_start(i, placed)
+			placed.append(start)
+			_prepare_start(start)
+			var number := players.size() + 1
+			players.append({"nome": "Jogador %d" % number, "cor": PLAYER_COLORS[(number - 1) % PLAYER_COLORS.size()],
+					"maquina": number > 1, "inicio": [start.x, start.y]})
+			iron[_iron_near(start)] = true
 	# Mais ferro: algumas colinas sorteadas (1 em 12)
 	for y in SIZE.y:
 		for x in SIZE.x:
@@ -157,13 +170,23 @@ func _land_type(p: Vector2, d: float) -> Terrain.Type:
 
 ## Casa inicial: perto do meio do continente (até 0,45 do raio), a que tem
 ## mais pradaria e cerrado na área da capital (5x5 sem os cantos).
-func _pick_start(i: int) -> Vector2i:
+## Casa inicial no continente [param i], longe das já escolhidas
+## ([param placed]): a primeira perto do meio (até 0,45 do raio); as outras
+## até 0,75 do raio, a pelo menos MIN_START_DISTANCE casas e, quanto mais
+## longe, melhor.
+func _pick_start(i: int, placed: Array[Vector2i]) -> Vector2i:
 	var best := Vector2i(CONTINENTS[i]["center"])
 	var best_score := -INF
+	var reach := 0.45 if placed.is_empty() else 0.75
 	for y in SIZE.y:
 		for x in SIZE.x:
 			var p := Vector2(x, y)
-			if _distance(i, p) > 0.45 or _terrain[y][x] != Terrain.Type.GRASSLAND:
+			if _distance(i, p) > reach or _terrain[y][x] != Terrain.Type.GRASSLAND:
+				continue
+			var nearest := INF
+			for other in placed:
+				nearest = minf(nearest, Vector2(other).distance_to(p))
+			if nearest < MIN_START_DISTANCE:
 				continue
 			var score := 0.0
 			for offset in City.area_offsets():
@@ -172,7 +195,10 @@ func _pick_start(i: int) -> Vector2i:
 					score += 1.0
 				elif t == Terrain.Type.FOREST or t == Terrain.Type.HILLS:
 					score += 0.5 # madeira e ferro por perto também valem
-			score -= (p - CONTINENTS[i]["center"]).length() * 0.05
+			if placed.is_empty():
+				score -= (p - CONTINENTS[i]["center"]).length() * 0.05
+			else:
+				score += minf(nearest, 24.0) * 0.15 # o vizinho bem longe
 			if score > best_score:
 				best_score = score
 				best = Vector2i(x, y)

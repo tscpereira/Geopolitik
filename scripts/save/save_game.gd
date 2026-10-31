@@ -84,8 +84,9 @@ static func summary(slot: int) -> String:
 	var players: Array = data.get("players", [])
 	var index := int(data["turn_manager"]["current_index"])
 	var player_name: String = players[index]["name"] if index < players.size() else "?"
-	return "Turno %d, vez do %s - %s" % [int(data["turn_manager"]["turn_number"]), player_name,
-			_date_text(data.get("saved_at", ""))]
+	var with_nation: bool = index < players.size() and int(players[index].get("nation", -1)) >= 0
+	return "Turno %d, vez %s %s - %s" % [int(data["turn_manager"]["turn_number"]), "dos" if with_nation else "do",
+			player_name, _date_text(data.get("saved_at", ""))]
 
 
 ## "2026-10-22 14:30:05" -> "22/10/2026 14:30".

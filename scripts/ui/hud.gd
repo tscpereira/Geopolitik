@@ -448,7 +448,7 @@ func _flash(label: Control, increased: bool) -> void:
 
 func set_turn(turn_number: int, player: Player) -> void:
 	_turn_label.text = "Turno %d" % turn_number
-	_player_label.text = "Vez do %s%s" % [player.display_name, " (máquina)" if player.is_ai else ""]
+	_player_label.text = "Vez %s%s" % [player.of_name(), " (máquina)" if player.is_ai else ""]
 	_player_label.add_theme_color_override("font_color", player.color)
 	show_end_turn_prompt(false)
 
@@ -468,7 +468,7 @@ func show_end_turn_prompt(visible_prompt: bool) -> void:
 
 ## Tela de fim de jogo por cima de tudo, com o nome do vencedor na cor dele.
 func show_victory(winner: Player) -> void:
-	_victory_label.text = "%s venceu!" % winner.display_name
+	_victory_label.text = ("%s venceram!" if winner.nation >= 0 else "%s venceu!") % winner.the_name().capitalize()
 	_victory_label.add_theme_color_override("font_color", winner.color)
 	_victory_screen.modulate.a = 0.0
 	_victory_screen.show()
