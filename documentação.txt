@@ -2754,8 +2754,9 @@ message_dialog.gd)
   pose e resolução). Sem a expressão pedida, o jogo usa o neutro
   (Nation.portrait). GREGOS: neutro importado (837 x 1223; o original em
   tools/art/gemini/pedidos/13_lider_gregos/neutra.jpg) e bravo (679 x 992,
-  editado numa conversa nova a partir do neutro: brava.jpg); falta
-  o feliz (a 1ª edição, na mesma conversa, editou a folha de três e não
+  editado numa conversa nova a partir do neutro: brava.jpg) e feliz (679 x
+  992, feliz.jpg): GREGOS COMPLETOS
+  (a 1ª edição, na mesma conversa, editou a folha de três e não
   o neutro: as edições vão em CONVERSA NOVA, anexando só o neutro). Importar: tools/art/import_lideres_gemini.gd
   -- <imagem> <líder> <brava|neutra|feliz> (uma de cada vez) ou
   -- brava.png neutra.png feliz.png <líder> (ou -- folha.png <líder>, se
@@ -3254,7 +3255,8 @@ PRÓXIMO PASSO GRANDE 2: CONJUNTOS CULTURAIS DE UNIDADES E CIDADES
     continentes, 2 por continente (30/10/2026)
 [ ] Escolher o mapa ao começar a partida (hoje: Game.map_name)
 [ ] Título do líder pela civilização e pelo governo (hoje: Imperador)
-[ ] Retratos dos 6 líderes (pedidos 13 a 18 no Gemini; o importador está
+[ ] Retratos dos líderes: Gregos prontos (30/10/2026); faltam Romanos,
+    Egípcios, Fenícios, Americanos e Ingleses (pedidos 14 a 18; o importador está
     pronto)
 [ ] Líderes que mudam com as eras (novos retratos por era)
 [ ] IA: atravessar o mar (Galés) para alcançar os outros continentes
