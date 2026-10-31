@@ -2793,6 +2793,8 @@ message_dialog.gd)
   chamada só, aprovado pelo usuário): os três de 454 x 718, braços e
   capa inteiros, mesmo enquadramento, só o rosto muda; a folha original
   (1376 x 768) em tools/art/gemini/originais/lideres/gregos_folha.png.
+  O corpo é o mesmo nos três ao pixel (o importador põe só o rosto do
+  bravo e do feliz sobre o neutro: ver CORPO DO LÍDER IMÓVEL).
   O Gemini desenhou linhas pretas entre os painéis (o pedido diz que
   não): o importador apaga colunas quase inteiras escuras (e 4 colunas
   de cada lado). GREGOS COMPLETOS
@@ -5013,6 +5015,19 @@ PRÓXIMO PASSO GRANDE 2: CONJUNTOS CULTURAIS DE UNIDADES E CIDADES
   prompt novo, numa chamada só, importada (454 x 718 cada, braços e capa
   inteiros, sem linhas). Validação: prévia dos três e teste das
   respostas do líder.
+
+- CORPO DO LÍDER IMÓVEL ENTRE AS EXPRESSÕES (pedido do usuário: ao mudar
+  a expressão, o corpo não pode se mover UM PIXEL): o Gemini nunca
+  repete a figura exata, então o importador (folha) usa o NEUTRO como
+  base dos três e só transplanta o ROSTO do bravo e do feliz: alinha a
+  cabeça da expressão à do neutro (_align, diferença de cor mínima,
+  busca grossa de 3 em 3 px até 18 px e fina em volta) e copia uma
+  elipse em volta do rosto (centro a 17% da altura da figura, meia-
+  altura 14%, meia-largura 80% da metade da cabeça), com borda suave
+  (35%); fora dela é o neutro. Validação: grego reimportado (bravo
+  deslocado (2, 1), feliz (1, 0)); fora do rosto, 0 pixels diferentes
+  do neutro nos dois; ampliação dos rostos sem emenda visível; teste
+  das respostas do líder.
 
 --------------------------------------------------------------
 7. BACKLOG (ideias para depois)

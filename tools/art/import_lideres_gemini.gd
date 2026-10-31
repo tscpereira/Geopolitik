@@ -30,6 +30,18 @@ const MAX_HEIGHT := 1600
 const KEY_FULL := 0.22
 const KEY_EDGE := 0.06
 const DIVIDER_MARGIN := 4
+## Rosto que vem do bravo e do feliz (o resto é o neutro), em frações da
+## altura da figura: a cabeça nas FACE_ROWS de cima (para alinhar), o centro
+## do rosto em FACE_CENTER e a meia-altura FACE_HEIGHT; a meia-largura é
+## FACE_WIDTH da largura da cabeça nessa altura; a borda suave é a fração
+## FACE_FEATHER de fora da elipse.
+const FACE_ROWS := 0.34
+const FACE_CENTER := 0.17
+const FACE_HEIGHT := 0.14
+const FACE_WIDTH := 0.8
+const FACE_FEATHER := 0.35
+## Deslocamento máximo procurado entre as figuras dos painéis (px).
+const ALIGN_REACH := 18
 
 
 func _initialize() -> void:
@@ -84,9 +96,16 @@ func _initialize() -> void:
 		var top: int = boxes.map(func(b: Rect2i) -> int: return b.position.y).min()
 		var bottom: int = boxes.map(func(b: Rect2i) -> int: return b.end.y).max()
 		var width: int = boxes.map(func(b: Rect2i) -> int: return b.size.x).max()
+		var portraits: Array[Image] = []
 		for i in 3:
 			var x := boxes[i].get_center().x - width / 2
-			_save(sheet, Rect2i(x, top, width, bottom - top), leader, MOODS[i])
+			portraits.append(_crop(sheet, Rect2i(x, top, width, bottom - top)))
+		# O corpo NÃO MEXE UM PIXEL (pedido do usuário, 30/10/2026): o bravo e o
+		# feliz são o neutro com só o rosto trocado
+		for i in [0, 2]:
+			portraits[i] = _transplant_face(portraits[1], portraits[i], MOODS[i])
+		for i in 3:
+			_write(portraits[i], leader, MOODS[i])
 	quit()
 
 
@@ -104,7 +123,12 @@ func _save(image: Image, box: Rect2i, leader: String, mood: String) -> void:
 	if box.size.x <= 0:
 		print("ERRO: retrato %s vazio" % mood)
 		return
-	# Fora da imagem fica transparente (o recorte mantém o tamanho pedido)
+	_write(_crop(image, box), leader, mood)
+
+
+## O retrato em [param box] (fora da imagem fica transparente: o recorte
+## mantém o tamanho pedido), reduzido só acima de MAX_HEIGHT.
+func _crop(image: Image, box: Rect2i) -> Image:
 	var area := box.grow(4)
 	var portrait := Image.create(area.size.x, area.size.y, false, Image.FORMAT_RGBA8)
 	var inside := area.intersection(Rect2i(Vector2i.ZERO, image.get_size()))
@@ -112,6 +136,81 @@ func _save(image: Image, box: Rect2i, leader: String, mood: String) -> void:
 	if portrait.get_height() > MAX_HEIGHT:
 		var width := roundi(portrait.get_width() * float(MAX_HEIGHT) / portrait.get_height())
 		portrait.resize(width, MAX_HEIGHT, Image.INTERPOLATE_LANCZOS)
+	return portrait
+
+
+## Rosto de [param expression] sobre o retrato [param base] (o neutro): o
+## resultado é o neutro pixel por pixel, menos o rosto. A cabeça da expressão
+## é alinhada à do neutro (_align: o Gemini desloca a figura uns pixels de um
+## painel para o outro) e entra por uma elipse em volta do rosto (FACE_*), com
+## a borda suave (FACE_FEATHER); fora dela, o neutro.
+func _transplant_face(base: Image, expression: Image, mood: String) -> Image:
+	var figure := _bounding_box(base, Vector2i(0, base.get_width() - 1))
+	var head_rows := Rect2i(figure.position.x, figure.position.y, figure.size.x, roundi(figure.size.y * FACE_ROWS))
+	# Centro do rosto: o meio da cabeça na altura dos olhos
+	var center_y := figure.position.y + figure.size.y * FACE_CENTER
+	var left := -1
+	var right := -1
+	for x in base.get_width():
+		if base.get_pixel(x, roundi(center_y)).a > 0.5:
+			if left < 0:
+				left = x
+			right = x
+	var center := Vector2((left + right) / 2.0, center_y)
+	var radius := Vector2((right - left) / 2.0 * FACE_WIDTH, figure.size.y * FACE_HEIGHT)
+	var offset := _align(base, expression, head_rows)
+	var result := base.duplicate() as Image
+	for y in range(maxi(roundi(center.y - radius.y), 0), mini(roundi(center.y + radius.y) + 1, base.get_height())):
+		for x in range(maxi(roundi(center.x - radius.x), 0), mini(roundi(center.x + radius.x) + 1, base.get_width())):
+			var d := Vector2((x - center.x) / radius.x, (y - center.y) / radius.y).length()
+			if d >= 1.0:
+				continue
+			var source := Vector2i(x, y) + offset
+			if source.x < 0 or source.y < 0 or source.x >= expression.get_width() or source.y >= expression.get_height():
+				continue
+			var weight := clampf((1.0 - d) / FACE_FEATHER, 0.0, 1.0)
+			result.set_pixel(x, y, base.get_pixel(x, y).lerp(expression.get_pixel(source.x, source.y), weight))
+	print("  %s: rosto sobre o neutro (deslocamento %s); o resto é o neutro" % [mood, offset])
+	return result
+
+
+## Deslocamento de [param moved] em relação a [param base] que melhor encaixa
+## a região [param area] (menor diferença de cor; busca grossa e depois fina).
+func _align(base: Image, moved: Image, area: Rect2i) -> Vector2i:
+	var best := Vector2i.ZERO
+	var best_cost := INF
+	for step: int in [3, 1]:
+		var around := best
+		var reach := ALIGN_REACH if step == 3 else 2
+		for dy in range(-reach, reach + 1, step):
+			for dx in range(-reach, reach + 1, step):
+				var offset := around + Vector2i(dx, dy)
+				var cost := _difference(base, moved, area, offset)
+				if cost < best_cost:
+					best_cost = cost
+					best = offset
+	return best
+
+
+func _difference(base: Image, moved: Image, area: Rect2i, offset: Vector2i) -> float:
+	var total := 0.0
+	var count := 0
+	for y in range(area.position.y, area.end.y, 4):
+		for x in range(area.position.x, area.end.x, 4):
+			var other := Vector2i(x, y) + offset
+			if other.x < 0 or other.y < 0 or other.x >= moved.get_width() or other.y >= moved.get_height():
+				total += 1.0
+				count += 1
+				continue
+			var a := base.get_pixel(x, y)
+			var b := moved.get_pixel(other.x, other.y)
+			total += absf(a.r - b.r) + absf(a.g - b.g) + absf(a.b - b.b) + absf(a.a - b.a)
+			count += 1
+	return total / maxi(count, 1)
+
+
+## Grava o retrato em assets/leaders/<líder>_<expressão>.png.
+func _write(portrait: Image, leader: String, mood: String) -> void:
 	var path := "%s%s_%s.png" % [LEADERS, leader, mood]
 	portrait.save_png(ProjectSettings.globalize_path(path))
 	print("ok: %s (%s)" % [path, portrait.get_size()])
