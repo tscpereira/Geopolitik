@@ -3042,9 +3042,22 @@ PLANO PARA 31/10/2026 (anotado em 30/10 pelo usuário)
    Fenícios, Americanos, Ingleses; pastas 14 a 18), uma chamada por
    civilização; importar com import_lideres_gemini.gd (o corpo fica o do
    neutro).
-3. Opcional: um cenário de teste em que os Gregos já exploraram o
-   continente deles e têm cidades, para testar a troca de mapas de
-   verdade (no Espaço 5 eles só têm 2 unidades ao lado de Roma).
+3. BUG: TROCA DE MAPAS AINDA NÃO ENTREGA O MAPA (usuário, 30/10, depois
+   da correção do commit 9820067: "não recebemos os mapas em troca").
+   Investigar no jogo de verdade, não só na cópia do Espaço 5:
+   - quantas casas o painel mostra em "O mapa dele (+N casas)" e se
+     esse N chega ao Player.explored do humano depois da troca;
+   - se a névoa é redesenhada depois (fog.reset + _update_vision): o
+     FogOfWar.update compara as fontes de visão e pode não refazer a
+     imagem; conferir que as casas novas aparecem como exploradas;
+   - se o Trade.transfer marca as casas no tamanho certo do mapa
+     (explored vazio de um lado, tamanhos diferentes);
+   - se o humano marcou "O mapa dele" em "Você pede" (e não o "O mapa
+     seu" em "Você oferece": a troca "Você deu: o mapa" não traz nada).
+   Fazer um teste que abre o painel, marca o mapa pelo CheckBox (como o
+   usuário) e confere a névoa na tela (screenshot), num cenário em que
+   os Gregos já exploraram o continente deles (o Espaço 5 tem só 2
+   unidades gregas ao lado de Roma).
 
 ==============================================================
 PLANO PARA 27/10/2026: ARTE NO GEMINI (onde paramos em 26/10)
