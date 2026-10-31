@@ -4986,7 +4986,12 @@ PRÓXIMO PASSO GRANDE 2: CONJUNTOS CULTURAIS DE UNIDADES E CIDADES
 - LÍDER GREGO NOVO (folha do usuário com as 3 expressões): importado;
   o importador agora apaga as linhas entre os painéis. Validação:
   prévia dos três lado a lado (mesmo homem, mesma pose, sem restos de
-  linha) e teste das respostas do líder.
+  linha) e teste das respostas do líder. O usuário viu o braço direito
+  cortado (na folha, o braço acaba na linha entre os painéis: não há
+  como recuperar). Prompt mais rígido para os 6 líderes: a parte mais
+  larga da figura (braços, mãos, capa) em no máximo 70% do painel, 15%
+  de verde de cada lado, "melhor menor do que cortado", nenhuma linha
+  entre os painéis. O grego fica como está até a nova folha.
 
 --------------------------------------------------------------
 7. BACKLOG (ideias para depois)

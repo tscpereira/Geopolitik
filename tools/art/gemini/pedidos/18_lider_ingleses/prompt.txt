@@ -7,10 +7,11 @@ STYLE (copy it from the attached units):
 - Soft daylight from the TOP-LEFT, the same in the three portraits.
 
 LAYOUT AND FRAMING (very important, follow every point):
-- The image is split into THREE EQUAL VERTICAL PANELS (left, middle, right), each one third of the width, on ONE flat solid green background (#00B140) with no lines between the panels.
+- The image is split into THREE EQUAL VERTICAL PANELS (left, middle, right), each one third of the width, on ONE flat solid green background (#00B140). Do NOT draw any line, border or separator between the panels: the panels are invisible, only green.
 - One portrait per panel, centered in its panel: the leader from the top of the head down to the WAIST, facing the viewer (turned very slightly, three-quarter).
-- THE WHOLE FIGURE STAYS INSIDE ITS PANEL: hair, shoulders, arms, hands, cloak, cape, weapons and every piece of clothing. Keep a clear band of green of at least 6% of the panel width on the LEFT and on the RIGHT of each figure, and green above the head. The cloak hangs close to the body, it does not spread out to the sides. Nothing is cut by the edges of the image or touches the neighbouring portrait. Only the waist (the bottom of the figure) may touch the bottom edge.
-- The figure is tall in its panel: the head near the top, the body filling about 85% of the height.
+- THE WHOLE FIGURE STAYS INSIDE ITS PANEL, NEVER CUT ON THE SIDES (most important rule): the WIDEST part of the figure (both arms, both elbows, both hands, the shoulders and the cloak) takes at most 70% of the panel width, with a band of plain green of at least 15% of the panel width on the LEFT and on the RIGHT. Both arms are complete, from the shoulder down, with green all around them; the arms hang close to the body. The cloak hangs close to the body, it does not spread out to the sides. Green above the head too. Nothing touches the sides of the panel or of the image. Only the waist (the bottom of the figure) may touch the bottom edge.
+- If the figure does not fit with these margins, draw it SMALLER: a smaller figure is fine, a cut arm is not.
+- The head near the top; the body fills about 80% of the height.
 - The three portraits are THE SAME PAINTING repeated: exactly the same man, face shape, hair, clothes, cloak, jewellery, colors, size, position, pose and hands, as if copied and pasted. ONLY THE FACE (brows, eyes, mouth, cheeks) changes between them. The hands do not change.
 - Exactly three people in the image, one per panel. No throne, no room, no landscape, no props apart from what the leader wears or holds. No text, no labels, no numbers, no frames.
 
